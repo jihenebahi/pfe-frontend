@@ -1,0 +1,101 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', sans-serif;
+}
+
+html, body {
+    height: 100%;
+    background-color: #ffffff;
+}
+
+/* Container centré verticalement et horizontalement */
+.login-container {
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Rectangle blanc avec ombre */
+.login-box {
+    width: 400px;
+    padding: 40px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    border: 1px solid #f0f0f0;
+    position: relative;
+    text-align: center; /* centre le logo et le contenu à l'intérieur */
+}
+
+/* Logo */
+.logo {
+    margin-bottom: 30px;
+}
+
+.logo img {
+    width: 120px;
+}
+
+/* Champs */
+.input-group {
+    margin-bottom: 20px;
+    text-align: left; /* champs alignés à gauche */
+}
+
+.input-group label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 14px;
+    color: #333;
+}
+
+.input-group input {
+    width: 100%;
+    padding: 10px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    transition: 0.3s;
+}
+
+.input-group input:focus {
+    border-color: #4aa3c7; /* bleu logo */
+    outline: none;
+    box-shadow: 0 0 5px rgba(74, 163, 199, 0.3);
+}
+
+/* Bouton */
+.login-btn {
+    width: 100%;
+    padding: 12px;
+    background-color: #4aa3c7; /* bleu logo */
+    border: none;
+    border-radius: 6px;
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.3s;
+    margin-top: 10px;
+}
+
+.login-btn:hover {
+    background-color: #3a8cab;
+}
+
+/* Lien mot de passe oublié */
+.forgot-password {
+    text-align: right;
+    margin-top: 15px;
+}
+
+.forgot-password a {
+    text-decoration: none;
+    font-size: 13px;
+    color: #555;
+}
+
+.forgot-password a:hover {
+    color: #e0b100; /* jaune du logo */
+}

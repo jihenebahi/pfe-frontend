@@ -1,0 +1,223 @@
+/* ================== RESET & GLOBAL ================== */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Poppins', sans-serif;
+}
+
+body {
+    background: #F8FAFC;
+    color: #1E293B;
+    height: 100vh;
+    overflow: hidden; /* Empêche le défilement global */
+}
+
+a {
+    text-decoration: none;
+    color: inherit;
+}
+
+/* ================== NAVBAR ================== */
+.navbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 80px;
+    background: #ebedef;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 50px;
+    border-bottom: 1px solid #E5E7EB;
+    z-index: 1000;
+}
+
+/* Logo */
+.logo-section {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.logo-section img {
+    height: 85px;
+}
+
+.brand-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #4aa3c7;
+}
+
+/* Partie droite (notifications + avatar) */
+.nav-right {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+}
+
+/* Notification */
+.notification {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: #F1F5F9;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #4aa3c7;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+/* Avatar */
+.avatar {
+    width: 34px;
+    height: 34px;
+    background: #4aa3c7;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+}
+
+.admin-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    color: #334155;
+}
+
+/* Dropdown Admin */
+.admin-dropdown {
+    position: relative;
+}
+
+.admin-menu {
+    position: absolute;
+    right: 0;
+    top: 55px;
+    background: white;
+    width: 200px;
+    border-radius: 14px;
+    box-shadow: 0 15px 35px rgba(0,0,0,0.06);
+    padding: 8px;
+    display: none;
+}
+
+.admin-menu.show {
+    display: block;
+}
+
+.admin-menu a {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    border-radius: 10px;
+    font-size: 14px;
+    color: #475569;
+}
+
+.admin-menu a i {
+    color: #4aa3c7;
+}
+
+.logout {
+    color: #050505;
+}
+
+/* ================== LAYOUT PRINCIPAL ================== */
+.container {
+    display: flex;
+    margin-top: 80px; /* espace pour navbar */
+    height: calc(100vh - 80px);
+    width: 100%;
+    overflow: hidden; /* Empêche le débordement du conteneur */
+}
+
+/* ================== SIDEBAR ================== */
+.sidebar {
+    width: 270px;
+    background: #ebedef;
+    padding: 20px 25px;
+    border-right: 1px solid #E5E7EB;
+    display: flex;
+    flex-direction: column;
+    
+    /* Hauteur fixe basée sur la hauteur de l'écran moins la navbar */
+    height: calc(100vh - 80px);
+    overflow-y: auto; /* Permet le défilement interne si nécessaire */
+}
+
+/* Supprimer scrollbars visibles */
+.sidebar::-webkit-scrollbar {
+    width: 0px;
+    background: transparent;
+}
+
+.sidebar {
+    scrollbar-width: none; /* Pour Firefox */
+}
+
+/* Titres des sections */
+.sidebar-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: #4aa3c7;
+    margin-top: 30px;
+    margin-bottom: 15px;
+    letter-spacing: 0.5px;
+}
+
+/* Premier titre n'a pas besoin de marge haute */
+.sidebar-title:first-of-type {
+    margin-top: 0;
+}
+
+/* Liens sidebar */
+.sidebar-link {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 14px;
+    color: #475569;
+    padding: 8px 12px;
+    transition: all 0.2s ease;
+    border-radius: 8px; /* Ajouté pour cohérence avec le hover */
+}
+
+.sidebar-link i {
+    color: #4aa3c7;
+    width: 18px;
+}
+
+/* Hover effet */
+.sidebar-link:hover {
+    color: #1E293B;
+    background: #dbeafe;
+    padding-left: 16px;
+}
+
+/* ================== CONTENT ================== */
+.content {
+    flex: 1;
+    padding: 40px;
+    overflow-y: auto; /* Permet le défilement du contenu */
+    height: calc(100vh - 80px); /* Même hauteur que la sidebar */
+}
+
+.content h1 {
+    font-size: 28px;
+    font-weight: 600;
+    color: #1E293B;
+}
+#root {
+    width: 100%;
+    height: 100vh;
+}
