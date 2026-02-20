@@ -1,3 +1,4 @@
+/* ================== RESET ================== */
 * {
     margin: 0;
     padding: 0;
@@ -7,6 +8,7 @@
 
 body {
     background: #F8FAFC;
+    min-height: 100vh;
 }
 
 a {
@@ -14,14 +16,14 @@ a {
     color: inherit;
 }
 
-/* NAVBAR */
+/* ================== NAVBAR ================== */
 .navbar {
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
     height: 65px;
-    background: #ebedef;
+    background: #ebedef; /* couleur claire */
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -44,7 +46,7 @@ a {
 .brand-title {
     font-size: 16px;
     font-weight: 600;
-    color: #4aa3c7;
+    color: #4aa3c7; /* bleu */
 }
 
 /* Partie droite */
@@ -90,7 +92,7 @@ a {
     font-size: 14px;
 }
 
-/* Dropdown */
+/* Dropdown admin */
 .admin-dropdown {
     position: relative;
 }
@@ -111,36 +113,48 @@ a {
     display: block;
 }
 
-.admin-menu a {
+.admin-menu a,
+.admin-menu button.logout {
     display: flex;
     align-items: center;
     gap: 10px;
     padding: 9px;
     border-radius: 10px;
     font-size: 13px;
+    color: #475569;
+    background: none;
+    border: none;
+    cursor: pointer;
+    width: 100%;
+    text-align: left;
+    transition: 0.2s ease;
 }
 
-.admin-menu a:hover {
+.admin-menu a:hover,
+.admin-menu button.logout:hover {
     background: #F1F5F9;
+    color: #4aa3c7;
 }
 
 .admin-menu a i {
     color: #4aa3c7;
 }
 
-/* LAYOUT */
+/* ================== LAYOUT ================== */
 .container {
-    display: flex;
-    margin-top: 65px;
+    display: flex; /* sidebar + contenu côte à côte */
+    margin-top: 65px; /* espace pour navbar */
+    min-height: calc(100vh - 65px);
 }
 
-/* SIDEBAR */
+/* ================== SIDEBAR ================== */
 .sidebar {
     width: 230px;
     height: calc(100vh - 65px);
     background: #ebedef;
     padding: 30px 18px;
     border-right: 1px solid #E5E7EB;
+    flex-shrink: 0; /* empêche de rétrécir */
     overflow-y: auto;
 }
 
@@ -184,32 +198,96 @@ a {
     transform: translateX(3px);
 }
 
-/* CONTENT */
+/* ================== CONTENT ================== */
 .content {
-    flex: 1;
+    flex: 1; /* prend tout l'espace restant */
     padding: 40px;
-}
-/* Menu admin - liens et bouton */
-.admin-menu a,
-.admin-menu button.logout {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 9px;
-    border-radius: 10px;
-    font-size: 13px;
-    color: #475569;
-    background: none;
-    border: none;
-    cursor: pointer;
-    width: 100%;
-    text-align: left;
-    transition: 0.2s ease;
+    background-color: #F8FAFC; /* couleur claire */
 }
 
-/* Hover pour les deux */
-.admin-menu a:hover,
-.admin-menu button.logout:hover {
-    background: #F1F5F9;
+/* ================== PROFILE / AUTH PAGES ================== */
+.profile-container {
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.profile-title {
+    font-size: 28px;
+    font-weight: 600;
+    margin-bottom: 30px;
+    color: #1E293B;
+    text-align: center;
+}
+
+.profile-card {
+    background: #fff;
+    border-radius: 16px;
+    padding: 40px;
+    border: 1px solid #E5E7EB;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+}
+
+.profile-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 16px 0;
+    border-bottom: 1px solid #F1F5F9;
+    align-items: center;
+}
+
+.profile-row:last-child {
+    border-bottom: none;
+}
+
+.label {
+    font-size: 15px;
+    color: #64748B;
+    font-weight: 400;
+}
+
+.value {
+    font-size: 15px;
+    font-weight: 500;
+    color: #1E293B;
+}
+
+.role {
     color: #4aa3c7;
+    font-weight: 600;
+}
+
+/* INPUTS FORM CHANGE PASSWORD */
+input {
+    padding: 8px 12px;
+    border: 1px solid #E5E7EB;
+    border-radius: 8px;
+    width: 60%;
+}
+
+button.password-link {
+    font-size: 15px;
+    color: #fff;
+    background-color: #4aa3c7;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+button.password-link:hover {
+    background-color: #3a86a0;
+}
+
+/* LIEN MOT DE PASSE */
+.password-link a {
+    font-size: 15px;
+    color: #4aa3c7;
+    text-decoration: underline;
+    transition: 0.2s;
+    font-weight: 500;
+}
+
+.password-link a:hover {
+    color: #e0b94f;
 }

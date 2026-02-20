@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import Layout from "../../components/Layout";
 import "../../styles/auth/profile.css";
 import ProfileService from "../../services/auth/ProfileService";
+import { Link } from "react-router-dom";
 
 function Profile() {
   const [user, setUser] = useState(null);
@@ -61,8 +62,8 @@ function Profile() {
         </div>
 
         <div className="password-link">
-          <a href="/change-password">Changer le mot de passe</a>
-        </div>
+       <Link to="/change-password">Changer le mot de passe</Link>
+       </div>
       </div>
     </Layout>
   );
