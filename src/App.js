@@ -2,7 +2,8 @@ import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Authentification from "./pages/auth/authentification";
 import Home from "./pages/home/Home";
-import PrivateRoute from "./components/PrivateRoute"; // importer le PrivateRoute
+import PrivateRoute from "./components/PrivateRoute";
+import Profile from "./pages/auth/Profile"; // importer le PrivateRoute
 
 function App() {
   return (
@@ -20,8 +21,17 @@ function App() {
             </PrivateRoute>
           }
         />
+        <Route
+  path="/mon-profil"
+  element={
+    <PrivateRoute>
+      <Profile />
+    </PrivateRoute>
+  }
+/>
       </Routes>
     </Router>
+    
   );
 }
 

@@ -12,7 +12,7 @@ html, body {
 
 /* Container centré verticalement et horizontalement */
 .login-container {
-    height: 100%;
+    min-height: 100vh; /* correction ici */
     display: flex;
     justify-content: center;
     align-items: center;
@@ -27,7 +27,7 @@ html, body {
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
     border: 1px solid #f0f0f0;
     position: relative;
-    text-align: center; /* centre le logo et le contenu à l'intérieur */
+    text-align: center;
 }
 
 /* Logo */
@@ -42,7 +42,7 @@ html, body {
 /* Champs */
 .input-group {
     margin-bottom: 20px;
-    text-align: left; /* champs alignés à gauche */
+    text-align: left;
 }
 
 .input-group label {
@@ -61,7 +61,7 @@ html, body {
 }
 
 .input-group input:focus {
-    border-color: #4aa3c7; /* bleu logo */
+    border-color: #4aa3c7;
     outline: none;
     box-shadow: 0 0 5px rgba(74, 163, 199, 0.3);
 }
@@ -70,7 +70,7 @@ html, body {
 .login-btn {
     width: 100%;
     padding: 12px;
-    background-color: #4aa3c7; /* bleu logo */
+    background-color: #4aa3c7;
     border: none;
     border-radius: 6px;
     color: white;
@@ -97,5 +97,5 @@ html, body {
 }
 
 .forgot-password a:hover {
-    color: #e0b100; /* jaune du logo */
+    color: #e0b100;
 }

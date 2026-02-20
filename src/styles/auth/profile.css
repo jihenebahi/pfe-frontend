@@ -1,0 +1,63 @@
+.profile-container {
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.profile-title {
+    font-size: 28px;
+    font-weight: 600;
+    margin-bottom: 30px;
+    color: #1E293B;
+    text-align: center;
+}
+
+.profile-card {
+    background: white;
+    border-radius: 16px;
+    padding: 40px;
+    border: 1px solid #E5E7EB;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+}
+
+.profile-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 16px 0;
+    border-bottom: 1px solid #F1F5F9;
+}
+
+.profile-row:last-child {
+    border-bottom: none;
+}
+
+.label {
+    font-size: 15px;
+    color: #64748B;
+}
+
+.value {
+    font-size: 15px;
+    font-weight: 500;
+    color: #1E293B;
+}
+
+.role {
+    color: #4aa3c7;
+    font-weight: 600;
+}
+
+.password-link {
+    margin-top: 24px;
+    text-align: center;
+}
+
+.password-link a {
+    font-size: 15px;
+    color: #4aa3c7;
+    text-decoration: underline;
+    font-weight: 500;
+}
+
+.password-link a:hover {
+    color: #e0b94f;
+}
