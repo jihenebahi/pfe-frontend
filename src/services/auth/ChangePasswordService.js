@@ -126,21 +126,19 @@ function ChangePassword() {
             </div>
 
             <div style={{ textAlign: "center", marginTop: "24px", display: "flex", gap: "12px", justifyContent: "center" }}>
-             <button
-  type="button"
-  onClick={() => navigate("/mon-profil")}
-  disabled={loading}
-  className="password-link" // ← remplace cancel-btn par password-link
-  style={{ opacity: loading ? 0.7 : 1 }}
->
-  Annuler
-</button>
+              <button
+                type="button"
+                className="cancel-btn"
+                onClick={() => navigate("/mon-profil")}
+                disabled={loading}
+              >
+                Annuler
+              </button>
 
               <button
                 type="submit"
                 className="password-link"
                 disabled={loading}
-                style={{ opacity: loading ? 0.7 : 1 }}
               >
                 {loading ? "Enregistrement..." : "Changer le mot de passe"}
               </button>
