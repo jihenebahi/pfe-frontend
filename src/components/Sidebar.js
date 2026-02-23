@@ -1,9 +1,11 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import "../styles/layout.css"; // chemin relatif vers ton fichier
-
+import "../styles/layout.css";
+import authService from "../services/auth/authService"; // ✅ chemin corrigé
 
 function Sidebar() {
+  const isSuperAdmin = authService.isSuperAdmin(); // ✅ variable déclarée
+
   return (
     <aside className="sidebar">
       {/* AIDE À LA DÉCISION */}
@@ -59,9 +61,12 @@ function Sidebar() {
       <Link to="/mon-profil" className="sidebar-link">
         <i className="fa-solid fa-id-badge"></i> Mon profil
       </Link>
-      <Link to="/gestion-comptes" className="sidebar-link">
-        <i className="fa-solid fa-users"></i> Gestion des comptes
-      </Link>
+
+      {isSuperAdmin && (
+        <Link to="/gestion-comptes" className="sidebar-link">
+          <i className="fa-solid fa-users"></i> Gestion des comptes
+        </Link>
+      )}
     </aside>
   );
 }

@@ -22,14 +22,13 @@ class AuthService {
   
   async logout() {
     try {
-      await api.post('logout/'); // appel à Django pour déconnexion
+      await api.post('logout/');
     } catch (err) {
       console.error("Erreur lors du logout:", err);
     }
-    localStorage.removeItem('user'); // supprimer l'utilisateur localement
+    localStorage.removeItem('user');
   }
 
-  
   getCurrentUser() {
     const userStr = localStorage.getItem('user');
     if (userStr) {
@@ -37,6 +36,24 @@ class AuthService {
     }
     return null;
   }
+  
+  // ===== NOUVELLES MÉTHODES À AJOUTER =====
+  // Récupère le rôle de l'utilisateur connecté
+  getUserRole() {
+    const user = this.getCurrentUser();
+    return user ? user.role : null;
+  }
+  
+  // Vérifie si l'utilisateur est super admin
+  isSuperAdmin() {
+    return this.getUserRole() === 'super_admin';
+  }
+  
+  // Vérifie si l'utilisateur est responsable
+  isResponsable() {
+    return this.getUserRole() === 'responsable';
+  }
+  // ===== FIN DES NOUVELLES MÉTHODES =====
   
   setUser(user) {
     localStorage.setItem('user', JSON.stringify(user));

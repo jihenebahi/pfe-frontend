@@ -6,6 +6,7 @@ import Authentification from "./pages/auth/authentification";
 import Home from "./pages/home/Home";
 import Profile from "./pages/auth/Profile";
 import ChangePassword from "./pages/auth/ChangePassword";
+import GestionComptes from "./pages/auth/GestionComptes"; // ← AJOUT IMPORTANT !
 
 // Composants
 import PrivateRoute from "./components/PrivateRoute";
@@ -43,6 +44,16 @@ function App() {
           element={
             <PrivateRoute>
               <ChangePassword />
+            </PrivateRoute>
+          }
+        />
+        
+        {/* Gestion des comptes - protégée et accessible uniquement aux super admins */}
+        <Route
+          path="/gestion-comptes"
+          element={
+            <PrivateRoute>
+              <GestionComptes />
             </PrivateRoute>
           }
         />
