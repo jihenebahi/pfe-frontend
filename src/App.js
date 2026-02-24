@@ -6,7 +6,8 @@ import Authentification from "./pages/auth/authentification";
 import Home from "./pages/home/Home";
 import Profile from "./pages/auth/Profile";
 import ChangePassword from "./pages/auth/ChangePassword";
-import GestionComptes from "./pages/auth/GestionComptes"; // ← AJOUT IMPORTANT !
+import GestionComptes from "./pages/auth/GestionComptes";
+import AjouterCompte from "./pages/auth/AjouterCompte"; // ← AJOUT IMPORTANT
 
 // Composants
 import PrivateRoute from "./components/PrivateRoute";
@@ -54,6 +55,16 @@ function App() {
           element={
             <PrivateRoute>
               <GestionComptes />
+            </PrivateRoute>
+          }
+        />
+
+        {/* Ajouter un compte - protégé et accessible uniquement aux super admins */}
+        <Route
+          path="/ajouter-compte"
+          element={
+            <PrivateRoute>
+              <AjouterCompte />
             </PrivateRoute>
           }
         />

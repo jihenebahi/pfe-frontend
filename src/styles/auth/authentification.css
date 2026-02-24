@@ -99,3 +99,69 @@ html, body {
 .forgot-password a:hover {
     color: #e0b100;
 }
+
+
+
+/* Ajoutez ces styles à votre fichier CSS existant */
+
+.input-group input.input-error {
+  border-color: #dc2626 !important;
+  background-color: #fff5f5;
+}
+
+.field-error {
+  color: #dc2626;
+  font-size: 0.85rem;
+  margin-top: 5px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.error-icon {
+  font-size: 1rem;
+}
+
+.error-message.error-general {
+  background-color: #fee2e2;
+  color: #dc2626;
+  padding: 12px;
+  border-radius: 6px;
+  margin-bottom: 20px;
+  border-left: 4px solid #dc2626;
+  font-weight: 500;
+}
+
+/* Animation pour les messages d'erreur */
+.field-error {
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Style pour le placeholder */
+.input-group input::placeholder {
+  color: #9ca3af;
+  font-size: 0.9rem;
+}
+
+/* Amélioration du focus */
+.input-group input:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.input-group input.input-error:focus {
+  border-color: #dc2626;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+}

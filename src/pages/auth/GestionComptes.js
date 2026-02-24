@@ -1,5 +1,6 @@
 // src/pages/auth/GestionComptes.js
 import React, { useState, useEffect, useCallback } from "react";
+import { Link } from "react-router-dom"; // ← AJOUT IMPORTANT
 import Layout from "../../components/Layout";
 import { getUsers, toggleUserStatus, deleteUser } from "../../services/auth/userService";
 import "../../styles/auth/gestioncomptes.css";
@@ -113,9 +114,9 @@ function GestionComptes() {
           />
         </div>
         {canManage && (
-          <a href="/ajouter-compte" className="btn-add">
+          <Link to="/ajouter-compte" className="btn-add"> {/* ← MODIFIÉ: a → Link */}
             <i className="fa-solid fa-plus"></i> Ajouter un compte
-          </a>
+          </Link>
         )}
       </div>
 
@@ -220,13 +221,13 @@ function GestionComptes() {
                         {canManage && (
                           <td>
                             <div className="actions">
-                              <a
-                                href={`/details-compte?id=${user.id}`}
+                              <Link
+                                to={`/details-compte?id=${user.id}`}
                                 className="action-btn btn-detail"
                                 title="Voir les details"
                               >
                                 <i className="fa-solid fa-eye"></i>
-                              </a>
+                              </Link>
                               <button
                                 className="action-btn btn-delete"
                                 title="Supprimer"
