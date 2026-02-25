@@ -231,7 +231,7 @@ function Authentification() {
         </form>
 
         <div className="login-footer">
-          <p>© 2024 4CLab - Tous droits réservés</p>
+          <p></p>
         </div>
       </div>
     </div>
