@@ -8,6 +8,9 @@ import Profile from "./pages/auth/Profile";
 import ChangePassword from "./pages/auth/ChangePassword";
 import GestionComptes from "./pages/auth/GestionComptes";
 import AjouterCompte from "./pages/auth/AjouterCompte"; // ← AJOUT IMPORTANT
+import MotPassOublier from './pages/auth/MotPassOublier';
+import VerifierCode from './pages/auth/verifiercode';
+import NouveauMDP from './pages/auth/nouveauxMDP';
 
 // Composants
 import PrivateRoute from "./components/PrivateRoute";
@@ -68,6 +71,9 @@ function App() {
             </PrivateRoute>
           }
         />
+        <Route path="/mot-de-passe-oublie" element={<MotPassOublier />} />
+<Route path="/verify-code" element={<VerifierCode />} />
+<Route path="/reset-password" element={<NouveauMDP />} />
       </Routes>
     </Router>
   );
