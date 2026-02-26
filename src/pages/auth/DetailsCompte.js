@@ -13,9 +13,7 @@ const ROLE_META = {
   etudiant:    { label: "Étudiant",             icon: "fa-user-graduate"   },
   entreprise:  { label: "Entreprise Partenaire",icon: "fa-building"        },
 };
-const getRoleMeta = (role) =>
-  ROLE_META[role] ?? { label: role, icon: "fa-user" };
-
+const getRoleMeta  = (role) => ROLE_META[role] ?? { label: role, icon: "fa-user" };
 const AVATAR_COLORS = ["av1", "av2", "av3", "av4", "av5", "av6"];
 
 function DetailsCompte() {
@@ -27,50 +25,32 @@ function DetailsCompte() {
   const [canManage, setCanManage] = useState(false);
   const [loading,   setLoading]   = useState(true);
   const [error,     setError]     = useState(null);
-  const [flash,     setFlash]     = useState(null);    // { type, text }
-  const [showModal, setShowModal] = useState(false);   // modale suppression
-  const [deleting,  setDeleting]  = useState(false);   // spinner dans la modale
+  const [flash,     setFlash]     = useState(null);
+  const [showModal, setShowModal] = useState(false);
+  const [deleting,  setDeleting]  = useState(false);
 
-  // ── Chargement initial ───────────────────────────────
   useEffect(() => {
-    if (!userId) {
-      setError("Identifiant utilisateur manquant.");
-      setLoading(false);
-      return;
-    }
+    if (!userId) { setError("Identifiant utilisateur manquant."); setLoading(false); return; }
     (async () => {
       try {
         const data = await getUserDetail(userId);
-        if (data.success) {
-          setUser(data.user);
-          setCanManage(data.can_manage);
-        } else {
-          setError("Impossible de charger les informations de cet utilisateur.");
-        }
-      } catch {
-        setError("Une erreur est survenue. Veuillez réessayer.");
-      } finally {
-        setLoading(false);
-      }
+        if (data.success) { setUser(data.user); setCanManage(data.can_manage); }
+        else setError("Impossible de charger les informations de cet utilisateur.");
+      } catch { setError("Une erreur est survenue. Veuillez réessayer."); }
+      finally { setLoading(false); }
     })();
   }, [userId]);
 
-  // ── Flash message ────────────────────────────────────
   const showFlash = (type, text) => {
     setFlash({ type, text });
     setTimeout(() => setFlash(null), 4000);
   };
 
-  // ── Toggle statut ────────────────────────────────────
   const handleToggle = async () => {
     try {
       const res = await toggleUserStatus(user.id);
       if (res.success) {
-        setUser((prev) => ({
-          ...prev,
-          is_active: res.is_active,
-          statut: res.is_active ? "Actif" : "Inactif",
-        }));
+        setUser(prev => ({ ...prev, is_active: res.is_active, statut: res.is_active ? "Actif" : "Inactif" }));
         showFlash("success", `Compte ${res.is_active ? "activé" : "désactivé"} avec succès.`);
       }
     } catch (err) {
@@ -78,43 +58,37 @@ function DetailsCompte() {
     }
   };
 
-  // ── Suppression confirmée depuis la modale ────────────
   const handleDeleteConfirm = async () => {
     setDeleting(true);
     try {
       const res = await deleteUser(user.id);
       if (res.success) navigate("/gestion-comptes");
     } catch (err) {
-      setShowModal(false);
-      setDeleting(false);
+      setShowModal(false); setDeleting(false);
       showFlash("error", err.response?.data?.message || "Impossible de supprimer ce compte.");
     }
   };
 
-  // ── Rendu : chargement ───────────────────────────────
-  if (loading)
-    return (
-      <Layout>
-        <div className="dc-feedback">
-          <i className="fa-solid fa-spinner fa-spin"></i>
-          <span>Chargement du profil...</span>
-        </div>
-      </Layout>
-    );
+  if (loading) return (
+    <Layout>
+      <div className="dc-feedback">
+        <i className="fa-solid fa-spinner fa-spin"></i>
+        <span>Chargement du profil...</span>
+      </div>
+    </Layout>
+  );
 
-  // ── Rendu : erreur ───────────────────────────────────
-  if (error)
-    return (
-      <Layout>
-        <div className="dc-feedback dc-feedback--error">
-          <i className="fa-solid fa-triangle-exclamation"></i>
-          <span>{error}</span>
-          <Link to="/gestion-comptes">
-            <i className="fa-solid fa-arrow-left"></i> Retour à la liste
-          </Link>
-        </div>
-      </Layout>
-    );
+  if (error) return (
+    <Layout>
+      <div className="dc-feedback dc-feedback--error">
+        <i className="fa-solid fa-triangle-exclamation"></i>
+        <span>{error}</span>
+        <Link to="/gestion-comptes">
+          <i className="fa-solid fa-arrow-left"></i> Retour à la liste
+        </Link>
+      </div>
+    </Layout>
+  );
 
   const meta        = getRoleMeta(user.role);
   const avatarClass = AVATAR_COLORS[(user.id - 1) % AVATAR_COLORS.length];
@@ -122,7 +96,7 @@ function DetailsCompte() {
   return (
     <Layout>
 
-      {/* ── Breadcrumb ── */}
+      {/* Breadcrumb */}
       <nav className="breadcrumb">
         <Link to="/gestion-comptes">
           <i className="fa-solid fa-users-gear"></i> Gestion des comptes
@@ -131,13 +105,13 @@ function DetailsCompte() {
         <span>Détails du compte</span>
       </nav>
 
-      {/* ── Page header ── */}
+      {/* Page header */}
       <div className="page-header">
         <h1><i className="fa-solid fa-eye"></i> Détails du Compte</h1>
         <p>Consultez les informations complètes de cet utilisateur.</p>
       </div>
 
-      {/* ── Flash ── */}
+      {/* Flash */}
       {flash && (
         <div className={`dc-alert dc-alert--${flash.type}`}>
           <i className={`fa-solid ${flash.type === "success" ? "fa-circle-check" : "fa-circle-xmark"}`}></i>
@@ -145,15 +119,21 @@ function DetailsCompte() {
         </div>
       )}
 
-      {/* ══════════════ GRILLE ══════════════ */}
+      {/*
+        ══════════════════════════════════════
+        GRILLE 2 × 2 :
+        [ profile-card  | info-card     ]
+        [ activity-card | actions-card  ]
+        ══════════════════════════════════════
+      */}
       <div className="details-grid">
 
-        {/* Carte profil */}
+        {/* ── CASE 1 : Profil (col 1, row 1) ── */}
         <div className="detail-card profile-card">
           <div className="profile-top">
             <div className={`profile-avatar ${avatarClass}`}>{user.initiales}</div>
             <div className="profile-info">
-              <h2>{user.nom}</h2>
+              <span className="profile-name">{user.nom}</span>
               <span className="badge">
                 <i className={`fa-solid ${meta.icon}`}></i> {meta.label}
               </span>
@@ -165,12 +145,12 @@ function DetailsCompte() {
               </div>
             </div>
           </div>
-          <div className="profile-id-badge">
+          <span className="profile-code">
             <i className="fa-solid fa-hashtag"></i> {user.code}
-          </div>
+          </span>
         </div>
 
-        {/* Carte informations */}
+        {/* ── CASE 2 : Informations (col 2, row 1) ── */}
         <div className="detail-card info-card">
           <div className="detail-card-header">
             <i className="fa-solid fa-circle-info"></i>
@@ -212,7 +192,7 @@ function DetailsCompte() {
               <div className="field-body">
                 <span className="field-label">Statut</span>
                 <span className={`field-value status-label ${user.is_active ? "on" : "off"}`}>
-                  <i className="fa-solid fa-circle" style={{ fontSize: "8px", marginRight: "5px" }}></i>
+                  <i className="fa-solid fa-circle" style={{ fontSize: "7px", marginRight: "5px" }}></i>
                   {user.statut}
                 </span>
               </div>
@@ -220,7 +200,7 @@ function DetailsCompte() {
           </div>
         </div>
 
-        {/* Carte activité */}
+        {/* ── CASE 3 : Activité (col 1, row 2) ── */}
         <div className="detail-card activity-card">
           <div className="detail-card-header">
             <i className="fa-solid fa-clock-rotate-left"></i>
@@ -257,50 +237,51 @@ function DetailsCompte() {
           </div>
         </div>
 
-        {/* Carte actions */}
-        <div className="detail-card actions-card" style={{ gridColumn: "1 / -1" }}>
+        {/* ── CASE 4 : Actions (col 2, row 2) ── */}
+        <div className="detail-card actions-card">
           <div className="detail-card-header">
             <i className="fa-solid fa-sliders"></i>
             <h3>Actions</h3>
           </div>
           <div className="actions-list">
 
-            {/* Retour — toujours visible */}
-            <Link to="/gestion-comptes" className="action-link back">
-              <div className="action-link-icon"><i className="fa-solid fa-arrow-left"></i></div>
-              <div className="action-link-text">
+            <Link to="/gestion-comptes" className="action-btn back">
+              <div className="action-btn-icon">
+                <i className="fa-solid fa-arrow-left"></i>
+              </div>
+              <div className="action-btn-body">
                 <span>Retour à la liste</span>
                 <small>Revenir à la gestion des comptes</small>
               </div>
-              <i className="fa-solid fa-chevron-right action-link-arrow"></i>
+              <i className="fa-solid fa-chevron-right action-btn-arrow"></i>
             </Link>
 
-            {/* Toggle statut — super_admin uniquement */}
             {canManage && (
               <button
-                className={`action-link ${user.is_active ? "deactivate" : "activate"}`}
+                className={`action-btn ${user.is_active ? "deactivate" : "activate"}`}
                 onClick={handleToggle}
               >
-                <div className="action-link-icon">
+                <div className="action-btn-icon">
                   <i className={`fa-solid ${user.is_active ? "fa-ban" : "fa-circle-check"}`}></i>
                 </div>
-                <div className="action-link-text">
+                <div className="action-btn-body">
                   <span>{user.is_active ? "Désactiver le compte" : "Activer le compte"}</span>
-                  <small>{user.is_active ? "Bloquer l'accès à cet utilisateur" : "Autoriser l'accès à cet utilisateur"}</small>
+                  <small>{user.is_active ? "Bloquer l'accès à cet utilisateur" : "Autoriser l'accès"}</small>
                 </div>
-                <i className="fa-solid fa-chevron-right action-link-arrow"></i>
+                <i className="fa-solid fa-chevron-right action-btn-arrow"></i>
               </button>
             )}
 
-            {/* Suppression → ouvre la modale */}
             {canManage && (
-              <button className="action-link delete" onClick={() => setShowModal(true)}>
-                <div className="action-link-icon"><i className="fa-solid fa-trash-can"></i></div>
-                <div className="action-link-text">
+              <button className="action-btn delete" onClick={() => setShowModal(true)}>
+                <div className="action-btn-icon">
+                  <i className="fa-solid fa-trash-can"></i>
+                </div>
+                <div className="action-btn-body">
                   <span>Supprimer le compte</span>
                   <small>Cette action est irréversible</small>
                 </div>
-                <i className="fa-solid fa-chevron-right action-link-arrow"></i>
+                <i className="fa-solid fa-chevron-right action-btn-arrow"></i>
               </button>
             )}
 
@@ -310,23 +291,16 @@ function DetailsCompte() {
       </div>{/* /details-grid */}
 
 
-      {/* ══════════════ MODALE SUPPRESSION ══════════════ */}
+      {/* ══ MODALE ══ */}
       {showModal && (
-        <div
-          className="modal-overlay"
-          onClick={() => !deleting && setShowModal(false)}
-        >
+        <div className="modal-overlay" onClick={() => !deleting && setShowModal(false)}>
           <div className="modal-box" onClick={(e) => e.stopPropagation()}>
 
-            {/* Icône danger */}
             <div className="modal-icon-wrap">
               <i className="fa-solid fa-trash-can"></i>
             </div>
-
-            {/* Titre */}
             <h2 className="modal-title">Supprimer le compte</h2>
 
-            {/* Infos de l'utilisateur ciblé */}
             <div className="modal-user-preview">
               <div className={`modal-avatar ${avatarClass}`}>{user.initiales}</div>
               <div>
@@ -335,31 +309,20 @@ function DetailsCompte() {
               </div>
             </div>
 
-            {/* Avertissement */}
             <p className="modal-warning">
               <i className="fa-solid fa-triangle-exclamation"></i>
-              Cette action est <strong>irréversible</strong>. Toutes les données associées à ce compte seront définitivement supprimées.
+              Cette action est <strong>irréversible</strong>. Toutes les données associées seront définitivement supprimées.
             </p>
 
-            {/* Boutons */}
             <div className="modal-actions">
-              <button
-                className="modal-btn modal-btn--cancel"
-                onClick={() => setShowModal(false)}
-                disabled={deleting}
-              >
+              <button className="modal-btn modal-btn--cancel" onClick={() => setShowModal(false)} disabled={deleting}>
                 <i className="fa-solid fa-xmark"></i> Annuler
               </button>
-              <button
-                className="modal-btn modal-btn--confirm"
-                onClick={handleDeleteConfirm}
-                disabled={deleting}
-              >
-                {deleting ? (
-                  <><i className="fa-solid fa-spinner fa-spin"></i> Suppression...</>
-                ) : (
-                  <><i className="fa-solid fa-trash-can"></i> Confirmer la suppression</>
-                )}
+              <button className="modal-btn modal-btn--confirm" onClick={handleDeleteConfirm} disabled={deleting}>
+                {deleting
+                  ? <><i className="fa-solid fa-spinner fa-spin"></i> Suppression...</>
+                  : <><i className="fa-solid fa-trash-can"></i> Confirmer</>
+                }
               </button>
             </div>
 
