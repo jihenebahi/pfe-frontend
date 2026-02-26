@@ -7,7 +7,8 @@ import Home from "./pages/home/Home";
 import Profile from "./pages/auth/Profile";
 import ChangePassword from "./pages/auth/ChangePassword";
 import GestionComptes from "./pages/auth/GestionComptes";
-import AjouterCompte from "./pages/auth/AjouterCompte"; // ← AJOUT IMPORTANT
+import AjouterCompte from "./pages/auth/AjouterCompte";
+import DetailsCompte from "./pages/auth/DetailsCompte";   // ✅ NOUVEAU
 import MotPassOublier from './pages/auth/MotPassOublier';
 import VerifierCode from './pages/auth/verifiercode';
 import NouveauMDP from './pages/auth/nouveauxMDP';
@@ -51,8 +52,8 @@ function App() {
             </PrivateRoute>
           }
         />
-        
-        {/* Gestion des comptes - protégée et accessible uniquement aux super admins */}
+
+        {/* Gestion des comptes */}
         <Route
           path="/gestion-comptes"
           element={
@@ -62,7 +63,7 @@ function App() {
           }
         />
 
-        {/* Ajouter un compte - protégé et accessible uniquement aux super admins */}
+        {/* Ajouter un compte */}
         <Route
           path="/ajouter-compte"
           element={
@@ -71,9 +72,20 @@ function App() {
             </PrivateRoute>
           }
         />
+
+        {/* ✅ NOUVEAU : Détails d'un compte */}
+        <Route
+          path="/details-compte"
+          element={
+            <PrivateRoute>
+              <DetailsCompte />
+            </PrivateRoute>
+          }
+        />
+
         <Route path="/mot-de-passe-oublie" element={<MotPassOublier />} />
-<Route path="/verify-code" element={<VerifierCode />} />
-<Route path="/reset-password" element={<NouveauMDP />} />
+        <Route path="/verify-code" element={<VerifierCode />} />
+        <Route path="/reset-password" element={<NouveauMDP />} />
       </Routes>
     </Router>
   );

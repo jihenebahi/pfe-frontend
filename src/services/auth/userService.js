@@ -21,6 +21,17 @@ export const getUsers = async (filters = {}) => {
 
 
 /**
+ * Récupère les détails complets d'un utilisateur (super_admin uniquement).
+ * @param {number|string} userId
+ * @returns {Promise<{ success, can_manage, user }>}
+ */
+export const getUserDetail = async (userId) => {
+  const response = await api.get(`users/${userId}/`);
+  return response.data;
+};
+
+
+/**
  * Crée un nouvel utilisateur (super_admin uniquement).
  *
  * @param {Object} userData
