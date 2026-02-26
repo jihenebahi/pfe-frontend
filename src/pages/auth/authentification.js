@@ -147,7 +147,7 @@ function Authentification() {
           <img src={logo} alt="Logo 4CLab" />
         </div>
 
-        <h2>Connexion à votre espace</h2>
+
         
         {/* Message d'erreur général */}
         {errors.general && (

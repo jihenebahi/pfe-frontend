@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import passwordService from "../../services/auth/passwordService";
+import { validatePassword, validatePasswordConfirm } from "../../script/auth/addAccount";
 import "../../styles/auth/style-password.css";
 import logo from "../../assets/4Clab.png";
 
@@ -23,16 +24,25 @@ function ResetPassword() {
 
   const validate = () => {
     const newErrors = {};
-    if (!password) {
-      newErrors.password = "Le mot de passe est requis";
-    } else if (password.length < 8) {
-      newErrors.password = "Le mot de passe doit contenir au moins 8 caractères";
+    
+    // ✅ Utilisation de la fonction validatePassword de addAccount.js
+    const passwordValidation = validatePassword(password);
+    if (!passwordValidation.isValid) {
+      newErrors.password = passwordValidation.message;
     }
-    if (!confirm) {
-      newErrors.confirm = "Veuillez confirmer le mot de passe";
+    
+    // ✅ Utilisation de la fonction validatePasswordConfirm de addAccount.js
+    if (passwordValidation.isValid) {
+      const confirmValidation = validatePasswordConfirm(password, confirm);
+      if (!confirmValidation.isValid) {
+        newErrors.confirm = confirmValidation.message;
+      }
+    } else if (!confirm) {
+      newErrors.confirm = "Confirmation requise";
     } else if (password !== confirm) {
       newErrors.confirm = "Les mots de passe ne correspondent pas";
     }
+    
     return newErrors;
   };
 
@@ -94,7 +104,10 @@ function ResetPassword() {
         </div>
 
         {errors.general && (
-          <p className="field-error-text error-center">{errors.general}</p>
+          <div className="error-message error-general">
+            <span className="error-icon">⚠️</span>
+            <span className="error-text">{errors.general}</span>
+          </div>
         )}
 
         <form onSubmit={handleSubmit} noValidate>
@@ -102,13 +115,17 @@ function ResetPassword() {
             <label>Nouveau mot de passe</label>
             <input
               type="password"
-              placeholder="••••••••"
+              placeholder="Min. 8 car. avec majuscules, minuscules et chiffres"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               disabled={loading}
+              className={errors.password ? 'input-error' : ''}
             />
             {errors.password && (
-              <p className="field-error-text">{errors.password}</p>
+              <div className="field-error">
+                <span className="error-icon">⚠️</span>
+                <span className="error-text">{errors.password}</span>
+              </div>
             )}
           </div>
 
@@ -116,13 +133,17 @@ function ResetPassword() {
             <label>Confirmer le mot de passe</label>
             <input
               type="password"
-              placeholder="••••••••"
+              placeholder="Répétez le nouveau mot de passe"
               value={confirm}
               onChange={(e) => setConfirm(e.target.value)}
               disabled={loading}
+              className={errors.confirm ? 'input-error' : ''}
             />
             {errors.confirm && (
-              <p className="field-error-text">{errors.confirm}</p>
+              <div className="field-error">
+                <span className="error-icon">⚠️</span>
+                <span className="error-text">{errors.confirm}</span>
+              </div>
             )}
           </div>
 

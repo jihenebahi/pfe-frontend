@@ -26,13 +26,11 @@ function ForgotPassword() {
       const res = await passwordService.requestReset(email.trim().toLowerCase());
 
       if (res.data.success) {
-        // ✅ CORRECTION : "/verify-code" correspond à la route dans App.js
         navigate("/verify-code", { state: { email: email.trim().toLowerCase() } });
       } else {
         setError(res.data.error || "Erreur lors de l'envoi du code");
       }
     } catch (err) {
-      // ✅ Attraper les erreurs 404/400/500
       const msg = err.response?.data?.error || "Aucun compte trouvé avec cet email";
       setError(msg);
     }
@@ -49,14 +47,16 @@ function ForgotPassword() {
 
         <form onSubmit={handleSubmit} noValidate>
           <div className="input-group">
-            <label>Email</label>
+            <label htmlFor="email">Email</label>
             <input
+              id="email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="Entrer votre email"
+              placeholder="exemple@email.com"
               disabled={loading}
               autoFocus
+              autoComplete="email"  // ← Ajout de l'attribut autoComplete
             />
             {error && <p className="field-error-text">{error}</p>}
           </div>

@@ -305,9 +305,6 @@ const AjouterCompte = () => {
                   <option value="" disabled>Sélectionner un rôle</option>
                   <option value="super_admin">Super Administrateur</option>
                   <option value="responsable">Responsable Pédagogique</option>
-                  <option value="assistante">Assistante</option>
-                  <option value="formateur">Formateur</option>
-                  <option value="etudiant">Étudiant</option>
                 </select>
                 <i className="fa-solid fa-chevron-down select-arrow"></i>
               </div>

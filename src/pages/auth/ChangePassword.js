@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Layout from "../../components/Layout";
 import ChangePasswordService from "../../services/auth/ChangePasswordService";
+import { validatePassword, validatePasswordConfirm } from "../../script/auth/addAccount";
 import "../../styles/auth/changePassword.css";
 
 function ChangePassword() {
@@ -19,14 +20,17 @@ function ChangePassword() {
     setError("");
     setSuccess("");
 
-    // Vérification côté client avant d'envoyer
-    if (newPassword !== confirmPassword) {
-      setError("Les nouveaux mots de passe ne correspondent pas.");
+    // ✅ Validation du nouveau mot de passe (majuscules, minuscules, chiffres, min 8)
+    const passwordValidation = validatePassword(newPassword);
+    if (!passwordValidation.isValid) {
+      setError(passwordValidation.message);
       return;
     }
 
-    if (newPassword.length < 8) {
-      setError("Le nouveau mot de passe doit contenir au moins 8 caractères.");
+    // ✅ Validation de la confirmation
+    const confirmValidation = validatePasswordConfirm(newPassword, confirmPassword);
+    if (!confirmValidation.isValid) {
+      setError(confirmValidation.message);
       return;
     }
 
@@ -45,8 +49,6 @@ function ChangePassword() {
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
-
-      // Rediriger vers le profil après 2 secondes
       setTimeout(() => navigate("/mon-profil"), 2000);
     } else {
       setError(result.error);
@@ -58,7 +60,6 @@ function ChangePassword() {
       <div className="profile-container">
         <h1 className="profile-title">Changer le mot de passe</h1>
 
-        {/* Message d'erreur */}
         {error && (
           <div style={{
             backgroundColor: "#fee2e2",
@@ -72,7 +73,6 @@ function ChangePassword() {
           </div>
         )}
 
-        {/* Message de succès */}
         {success && (
           <div style={{
             backgroundColor: "#dcfce7",
@@ -107,7 +107,7 @@ function ChangePassword() {
                 type="password"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="Minimum 8 caractères"
+                placeholder="Min. 8 car. avec majuscules, minuscules et chiffres"
                 required
                 disabled={loading}
               />
@@ -126,16 +126,15 @@ function ChangePassword() {
             </div>
 
             <div style={{ textAlign: "center", marginTop: "24px", display: "flex", gap: "12px", justifyContent: "center" }}>
-             <button
-  type="button"
-  onClick={() => navigate("/mon-profil")}
-  disabled={loading}
-  className="password-link" // ← remplace cancel-btn par password-link
-  style={{ opacity: loading ? 0.7 : 1 }}
->
-  Annuler
-</button>
-
+              <button
+                type="button"
+                onClick={() => navigate("/mon-profil")}
+                disabled={loading}
+                className="password-link"
+                style={{ opacity: loading ? 0.7 : 1 }}
+              >
+                Annuler
+              </button>
               <button
                 type="submit"
                 className="password-link"
