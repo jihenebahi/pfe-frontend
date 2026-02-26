@@ -291,3 +291,30 @@ button.password-link:hover {
 .password-link a:hover {
     color: #e0b94f;
 }
+
+/* src/styles/layout.css - Ajouter ces styles à la fin du fichier */
+
+.avatar {
+  width: 35px;
+  height: 35px;
+  border-radius: 50%;
+  background-color: #3b82f6; /* Couleur de fond bleue */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 600;
+  font-size: 14px;
+  text-transform: uppercase;
+  overflow: hidden;
+}
+
+.avatar-initials {
+  line-height: 1;
+}
+
+/* Si vous voulez garder l'icône en fallback, vous pouvez ajouter : */
+.avatar i {
+  font-size: 18px;
+  color: white;
+}

@@ -19,7 +19,8 @@ class AuthService {
       
       return { 
         success: false, 
-        error: 'Réponse inattendue du serveur' 
+        error: 'Réponse inattendue du serveur',
+        field: 'general'
       };
       
     } catch (err) {
@@ -32,8 +33,9 @@ class AuthService {
       await api.post('logout/');
     } catch (err) {
       console.error("Erreur lors du logout:", err);
+    } finally {
+      localStorage.removeItem('user');
     }
-    localStorage.removeItem('user');
   }
 
   getCurrentUser() {
@@ -46,6 +48,10 @@ class AuthService {
       }
     }
     return null;
+  }
+  
+  setUser(user) {
+    localStorage.setItem('user', JSON.stringify(user));
   }
   
   // Récupère le rôle de l'utilisateur connecté
@@ -64,10 +70,6 @@ class AuthService {
     return this.getUserRole() === 'responsable';
   }
   
-  setUser(user) {
-    localStorage.setItem('user', JSON.stringify(user));
-  }
-  
   isAuthenticated() {
     return !!this.getCurrentUser();
   }
@@ -77,7 +79,7 @@ class AuthService {
     if (err.response?.data) {
       const data = err.response.data;
       
-      // Erreur avec champ spécifique (notre nouveau format)
+      // Erreur avec champ spécifique
       if (data.field) {
         return {
           success: false,

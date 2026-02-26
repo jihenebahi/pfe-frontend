@@ -1,20 +1,59 @@
+// src/components/Navbar.js
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { useAuth } from "../context/AuthContext"; // ← IMPORTANT : ajouter cet import
 import logo from "../assets/4Clab.png";
-import authService from "../services/auth/authService";
-import "../styles/layout.css"; // chemin vers ton fichier CSS
+import "../styles/layout.css";
 
 function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const { user, logout } = useAuth(); // ← Récupérer user et logout du contexte
   const navigate = useNavigate();
 
   const handleLogout = async () => {
-    try {
-      await authService.logout();
-      navigate("/");
-    } catch (err) {
-      console.error("Erreur logout:", err);
+    await logout(); // ← Utiliser logout du contexte
+    navigate("/");
+  };
+
+  // Formater le prénom (première lettre en majuscule)
+  const getDisplayName = () => {
+    if (!user) return "Utilisateur";
+    
+    // Si first_name est disponible, l'utiliser
+    if (user.first_name) {
+      return user.first_name.charAt(0).toUpperCase() + user.first_name.slice(1).toLowerCase();
     }
+    
+    // Sinon, essayer d'extraire du username
+    if (user.username) {
+      return user.username.charAt(0).toUpperCase() + user.username.slice(1).toLowerCase();
+    }
+    
+    // Sinon, utiliser l'email
+    if (user.email) {
+      return user.email.split('@')[0];
+    }
+    
+    return "Utilisateur";
+  };
+
+  // Obtenir les initiales pour l'avatar
+  const getInitials = () => {
+    if (!user) return "U";
+    
+    if (user.first_name && user.last_name) {
+      return (user.first_name[0] + user.last_name[0]).toUpperCase();
+    }
+    
+    if (user.first_name) {
+      return user.first_name[0].toUpperCase();
+    }
+    
+    if (user.username) {
+      return user.username[0].toUpperCase();
+    }
+    
+    return "U";
   };
 
   return (
@@ -37,9 +76,10 @@ function Navbar() {
             onClick={() => setMenuOpen(!menuOpen)}
           >
             <div className="avatar">
-              <i className="fa-solid fa-user"></i>
+              {/* Afficher les initiales au lieu de l'icône */}
+              <span className="avatar-initials">{getInitials()}</span>
             </div>
-            <span className="admin-name">Administrateur</span>
+            <span className="admin-name">{getDisplayName()}</span>
           </div>
 
           {menuOpen && (

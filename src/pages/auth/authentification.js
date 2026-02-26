@@ -1,7 +1,7 @@
 // src/pages/auth/authentification.js
 import React, { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import authService from "../../services/auth/authService";
+import { useAuth } from "../../context/AuthContext"; // ← IMPORTANT : ajouter cet import
 import "../../styles/auth/authentification.css";
 import logo from "../../assets/4Clab.png";
 
@@ -15,8 +15,9 @@ function Authentification() {
     password: false
   });
   const navigate = useNavigate();
+  const { login } = useAuth(); // ← Récupérer la fonction login du contexte
 
-  // Utiliser useRef pour les timeouts au lieu de useState
+  // Utiliser useRef pour les timeouts
   const timeoutsRef = useRef({
     general: null,
     email: null,
@@ -67,7 +68,7 @@ function Authentification() {
       isValid = false;
     }
     
-    // Validation mot de passe - seulement vérifier qu'il n'est pas vide
+    // Validation mot de passe
     if (!password) {
       setErrorWithTimeout('password', "Le mot de passe est requis");
       isValid = false;
@@ -92,7 +93,8 @@ function Authentification() {
     
     setLoading(true);
 
-    const result = await authService.login(email, password);
+    // Utiliser la fonction login du contexte
+    const result = await login(email, password);
     
     if (result.success) {
       navigate("/home");
@@ -147,8 +149,6 @@ function Authentification() {
           <img src={logo} alt="Logo 4CLab" />
         </div>
 
-
-        
         {/* Message d'erreur général */}
         {errors.general && (
           <div className="error-message error-general">
