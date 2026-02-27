@@ -6,10 +6,10 @@ import { validatePassword, validatePasswordConfirm } from "../../script/auth/add
 import "../../styles/auth/changePassword.css";
 
 function ChangePassword() {
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [error, setError] = useState("");
+  const [currentPassword, setCurrentPassword]   = useState("");
+  const [newPassword, setNewPassword]           = useState("");
+  const [confirmPassword, setConfirmPassword]   = useState("");
+  const [error, setError]     = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -17,38 +17,21 @@ function ChangePassword() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
-    setSuccess("");
+    setError(""); setSuccess("");
 
-    // ✅ Validation du nouveau mot de passe (majuscules, minuscules, chiffres, min 8)
     const passwordValidation = validatePassword(newPassword);
-    if (!passwordValidation.isValid) {
-      setError(passwordValidation.message);
-      return;
-    }
+    if (!passwordValidation.isValid) { setError(passwordValidation.message); return; }
 
-    // ✅ Validation de la confirmation
     const confirmValidation = validatePasswordConfirm(newPassword, confirmPassword);
-    if (!confirmValidation.isValid) {
-      setError(confirmValidation.message);
-      return;
-    }
+    if (!confirmValidation.isValid) { setError(confirmValidation.message); return; }
 
     setLoading(true);
-
-    const result = await ChangePasswordService.changePassword(
-      currentPassword,
-      newPassword,
-      confirmPassword
-    );
-
+    const result = await ChangePasswordService.changePassword(currentPassword, newPassword, confirmPassword);
     setLoading(false);
 
     if (result.success) {
       setSuccess("Mot de passe changé avec succès !");
-      setCurrentPassword("");
-      setNewPassword("");
-      setConfirmPassword("");
+      setCurrentPassword(""); setNewPassword(""); setConfirmPassword("");
       setTimeout(() => navigate("/mon-profil"), 2000);
     } else {
       setError(result.error);
@@ -57,95 +40,118 @@ function ChangePassword() {
 
   return (
     <Layout>
-      <div className="profile-container">
-        <h1 className="profile-title">Changer le mot de passe</h1>
+      <div className="cp-page">
 
-        {error && (
-          <div style={{
-            backgroundColor: "#fee2e2",
-            color: "#dc2626",
-            padding: "12px 16px",
-            borderRadius: "8px",
-            marginBottom: "16px",
-            fontSize: "14px",
-          }}>
-            ⚠️ {error}
+        {/* ══ NAVBAR ══ */}
+        <nav className="cp-navbar">
+          <div className="cp-navbar-identity">
+            <div className="cp-navbar-avatar">
+              🔒
+              <span className="cp-navbar-dot" />
+            </div>
+            <div>
+              <div className="cp-navbar-name">Sécurité du compte</div>
+              <div className="cp-navbar-role">Modifier le mot de passe</div>
+            </div>
           </div>
-        )}
+          <div className="cp-navbar-brand">Mon Profil</div>
+        </nav>
 
-        {success && (
-          <div style={{
-            backgroundColor: "#dcfce7",
-            color: "#16a34a",
-            padding: "12px 16px",
-            borderRadius: "8px",
-            marginBottom: "16px",
-            fontSize: "14px",
-          }}>
-            ✅ {success} Redirection en cours...
+        {/* ══ CONTENU ══ */}
+        <div className="cp-content">
+
+          {/* Titre */}
+          <div className="cp-header">
+            <h1>Changer le mot de passe</h1>
+            <p>Renseignez votre mot de passe actuel puis choisissez-en un nouveau</p>
           </div>
-        )}
 
-        <div className="profile-card">
-          <form onSubmit={handleSubmit}>
+          {/* Alertes */}
+          {error && (
+            <div className="cp-alert error">
+              ⚠️ {error}
+            </div>
+          )}
+          {success && (
+            <div className="cp-alert success">
+              ✅ {success} Redirection en cours...
+            </div>
+          )}
 
-            <div className="profile-row">
-              <span className="label">Mot de passe actuel</span>
-              <input
-                type="password"
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-                placeholder="Entrez votre mot de passe actuel"
-                required
-                disabled={loading}
-              />
+          {/* Card formulaire */}
+          <div className="cp-card">
+            <div className="cp-card-header">
+              <span className="cp-card-dot" />
+              <h2>Informations de sécurité</h2>
             </div>
 
-            <div className="profile-row">
-              <span className="label">Nouveau mot de passe</span>
-              <input
-                type="password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="Min. 8 car. avec majuscules, minuscules et chiffres"
-                required
-                disabled={loading}
-              />
-            </div>
+            <form onSubmit={handleSubmit}>
 
-            <div className="profile-row">
-              <span className="label">Confirmer le mot de passe</span>
-              <input
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Répétez le nouveau mot de passe"
-                required
-                disabled={loading}
-              />
-            </div>
+              <div className="cp-field">
+                <label htmlFor="currentPwd">Mot de passe actuel</label>
+                <input
+                  id="currentPwd"
+                  type="password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  placeholder="Entrez votre mot de passe actuel"
+                  required
+                  disabled={loading}
+                />
+              </div>
 
-            <div style={{ textAlign: "center", marginTop: "24px", display: "flex", gap: "12px", justifyContent: "center" }}>
-              <button
-                type="button"
-                onClick={() => navigate("/mon-profil")}
-                disabled={loading}
-                className="password-link"
-                style={{ opacity: loading ? 0.7 : 1 }}
-              >
-                Annuler
-              </button>
-              <button
-                type="submit"
-                className="password-link"
-                disabled={loading}
-                style={{ opacity: loading ? 0.7 : 1 }}
-              >
-                {loading ? "Enregistrement..." : "Changer le mot de passe"}
-              </button>
-            </div>
+              <div className="cp-field">
+                <label htmlFor="newPwd">Nouveau mot de passe</label>
+                <input
+                  id="newPwd"
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Min. 8 car. avec majuscules, minuscules et chiffres"
+                  required
+                  disabled={loading}
+                />
+              </div>
 
-          </form>
+              <div className="cp-field">
+                <label htmlFor="confirmPwd">Confirmer le mot de passe</label>
+                <input
+                  id="confirmPwd"
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Répétez le nouveau mot de passe"
+                  required
+                  disabled={loading}
+                />
+              </div>
+
+              {/* Boutons */}
+              <div className="cp-field cp-actions">
+                <button
+                  type="button"
+                  className="cp-btn cp-btn-cancel"
+                  onClick={() => navigate("/mon-profil")}
+                  disabled={loading}
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  className="cp-btn cp-btn-primary"
+                  disabled={loading}
+                >
+                  <svg viewBox="0 0 24 24">
+                    <rect x="3" y="11" width="18" height="11" rx="2" />
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                  </svg>
+                  {loading ? "Enregistrement..." : "Changer le mot de passe"}
+                </button>
+              </div>
+
+            </form>
+          </div>
+
         </div>
       </div>
     </Layout>
