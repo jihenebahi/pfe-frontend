@@ -23,7 +23,6 @@ function Profile() {
     fetchProfile();
   }, []);
 
-  /* Loading */
   if (!user) {
     return (
       <Layout>
@@ -43,22 +42,17 @@ function Profile() {
 
         {/* ══ NAVBAR ══ */}
         <nav className="profile-navbar">
-
-          {/* Avatar + Nom + Rôle */}
           <div className="navbar-identity">
             <div className="navbar-avatar">
               {getInitials(user)}
               <span className="navbar-avatar-dot" />
             </div>
-            <div className="navbar-info">
+            <div>
               <div className="navbar-name">{fullName}</div>
               <div className="navbar-role">{user.role}</div>
             </div>
           </div>
-
-          {/* Nom de l'app (optionnel) */}
           <div className="navbar-brand">Mon Profil</div>
-
         </nav>
 
         {/* ══ CONTENU ══ */}
@@ -70,13 +64,12 @@ function Profile() {
             <p>Consultez et gérez vos informations personnelles</p>
           </div>
 
-          {/* Card — Informations personnelles */}
+          {/* Card infos */}
           <div className="info-card">
             <div className="card-header">
               <span className="card-header-dot" />
               <h2>Informations personnelles</h2>
             </div>
-
             <div className="info-grid">
 
               <div className="info-field">
@@ -114,13 +107,13 @@ function Profile() {
             </div>
           </div>
 
-          {/* Card — Mot de passe */}
+          {/* Card mot de passe — bouton toujours visible */}
           <div className="action-card">
             <div className="action-card-left">
               <h3>Mot de passe</h3>
               <p>Modifiez votre mot de passe pour sécuriser votre compte</p>
             </div>
-            <Link to="/change-password" className="action-btn">
+            <Link to="/change-password" className="profile-action-btn">
               <svg viewBox="0 0 24 24">
                 <rect x="3" y="11" width="18" height="11" rx="2" />
                 <path d="M7 11V7a5 5 0 0 1 10 0v4" />

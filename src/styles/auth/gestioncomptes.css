@@ -263,18 +263,55 @@ tbody td { padding: 14px 18px; font-size: 13px; color: var(--text); vertical-ali
 .status-label.on  { color: #22c55e; }
 .status-label.off { color: #ef4444; }
 
-.actions { display: flex; align-items: center; gap: 6px; }
+/* ─── ACTIONS BOUTONS ICÔNES ─────────────────────────── */
+.actions { display: flex; align-items: center; gap: 8px; }
+
 .action-btn {
-    width: 32px; height: 32px; border-radius: 8px; border: none;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 13px; cursor: pointer;
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    cursor: pointer;
     transition: transform .15s, box-shadow .15s;
     text-decoration: none;
+    /* reset complet — aucun héritage externe */
+    min-width: unset;
+    padding: 0;
+    flex-shrink: 0;
+    background: unset;
+    opacity: 1;
+    visibility: visible;
 }
 .action-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 10px rgba(0,0,0,.12); }
-.btn-detail { background: var(--blue-lt); color: #0b8cba; }
-.btn-delete { background: #fff0f0; color: #ef4444; }
-.email-cell { color: var(--muted); font-size: 12px; }
+
+/* Bouton détail — bleu */
+.btn-detail { background: #e0f5ff !important; color: #0b8cba !important; }
+.btn-detail:hover { background: #b8ecff !important; }
+
+/* Bouton supprimer — rouge */
+.btn-delete { background: #fff0f0 !important; color: #ef4444 !important; }
+.btn-delete:hover { background: #ffd6d6 !important; }
+
+/* ─── TABLE FEEDBACK ─────────────────────────────────── */
+.table-feedback {
+    display: flex; align-items: center; justify-content: center;
+    gap: 10px; padding: 40px;
+    font-size: 14px; color: var(--muted);
+}
+.table-feedback.error { color: #ef4444; }
+.btn-retry {
+    display: flex; align-items: center; gap: 6px;
+    padding: 7px 14px; border-radius: 8px;
+    border: 1.5px solid var(--border);
+    background: white; color: var(--text);
+    font-size: 13px; cursor: pointer;
+    transition: all .2s;
+}
+.btn-retry:hover { border-color: var(--navy); color: var(--navy); }
 
 /* ─── PAGINATION ─────────────────────────────────────── */
 .pagination-row {

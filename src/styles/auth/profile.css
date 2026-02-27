@@ -217,6 +217,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 20px;
+  overflow: visible;
 }
 .action-card-left h3 {
   font-size: 14.5px;
@@ -230,11 +232,14 @@
 }
 
 /* ══ BOUTON — TOUJOURS VISIBLE ══ */
-.action-btn {
+.profile-action-btn {
   display: inline-flex !important;
   align-items: center;
+  justify-content: center;
   gap: 7px;
   padding: 10px 22px;
+  min-width: 210px;
+  flex-shrink: 0;
   border-radius: 9px;
   background: var(--navy);
   color: var(--white) !important;
@@ -250,13 +255,13 @@
   pointer-events: auto !important;
   transition: background .2s, box-shadow .2s, transform .2s;
 }
-.action-btn:hover {
+.profile-action-btn:hover {
   background: var(--blue);
   color: var(--navy) !important;
   box-shadow: 0 5px 14px rgba(51,204,255,0.3);
   transform: translateY(-1px);
 }
-.action-btn svg {
+.profile-action-btn svg {
   width: 14px; height: 14px;
   stroke: currentColor;
   fill: none;
