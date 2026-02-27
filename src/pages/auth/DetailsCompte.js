@@ -13,7 +13,7 @@ const ROLE_META = {
   etudiant:    { label: "Étudiant",             icon: "fa-user-graduate"   },
   entreprise:  { label: "Entreprise Partenaire",icon: "fa-building"        },
 };
-const getRoleMeta  = (role) => ROLE_META[role] ?? { label: role, icon: "fa-user" };
+const getRoleMeta   = (role) => ROLE_META[role] ?? { label: role, icon: "fa-user" };
 const AVATAR_COLORS = ["av1", "av2", "av3", "av4", "av5", "av6"];
 
 function DetailsCompte() {
@@ -21,13 +21,14 @@ function DetailsCompte() {
   const navigate       = useNavigate();
   const userId         = searchParams.get("id");
 
-  const [user,      setUser]      = useState(null);
-  const [canManage, setCanManage] = useState(false);
-  const [loading,   setLoading]   = useState(true);
-  const [error,     setError]     = useState(null);
-  const [flash,     setFlash]     = useState(null);
-  const [showModal, setShowModal] = useState(false);
-  const [deleting,  setDeleting]  = useState(false);
+  const [user,       setUser]       = useState(null);
+  const [canManage,  setCanManage]  = useState(false);
+  const [loading,    setLoading]    = useState(true);
+  const [error,      setError]      = useState(null);
+  const [flash,      setFlash]      = useState(null);
+  const [showModal,  setShowModal]  = useState(false);
+  const [deleting,   setDeleting]   = useState(false);
+  const [pwdVisible, setPwdVisible] = useState(false);
 
   useEffect(() => {
     if (!userId) { setError("Identifiant utilisateur manquant."); setLoading(false); return; }
@@ -69,6 +70,7 @@ function DetailsCompte() {
     }
   };
 
+  /* ── Loading ── */
   if (loading) return (
     <Layout>
       <div className="dc-feedback">
@@ -78,6 +80,7 @@ function DetailsCompte() {
     </Layout>
   );
 
+  /* ── Error ── */
   if (error) return (
     <Layout>
       <div className="dc-feedback dc-feedback--error">
@@ -96,22 +99,27 @@ function DetailsCompte() {
   return (
     <Layout>
 
-      {/* Breadcrumb */}
-      <nav className="breadcrumb">
+      {/* ── Breadcrumb ── */}
+      <nav className="dc-breadcrumb">
         <Link to="/gestion-comptes">
           <i className="fa-solid fa-users-gear"></i> Gestion des comptes
         </Link>
-        <i className="fa-solid fa-chevron-right bc-sep"></i>
+        <i className="fa-solid fa-chevron-right dc-bc-sep"></i>
         <span>Détails du compte</span>
       </nav>
 
-      {/* Page header */}
-      <div className="page-header">
-        <h1><i className="fa-solid fa-eye"></i> Détails du Compte</h1>
-        <p>Consultez les informations complètes de cet utilisateur.</p>
+      {/* ── Page header ── */}
+      <div className="dc-page-header">
+        <div className="dc-header-icon">
+          <i className="fa-solid fa-eye"></i>
+        </div>
+        <div>
+          <h1>Détails du Compte</h1>
+          <p>Consultez les informations complètes de cet utilisateur.</p>
+        </div>
       </div>
 
-      {/* Flash */}
+      {/* ── Flash ── */}
       {flash && (
         <div className={`dc-alert dc-alert--${flash.type}`}>
           <i className={`fa-solid ${flash.type === "success" ? "fa-circle-check" : "fa-circle-xmark"}`}></i>
@@ -119,206 +127,251 @@ function DetailsCompte() {
         </div>
       )}
 
-      {/*
-        ══════════════════════════════════════
-        GRILLE 2 × 2 :
-        [ profile-card  | info-card     ]
-        [ activity-card | actions-card  ]
-        ══════════════════════════════════════
-      */}
-      <div className="details-grid">
+      {/* ══════════════════════════════════════════════
+          STACK PRINCIPAL
+          1. Profile   → pleine largeur (header)
+          2. Info + Activité → côte à côte
+          3. Actions   → pleine largeur (footer)
+      ══════════════════════════════════════════════ */}
+      <div className="dc-stack">
 
-        {/* ── CASE 1 : Profil (col 1, row 1) ── */}
-        <div className="detail-card profile-card">
-          <div className="profile-top">
-            <div className={`profile-avatar ${avatarClass}`}>{user.initiales}</div>
-            <div className="profile-info">
-              <span className="profile-name">{user.nom}</span>
-              <span className="badge">
-                <i className={`fa-solid ${meta.icon}`}></i> {meta.label}
-              </span>
-              <div className="profile-status">
-                <span className={user.is_active ? "dot-on" : "dot-off"}></span>
-                <span className={`status-label ${user.is_active ? "on" : "off"}`}>
+        {/* ── BLOC 1 : Profil header ── */}
+        <div className="dc-card dc-profile-card">
+          <div className="dc-deco-ring"></div>
+
+          <div className="dc-profile-left">
+            <div className={`dc-profile-avatar ${avatarClass}`}>{user.initiales}</div>
+            <div className="dc-profile-meta">
+              <span className="dc-profile-name">{user.nom}</span>
+              <div className="dc-profile-badges">
+                <span className="dc-badge">
+                  <i className={`fa-solid ${meta.icon}`}></i> {meta.label}
+                </span>
+              </div>
+              <div className="dc-profile-status">
+                <span className={user.is_active ? "dc-dot-on" : "dc-dot-off"}></span>
+                <span className={`dc-status-label ${user.is_active ? "on" : "off"}`}>
                   {user.is_active ? "Compte actif" : "Compte inactif"}
                 </span>
               </div>
             </div>
           </div>
-          <span className="profile-code">
-            <i className="fa-solid fa-hashtag"></i> {user.code}
-          </span>
-        </div>
 
-        {/* ── CASE 2 : Informations (col 2, row 1) ── */}
-        <div className="detail-card info-card">
-          <div className="detail-card-header">
-            <i className="fa-solid fa-circle-info"></i>
-            <h3>Informations du compte</h3>
-          </div>
-          <div className="detail-fields">
-            <div className="detail-field">
-              <div className="field-icon"><i className="fa-solid fa-user"></i></div>
-              <div className="field-body">
-                <span className="field-label">Nom complet</span>
-                <span className="field-value">{user.nom}</span>
-              </div>
-            </div>
-            <div className="detail-field">
-              <div className="field-icon"><i className="fa-solid fa-envelope"></i></div>
-              <div className="field-body">
-                <span className="field-label">Adresse e-mail</span>
-                <span className="field-value">{user.email}</span>
-              </div>
-            </div>
-            <div className="detail-field">
-              <div className="field-icon"><i className="fa-solid fa-phone"></i></div>
-              <div className="field-body">
-                <span className="field-label">Téléphone</span>
-                <span className={`field-value ${!user.telephone ? "empty" : ""}`}>
-                  {user.telephone || "Non renseigné"}
-                </span>
-              </div>
-            </div>
-            <div className="detail-field">
-              <div className="field-icon"><i className={`fa-solid ${meta.icon}`}></i></div>
-              <div className="field-body">
-                <span className="field-label">Rôle</span>
-                <span className="field-value">{meta.label}</span>
-              </div>
-            </div>
-            <div className="detail-field">
-              <div className="field-icon"><i className="fa-solid fa-toggle-on"></i></div>
-              <div className="field-body">
-                <span className="field-label">Statut</span>
-                <span className={`field-value status-label ${user.is_active ? "on" : "off"}`}>
-                  <i className="fa-solid fa-circle" style={{ fontSize: "7px", marginRight: "5px" }}></i>
-                  {user.statut}
-                </span>
-              </div>
+          <div className="dc-profile-right">
+            <div className="dc-profile-code">
+              <i className="fa-solid fa-hashtag"></i>
+              <span>{user.code}</span>
             </div>
           </div>
         </div>
 
-        {/* ── CASE 3 : Activité (col 1, row 2) ── */}
-        <div className="detail-card activity-card">
-          <div className="detail-card-header">
-            <i className="fa-solid fa-clock-rotate-left"></i>
-            <h3>Activité</h3>
-          </div>
-          <div className="detail-fields">
-            <div className="detail-field">
-              <div className="field-icon"><i className="fa-solid fa-calendar-plus"></i></div>
-              <div className="field-body">
-                <span className="field-label">Date de création</span>
-                <span className={`field-value ${!user.dateCreation ? "empty" : ""}`}>
-                  {user.dateCreation || "—"}
-                </span>
-              </div>
-            </div>
-            <div className="detail-field">
-              <div className="field-icon"><i className="fa-solid fa-right-to-bracket"></i></div>
-              <div className="field-body">
-                <span className="field-label">Dernière connexion</span>
-                <span className={`field-value ${!user.derniereConnexion ? "empty" : ""}`}>
-                  {user.derniereConnexion || "Jamais connecté"}
-                </span>
-              </div>
-            </div>
-            <div className="detail-field">
-              <div className="field-icon"><i className="fa-solid fa-calendar-check"></i></div>
-              <div className="field-body">
-                <span className="field-label">Dernière modification</span>
-                <span className={`field-value ${!user.derniereModification ? "empty" : ""}`}>
-                  {user.derniereModification || "—"}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
+        {/* ── BLOC 2 : Informations + Activité côte à côte ── */}
+        <div className="dc-middle-row">
 
-        {/* ── CASE 4 : Actions (col 2, row 2) ── */}
-        <div className="detail-card actions-card">
-          <div className="detail-card-header">
-            <i className="fa-solid fa-sliders"></i>
+          {/* Informations générales */}
+          <div className="dc-card">
+            <div className="dc-card-header">
+              <div className="dc-hdr-icon"><i className="fa-solid fa-circle-info"></i></div>
+              <h3>Informations générales</h3>
+            </div>
+            <div className="dc-fields">
+
+              <div className="dc-field">
+                <div className="dc-field-icon"><i className="fa-solid fa-user"></i></div>
+                <div className="dc-field-body">
+                  <span className="dc-field-label">Nom complet</span>
+                  <span className="dc-field-value">{user.nom}</span>
+                </div>
+              </div>
+
+              <div className="dc-field">
+                <div className="dc-field-icon"><i className="fa-solid fa-envelope"></i></div>
+                <div className="dc-field-body">
+                  <span className="dc-field-label">Adresse e-mail</span>
+                  <span className="dc-field-value">{user.email}</span>
+                </div>
+              </div>
+
+              <div className="dc-field">
+                <div className="dc-field-icon"><i className="fa-solid fa-phone"></i></div>
+                <div className="dc-field-body">
+                  <span className="dc-field-label">Téléphone</span>
+                  <span className={`dc-field-value ${!user.telephone ? "empty" : ""}`}>
+                    {user.telephone || "Non renseigné"}
+                  </span>
+                </div>
+              </div>
+
+              <div className="dc-field">
+                <div className="dc-field-icon"><i className={`fa-solid ${meta.icon}`}></i></div>
+                <div className="dc-field-body">
+                  <span className="dc-field-label">Rôle</span>
+                  <span className="dc-field-value">{meta.label}</span>
+                </div>
+              </div>
+
+              <div className="dc-field">
+                <div className="dc-field-icon"><i className="fa-solid fa-toggle-on"></i></div>
+                <div className="dc-field-body">
+                  <span className="dc-field-label">Statut</span>
+                  <span className={`dc-field-value dc-status-label ${user.is_active ? "on" : "off"}`}>
+                    <i className="fa-solid fa-circle" style={{ fontSize: "7px", marginRight: "5px" }}></i>
+                    {user.statut}
+                  </span>
+                </div>
+              </div>
+
+              <div className="dc-field">
+                <div className="dc-field-icon"><i className="fa-solid fa-lock"></i></div>
+                <div className="dc-field-body">
+                  <span className="dc-field-label">Mot de passe</span>
+                  <div className="dc-pwd-row">
+                    <span className={pwdVisible ? "dc-field-value dc-pwd-real" : "dc-field-value dc-pwd-dots"}>
+                      {pwdVisible ? (user.password_display || "••••••••••") : "••••••••••"}
+                    </span>
+                    <button
+                      className="dc-pwd-toggle"
+                      onClick={() => setPwdVisible(v => !v)}
+                      title={pwdVisible ? "Masquer" : "Afficher"}
+                    >
+                      <i className={`fa-solid ${pwdVisible ? "fa-eye-slash" : "fa-eye"}`}></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          {/* Activité */}
+          <div className="dc-card">
+            <div className="dc-card-header">
+              <div className="dc-hdr-icon"><i className="fa-solid fa-clock-rotate-left"></i></div>
+              <h3>Activité</h3>
+            </div>
+            <div className="dc-fields">
+
+              <div className="dc-field">
+                <div className="dc-field-icon"><i className="fa-solid fa-calendar-plus"></i></div>
+                <div className="dc-field-body">
+                  <span className="dc-field-label">Date de création</span>
+                  <span className={`dc-field-value ${!user.dateCreation ? "empty" : ""}`}>
+                    {user.dateCreation || "—"}
+                  </span>
+                </div>
+              </div>
+
+              <div className="dc-field">
+                <div className="dc-field-icon"><i className="fa-solid fa-right-to-bracket"></i></div>
+                <div className="dc-field-body">
+                  <span className="dc-field-label">Dernière connexion</span>
+                  <span className={`dc-field-value ${!user.derniereConnexion ? "empty" : ""}`}>
+                    {user.derniereConnexion || "Jamais connecté"}
+                  </span>
+                </div>
+              </div>
+
+              <div className="dc-field">
+                <div className="dc-field-icon"><i className="fa-solid fa-calendar-check"></i></div>
+                <div className="dc-field-body">
+                  <span className="dc-field-label">Dernière modification</span>
+                  <span className={`dc-field-value ${!user.derniereModification ? "empty" : ""}`}>
+                    {user.derniereModification || "—"}
+                  </span>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+        </div>{/* /dc-middle-row */}
+
+        {/* ── BLOC 3 : Actions footer ── */}
+        <div className="dc-card dc-actions-card">
+          <div className="dc-card-header">
+            <div className="dc-hdr-icon"><i className="fa-solid fa-sliders"></i></div>
             <h3>Actions</h3>
           </div>
-          <div className="actions-list">
+          <div className="dc-actions-row">
 
-            <Link to="/gestion-comptes" className="action-btn back">
-              <div className="action-btn-icon">
-                <i className="fa-solid fa-arrow-left"></i>
-              </div>
-              <div className="action-btn-body">
+            <Link to="/gestion-comptes" className="dc-action-btn back">
+              <div className="dc-action-icon"><i className="fa-solid fa-arrow-left"></i></div>
+              <div className="dc-action-body">
                 <span>Retour à la liste</span>
                 <small>Revenir à la gestion des comptes</small>
               </div>
-              <i className="fa-solid fa-chevron-right action-btn-arrow"></i>
+              <i className="fa-solid fa-chevron-right dc-action-arrow"></i>
             </Link>
 
             {canManage && (
               <button
-                className={`action-btn ${user.is_active ? "deactivate" : "activate"}`}
+                className={`dc-action-btn ${user.is_active ? "deactivate" : "activate"}`}
                 onClick={handleToggle}
               >
-                <div className="action-btn-icon">
+                <div className="dc-action-icon">
                   <i className={`fa-solid ${user.is_active ? "fa-ban" : "fa-circle-check"}`}></i>
                 </div>
-                <div className="action-btn-body">
+                <div className="dc-action-body">
                   <span>{user.is_active ? "Désactiver le compte" : "Activer le compte"}</span>
                   <small>{user.is_active ? "Bloquer l'accès à cet utilisateur" : "Autoriser l'accès"}</small>
                 </div>
-                <i className="fa-solid fa-chevron-right action-btn-arrow"></i>
+                <i className="fa-solid fa-chevron-right dc-action-arrow"></i>
               </button>
             )}
 
             {canManage && (
-              <button className="action-btn delete" onClick={() => setShowModal(true)}>
-                <div className="action-btn-icon">
-                  <i className="fa-solid fa-trash-can"></i>
-                </div>
-                <div className="action-btn-body">
+              <button className="dc-action-btn delete" onClick={() => setShowModal(true)}>
+                <div className="dc-action-icon"><i className="fa-solid fa-trash-can"></i></div>
+                <div className="dc-action-body">
                   <span>Supprimer le compte</span>
                   <small>Cette action est irréversible</small>
                 </div>
-                <i className="fa-solid fa-chevron-right action-btn-arrow"></i>
+                <i className="fa-solid fa-chevron-right dc-action-arrow"></i>
               </button>
             )}
 
           </div>
         </div>
 
-      </div>{/* /details-grid */}
+      </div>{/* /dc-stack */}
 
 
       {/* ══ MODALE ══ */}
       {showModal && (
-        <div className="modal-overlay" onClick={() => !deleting && setShowModal(false)}>
-          <div className="modal-box" onClick={(e) => e.stopPropagation()}>
+        <div className="dc-modal-overlay" onClick={() => !deleting && setShowModal(false)}>
+          <div className="dc-modal-box" onClick={(e) => e.stopPropagation()}>
 
-            <div className="modal-icon-wrap">
+            <div className="dc-modal-icon">
               <i className="fa-solid fa-trash-can"></i>
             </div>
-            <h2 className="modal-title">Supprimer le compte</h2>
+            <h2 className="dc-modal-title">Supprimer le compte</h2>
 
-            <div className="modal-user-preview">
-              <div className={`modal-avatar ${avatarClass}`}>{user.initiales}</div>
+            <div className="dc-modal-preview">
+              <div className={`dc-modal-avatar ${avatarClass}`}>{user.initiales}</div>
               <div>
-                <span className="modal-user-name">{user.nom}</span>
-                <span className="modal-user-code">{user.code}</span>
+                <span className="dc-modal-name">{user.nom}</span>
+                <span className="dc-modal-code">{user.code}</span>
               </div>
             </div>
 
-            <p className="modal-warning">
+            <p className="dc-modal-warning">
               <i className="fa-solid fa-triangle-exclamation"></i>
               Cette action est <strong>irréversible</strong>. Toutes les données associées seront définitivement supprimées.
             </p>
 
-            <div className="modal-actions">
-              <button className="modal-btn modal-btn--cancel" onClick={() => setShowModal(false)} disabled={deleting}>
+            <div className="dc-modal-actions">
+              <button
+                className="dc-modal-btn dc-modal-btn--cancel"
+                onClick={() => setShowModal(false)}
+                disabled={deleting}
+              >
                 <i className="fa-solid fa-xmark"></i> Annuler
               </button>
-              <button className="modal-btn modal-btn--confirm" onClick={handleDeleteConfirm} disabled={deleting}>
+              <button
+                className="dc-modal-btn dc-modal-btn--confirm"
+                onClick={handleDeleteConfirm}
+                disabled={deleting}
+              >
                 {deleting
                   ? <><i className="fa-solid fa-spinner fa-spin"></i> Suppression...</>
                   : <><i className="fa-solid fa-trash-can"></i> Confirmer</>
