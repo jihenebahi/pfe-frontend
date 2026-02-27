@@ -1,6 +1,6 @@
 // src/pages/auth/GestionComptes.js
 import React, { useState, useEffect, useCallback } from "react";
-import { Link } from "react-router-dom"; // ← AJOUT IMPORTANT
+import { Link } from "react-router-dom";
 import Layout from "../../components/Layout";
 import { getUsers, toggleUserStatus, deleteUser } from "../../services/auth/userService";
 import "../../styles/auth/gestioncomptes.css";
@@ -20,12 +20,17 @@ const AVATAR_CLASSES = ["av1", "av2", "av3", "av4", "av5", "av6"];
 
 function GestionComptes() {
   const [users, setUsers]         = useState([]);
-  const [canManage, setCanManage] = useState(false);   // true si super_admin
+  const [canManage, setCanManage] = useState(false);
   const [loading, setLoading]     = useState(true);
   const [error, setError]         = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const usersPerPage = 6;
+
+  // ── État modale suppression ──
+  const [showModal,    setShowModal]    = useState(false);
+  const [userToDelete, setUserToDelete] = useState(null); // { id, nom, initiales, code, avatarClass }
+  const [deleting,     setDeleting]     = useState(false);
 
   const fetchUsers = useCallback(async () => {
     setLoading(true);
@@ -68,7 +73,7 @@ function GestionComptes() {
 
   useEffect(() => { setCurrentPage(1); }, [searchTerm]);
 
-  // Toggle statut (super_admin uniquement)
+  // Toggle statut
   const handleToggleStatus = async (userId) => {
     try {
       const result = await toggleUserStatus(userId);
@@ -82,16 +87,28 @@ function GestionComptes() {
     }
   };
 
-  // Suppression (super_admin uniquement)
-  const handleDelete = async (userId, userName) => {
-    if (!window.confirm(`Etes-vous sur de vouloir supprimer "${userName}" ?`)) return;
+  // Ouvre la modale avec les infos de l'utilisateur ciblé
+  const openDeleteModal = (user) => {
+    const avatarClass = AVATAR_CLASSES[(user.id - 1) % AVATAR_CLASSES.length];
+    setUserToDelete({ ...user, avatarClass });
+    setShowModal(true);
+  };
+
+  // Confirme la suppression
+  const handleDeleteConfirm = async () => {
+    if (!userToDelete) return;
+    setDeleting(true);
     try {
-      const result = await deleteUser(userId);
+      const result = await deleteUser(userToDelete.id);
       if (result.success) {
-        setUsers((prev) => prev.filter((u) => u.id !== userId));
+        setUsers((prev) => prev.filter((u) => u.id !== userToDelete.id));
+        setShowModal(false);
+        setUserToDelete(null);
       }
     } catch (err) {
       alert(err.response?.data?.message || "Impossible de supprimer cet utilisateur.");
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -114,7 +131,7 @@ function GestionComptes() {
           />
         </div>
         {canManage && (
-          <Link to="/ajouter-compte" className="btn-add"> {/* ← MODIFIÉ: a → Link */}
+          <Link to="/ajouter-compte" className="btn-add">
             <i className="fa-solid fa-plus"></i> Ajouter un compte
           </Link>
         )}
@@ -231,7 +248,7 @@ function GestionComptes() {
                               <button
                                 className="action-btn btn-delete"
                                 title="Supprimer"
-                                onClick={() => handleDelete(user.id, user.nom)}
+                                onClick={() => openDeleteModal(user)}
                               >
                                 <i className="fa-solid fa-trash-can"></i>
                               </button>
@@ -281,6 +298,56 @@ function GestionComptes() {
           </>
         )}
       </div>
+
+      {/* ══ MODALE SUPPRESSION (identique à DetailsCompte) ══ */}
+      {showModal && userToDelete && (
+        <div className="dc-modal-overlay" onClick={() => !deleting && setShowModal(false)}>
+          <div className="dc-modal-box" onClick={(e) => e.stopPropagation()}>
+
+            <div className="dc-modal-icon">
+              <i className="fa-solid fa-trash-can"></i>
+            </div>
+            <h2 className="dc-modal-title">Supprimer le compte</h2>
+
+            <div className="dc-modal-preview">
+              <div className={`dc-modal-avatar ${userToDelete.avatarClass}`}>
+                {userToDelete.initiales}
+              </div>
+              <div>
+                <span className="dc-modal-name">{userToDelete.nom}</span>
+                <span className="dc-modal-code">{userToDelete.code}</span>
+              </div>
+            </div>
+
+            <p className="dc-modal-warning">
+              <i className="fa-solid fa-triangle-exclamation"></i>
+              Cette action est <strong>irréversible</strong>. Toutes les données associées seront définitivement supprimées.
+            </p>
+
+            <div className="dc-modal-actions">
+              <button
+                className="dc-modal-btn dc-modal-btn--cancel"
+                onClick={() => setShowModal(false)}
+                disabled={deleting}
+              >
+                <i className="fa-solid fa-xmark"></i> Annuler
+              </button>
+              <button
+                className="dc-modal-btn dc-modal-btn--confirm"
+                onClick={handleDeleteConfirm}
+                disabled={deleting}
+              >
+                {deleting
+                  ? <><i className="fa-solid fa-spinner fa-spin"></i> Suppression...</>
+                  : <><i className="fa-solid fa-trash-can"></i> Confirmer</>
+                }
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
     </Layout>
   );
 }
