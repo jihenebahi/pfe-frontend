@@ -34,8 +34,9 @@ function Categories() {
   const [formAjout, setFormAjout] = useState(EMPTY_FORM);
   const [formModif, setFormModif] = useState(EMPTY_FORM);
 
-  // Erreurs / succès
-  const [erreurAjout, setErreurAjout] = useState("");
+  // Erreurs champ par champ
+  const [erreursAjout, setErreursAjout] = useState({});
+  const [erreurServeur, setErreurServeur] = useState("");
   const [submitLoading, setSubmitLoading] = useState(false);
 
   // ---- Charger les catégories depuis l'API ----
@@ -77,15 +78,30 @@ function Categories() {
   // ---- Numérotation ----
   const getNum = (index) => String(index + 1).padStart(2, "0");
 
+  // ---- Validation formulaire ----
+  const validerFormulaire = (form) => {
+    const erreurs = {};
+    if (!form.nom.trim()) {
+      erreurs.nom = "Le nom de la catégorie est obligatoire.";
+    }
+    if (!form.description.trim()) {
+      erreurs.description = "La description est obligatoire.";
+    }
+    return erreurs;
+  };
+
   // ---- Ajouter une catégorie ----
   const handleAjouter = async () => {
-    if (!formAjout.nom.trim()) {
-      setErreurAjout("Le nom de la catégorie est obligatoire.");
+    const erreurs = validerFormulaire(formAjout);
+    if (Object.keys(erreurs).length > 0) {
+      setErreursAjout(erreurs);
       return;
     }
+
     try {
       setSubmitLoading(true);
-      setErreurAjout("");
+      setErreursAjout({});
+      setErreurServeur("");
       await ajouterCategorie({
         nom: formAjout.nom.trim(),
         description: formAjout.description.trim(),
@@ -93,12 +109,12 @@ function Categories() {
       });
       setModalAjout(false);
       setFormAjout(EMPTY_FORM);
-      await fetchCategories(); // Recharger la liste
+      await fetchCategories();
     } catch (err) {
       if (err.response?.data?.nom) {
-        setErreurAjout("Une catégorie avec ce nom existe déjà.");
+        setErreursAjout({ nom: "Une catégorie avec ce nom existe déjà." });
       } else {
-        setErreurAjout("Erreur lors de l'ajout. Veuillez réessayer.");
+        setErreurServeur("Erreur serveur. Veuillez réessayer.");
       }
     } finally {
       setSubmitLoading(false);
@@ -107,13 +123,32 @@ function Categories() {
 
   // ---- Ouvrir modale modifier ----
   const openModif = (cat) => {
-    setFormModif({ nom: cat.nom, description: cat.description, actif: cat.actif });
+    setFormModif({ nom: cat.nom, description: cat.description || "", actif: cat.actif });
     setModalModif(cat);
   };
 
   // ---- Fermer overlay en cliquant dehors ----
   const handleOverlay = (e, closeFn) => {
     if (e.target === e.currentTarget) closeFn();
+  };
+
+  // ---- Styles inline pour les erreurs ----
+  const styleErreur = {
+    border: "1.5px solid #ef4444",
+    borderRadius: "8px",
+    padding: "10px 14px",
+    backgroundColor: "#fff5f5",
+    color: "#dc2626",
+    fontSize: "13px",
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    marginBottom: "8px",
+  };
+
+  const styleInputErreur = {
+    border: "1.5px solid #ef4444",
+    outline: "none",
   };
 
   return (
@@ -150,7 +185,8 @@ function Categories() {
             className="btn btn-add"
             onClick={() => {
               setFormAjout(EMPTY_FORM);
-              setErreurAjout("");
+              setErreursAjout({});
+              setErreurServeur("");
               setModalAjout(true);
             }}
           >
@@ -292,7 +328,6 @@ function Categories() {
                 <i className="fa-solid fa-xmark"></i>
               </button>
             </div>
-
             <div className="modal-body">
               <div className="detail-stat-row">
                 <div className="dsr-card">
@@ -326,7 +361,6 @@ function Categories() {
                   </div>
                 </div>
               </div>
-
               <div className="detail-sections">
                 <div className="detail-sec">
                   <div className="detail-sec-title">
@@ -336,7 +370,6 @@ function Categories() {
                 </div>
               </div>
             </div>
-
             <div className="modal-footer">
               <button className="btn btn-cancel" onClick={() => setModalDetail(null)}>Fermer</button>
               <button className="btn btn-update" onClick={() => { setModalDetail(null); openModif(modalDetail); }}>
@@ -358,32 +391,60 @@ function Categories() {
               </button>
             </div>
             <div className="modal-body">
-              {erreurAjout && (
-                <div className="alert-error">
-                  <i className="fa-solid fa-triangle-exclamation"></i> {erreurAjout}
+
+              {/* ── Erreur serveur globale ── */}
+              {erreurServeur && (
+                <div style={styleErreur}>
+                  <i className="fa-solid fa-circle-xmark"></i>
+                  {erreurServeur}
                 </div>
               )}
+
               <div className="form-grid">
+
+                {/* ── Champ Nom ── */}
                 <div className="form-group full">
                   <label>Nom de la catégorie <span className="req">*</span></label>
                   <input
                     type="text"
                     placeholder="Ex : Intelligence Artificielle"
                     value={formAjout.nom}
-                    onChange={(e) => setFormAjout({ ...formAjout, nom: e.target.value })}
+                    style={erreursAjout.nom ? styleInputErreur : {}}
+                    onChange={(e) => {
+                      setFormAjout({ ...formAjout, nom: e.target.value });
+                      if (erreursAjout.nom) setErreursAjout({ ...erreursAjout, nom: "" });
+                    }}
                   />
+                  {erreursAjout.nom && (
+                    <div style={styleErreur}>
+                      <i className="fa-solid fa-triangle-exclamation"></i>
+                      {erreursAjout.nom}
+                    </div>
+                  )}
                 </div>
 
+                {/* ── Champ Description ── */}
                 <div className="form-group full">
-                  <label>Description</label>
+                  <label>Description <span className="req">*</span></label>
                   <textarea
                     rows="5"
                     placeholder="Décrivez cette catégorie, son public cible et ses objectifs généraux…"
                     value={formAjout.description}
-                    onChange={(e) => setFormAjout({ ...formAjout, description: e.target.value })}
+                    style={erreursAjout.description ? styleInputErreur : {}}
+                    onChange={(e) => {
+                      setFormAjout({ ...formAjout, description: e.target.value });
+                      if (erreursAjout.description) setErreursAjout({ ...erreursAjout, description: "" });
+                    }}
                   />
+                  {erreursAjout.description && (
+                    <div style={styleErreur}>
+                      <i className="fa-solid fa-triangle-exclamation"></i>
+                      {erreursAjout.description}
+                    </div>
+                  )}
                 </div>
 
+                {/* ── Toggle Statut ── */}
                 <div className="form-group full">
                   <div className="form-toggle-row">
                     <label>Statut</label>
@@ -400,6 +461,7 @@ function Categories() {
                     </span>
                   </div>
                 </div>
+
               </div>
             </div>
             <div className="modal-footer">
@@ -415,7 +477,7 @@ function Categories() {
         </div>
       )}
 
-      {/* ══════════════ MODALE MODIFIER (inchangée pour l'instant) ══════════════ */}
+      {/* ══════════════ MODALE MODIFIER ══════════════ */}
       {modalModif && (
         <div className="modal-overlay show" onClick={(e) => handleOverlay(e, () => setModalModif(null))}>
           <div className="modal">
