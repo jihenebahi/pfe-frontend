@@ -1,7 +1,8 @@
 // src/pages/infoCentre/Categories.js
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Layout from "../../components/Layout";
+import { getCategories, ajouterCategorie } from "../../services/infoCentre/categorieService";
 import "../../styles/infoCentre/categories.css";
 
 const CAT_COLORS = {
@@ -14,78 +15,13 @@ const CAT_COLORS = {
   "Soft skills": "#CCCC99",
 };
 
-const INITIAL_DATA = [
-  {
-    id: 1,
-    num: "01",
-    nom: "Marketing digital",
-    description:
-      "Ensemble des techniques de promotion et de communication utilisant les canaux numériques : SEO, SEA, réseaux sociaux, email marketing et analytics.",
-    dateCreation: "12/01/2024",
-    actif: true,
-  },
-  {
-    id: 2,
-    num: "02",
-    nom: "Informatique",
-    description:
-      "Formations couvrant la programmation, les architectures logicielles, les bases de données, les réseaux et l'administration des systèmes d'information.",
-    dateCreation: "15/01/2024",
-    actif: true,
-  },
-  {
-    id: 3,
-    num: "03",
-    nom: "IA",
-    description:
-      "Parcours autour du machine learning, du deep learning, du traitement du langage naturel et des applications concrètes de l'IA dans les entreprises.",
-    dateCreation: "20/01/2024",
-    actif: true,
-  },
-  {
-    id: 4,
-    num: "04",
-    nom: "Design",
-    description:
-      "Formations en design graphique, UI/UX, motion design, identité visuelle et outils de création (Figma, Adobe Suite) pour concevoir des interfaces attractives.",
-    dateCreation: "22/01/2024",
-    actif: true,
-  },
-  {
-    id: 5,
-    num: "05",
-    nom: "Langues",
-    description:
-      "Programmes de langues orientés milieu professionnel : anglais, français, espagnol et arabe des affaires, avec certification internationale reconnue.",
-    dateCreation: "25/01/2024",
-    actif: true,
-  },
-  {
-    id: 6,
-    num: "06",
-    nom: "Data",
-    description:
-      "Formations en data analyse, data engineering, business intelligence, visualisation de données et modélisation statistique pour la prise de décision.",
-    dateCreation: "28/01/2024",
-    actif: false,
-  },
-  {
-    id: 7,
-    num: "07",
-    nom: "Soft skills",
-    description:
-      "Développement des compétences non techniques : leadership, communication, gestion du stress, travail en équipe, résolution de conflits et intelligence émotionnelle.",
-    dateCreation: "01/02/2024",
-    actif: true,
-  },
-];
-
 const EMPTY_FORM = { nom: "", description: "", actif: true };
 const ITEMS_PER_PAGE = 7;
 
 function Categories() {
   const navigate = useNavigate();
-  const [data, setData] = useState(INITIAL_DATA);
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -98,11 +34,32 @@ function Categories() {
   const [formAjout, setFormAjout] = useState(EMPTY_FORM);
   const [formModif, setFormModif] = useState(EMPTY_FORM);
 
+  // Erreurs / succès
+  const [erreurAjout, setErreurAjout] = useState("");
+  const [submitLoading, setSubmitLoading] = useState(false);
+
+  // ---- Charger les catégories depuis l'API ----
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
+  const fetchCategories = async () => {
+    try {
+      setLoading(true);
+      const res = await getCategories();
+      setData(res.data);
+    } catch (err) {
+      console.error("Erreur lors du chargement des catégories :", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // ---- Filtrage ----
   const filtered = data.filter(
     (c) =>
       c.nom.toLowerCase().includes(search.toLowerCase()) ||
-      c.description.toLowerCase().includes(search.toLowerCase())
+      (c.description && c.description.toLowerCase().includes(search.toLowerCase()))
   );
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
   const paginated = filtered.slice(
@@ -110,11 +67,42 @@ function Categories() {
     currentPage * ITEMS_PER_PAGE
   );
 
-  // ---- Toggle actif/inactif depuis tableau ----
-  const toggleActif = (id) => {
-    setData((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, actif: !c.actif } : c))
-    );
+  // ---- Formater la date ----
+  const formatDate = (dateStr) => {
+    if (!dateStr) return "-";
+    const d = new Date(dateStr);
+    return d.toLocaleDateString("fr-FR");
+  };
+
+  // ---- Numérotation ----
+  const getNum = (index) => String(index + 1).padStart(2, "0");
+
+  // ---- Ajouter une catégorie ----
+  const handleAjouter = async () => {
+    if (!formAjout.nom.trim()) {
+      setErreurAjout("Le nom de la catégorie est obligatoire.");
+      return;
+    }
+    try {
+      setSubmitLoading(true);
+      setErreurAjout("");
+      await ajouterCategorie({
+        nom: formAjout.nom.trim(),
+        description: formAjout.description.trim(),
+        actif: formAjout.actif,
+      });
+      setModalAjout(false);
+      setFormAjout(EMPTY_FORM);
+      await fetchCategories(); // Recharger la liste
+    } catch (err) {
+      if (err.response?.data?.nom) {
+        setErreurAjout("Une catégorie avec ce nom existe déjà.");
+      } else {
+        setErreurAjout("Erreur lors de l'ajout. Veuillez réessayer.");
+      }
+    } finally {
+      setSubmitLoading(false);
+    }
   };
 
   // ---- Ouvrir modale modifier ----
@@ -162,6 +150,7 @@ function Categories() {
             className="btn btn-add"
             onClick={() => {
               setFormAjout(EMPTY_FORM);
+              setErreurAjout("");
               setModalAjout(true);
             }}
           >
@@ -177,101 +166,115 @@ function Categories() {
           <strong>{filtered.length}</strong>
         </div>
         <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>Nom de la catégorie</th>
-                <th>Date de création</th>
-                <th>Statut</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {paginated.map((cat) => (
-                <tr key={cat.id}>
-                  <td className="td-num">{cat.num}</td>
-                  <td className="td-name">
-                    <div className="cat-name-cell">
-                      <div
-                        className="cat-dot"
-                        style={{ background: CAT_COLORS[cat.nom] || "#94A3B8" }}
-                      ></div>
-                      {cat.nom}
-                    </div>
-                  </td>
-                  <td className="td-date">{cat.dateCreation}</td>
-                  <td>
-                    <div className="toggle-wrap">
-                      <label className="toggle">
-                        <input
-                          type="checkbox"
-                          checked={cat.actif}
-                          onChange={() => toggleActif(cat.id)}
-                        />
-                        <span className="toggle-slider"></span>
-                      </label>
-                      <span className={`toggle-lbl ${cat.actif ? "on" : "off"}`}>
-                        {cat.actif ? "Actif" : "Inactif"}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="td-actions">
-                    <button
-                      className="act-btn act-detail"
-                      title="Détail"
-                      onClick={() => setModalDetail(cat)}
-                    >
-                      <i className="fa-solid fa-eye"></i>
-                    </button>
-                    <button
-                      className="act-btn act-modif"
-                      title="Modifier"
-                      onClick={() => openModif(cat)}
-                    >
-                      <i className="fa-solid fa-pen"></i>
-                    </button>
-                    <button className="act-btn act-suppr" title="Supprimer">
-                      <i className="fa-solid fa-trash"></i>
-                    </button>
-                  </td>
+          {loading ? (
+            <div style={{ textAlign: "center", padding: "40px" }}>
+              <i className="fa-solid fa-spinner fa-spin"></i> Chargement…
+            </div>
+          ) : (
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Nom de la catégorie</th>
+                  <th>Date de création</th>
+                  <th>Statut</th>
+                  <th>Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {paginated.length === 0 ? (
+                  <tr>
+                    <td colSpan="5" style={{ textAlign: "center", padding: "30px", color: "#94A3B8" }}>
+                      Aucune catégorie trouvée.
+                    </td>
+                  </tr>
+                ) : (
+                  paginated.map((cat, index) => (
+                    <tr key={cat.id}>
+                      <td className="td-num">{getNum((currentPage - 1) * ITEMS_PER_PAGE + index)}</td>
+                      <td className="td-name">
+                        <div className="cat-name-cell">
+                          <div
+                            className="cat-dot"
+                            style={{ background: CAT_COLORS[cat.nom] || "#94A3B8" }}
+                          ></div>
+                          {cat.nom}
+                        </div>
+                      </td>
+                      <td className="td-date">{formatDate(cat.date_creation)}</td>
+                      <td>
+                        <div className="toggle-wrap">
+                          <label className="toggle">
+                            <input
+                              type="checkbox"
+                              checked={cat.actif}
+                              readOnly
+                            />
+                            <span className="toggle-slider"></span>
+                          </label>
+                          <span className={`toggle-lbl ${cat.actif ? "on" : "off"}`}>
+                            {cat.actif ? "Actif" : "Inactif"}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="td-actions">
+                        <button
+                          className="act-btn act-detail"
+                          title="Détail"
+                          onClick={() => setModalDetail(cat)}
+                        >
+                          <i className="fa-solid fa-eye"></i>
+                        </button>
+                        <button
+                          className="act-btn act-modif"
+                          title="Modifier"
+                          onClick={() => openModif(cat)}
+                        >
+                          <i className="fa-solid fa-pen"></i>
+                        </button>
+                        <button className="act-btn act-suppr" title="Supprimer">
+                          <i className="fa-solid fa-trash"></i>
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          )}
         </div>
 
         {/* Pagination */}
-        <div className="pagination">
-          <button
-            className="pg-btn"
-            onClick={() => setCurrentPage((p) => p - 1)}
-            disabled={currentPage === 1}
-          >
-            <i className="fa-solid fa-chevron-left"></i>
-          </button>
-          {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+        {totalPages > 1 && (
+          <div className="pagination">
             <button
-              key={p}
-              className={`pg-num${p === currentPage ? " active" : ""}`}
-              onClick={() => setCurrentPage(p)}
+              className="pg-btn"
+              onClick={() => setCurrentPage((p) => p - 1)}
+              disabled={currentPage === 1}
             >
-              {p}
+              <i className="fa-solid fa-chevron-left"></i>
             </button>
-          ))}
-          <button
-            className="pg-btn"
-            onClick={() => setCurrentPage((p) => p + 1)}
-            disabled={currentPage === totalPages}
-          >
-            <i className="fa-solid fa-chevron-right"></i>
-          </button>
-        </div>
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+              <button
+                key={p}
+                className={`pg-num${p === currentPage ? " active" : ""}`}
+                onClick={() => setCurrentPage(p)}
+              >
+                {p}
+              </button>
+            ))}
+            <button
+              className="pg-btn"
+              onClick={() => setCurrentPage((p) => p + 1)}
+              disabled={currentPage === totalPages}
+            >
+              <i className="fa-solid fa-chevron-right"></i>
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* ══════════════ MODALES RESTANTES (inchangées) ══════════════ */}
-      {/* ...le code des modales Detail, Ajout et Modifier reste identique */}
-       {/* ══════════════ MODALE DÉTAIL ══════════════ */}
+      {/* ══════════════ MODALE DÉTAIL ══════════════ */}
       {modalDetail && (
         <div className="modal-overlay show" onClick={(e) => handleOverlay(e, () => setModalDetail(null))}>
           <div className="modal">
@@ -282,7 +285,7 @@ function Categories() {
                 </div>
                 <div className="detail-header-info">
                   <h2>{modalDetail.nom}</h2>
-                  <p className="detail-sub">Créée le {modalDetail.dateCreation}</p>
+                  <p className="detail-sub">Créée le {formatDate(modalDetail.date_creation)}</p>
                 </div>
               </div>
               <button className="modal-close" onClick={() => setModalDetail(null)}>
@@ -291,26 +294,25 @@ function Categories() {
             </div>
 
             <div className="modal-body">
-              {/* 4 cartes stat */}
               <div className="detail-stat-row">
                 <div className="dsr-card">
                   <div className="dsr-icon"><i className="fa-solid fa-hashtag"></i></div>
                   <div className="dsr-info">
-                    <span className="dsr-val">{modalDetail.num}</span>
+                    <span className="dsr-val">#{modalDetail.id}</span>
                     <span className="dsr-lbl">ID catégorie</span>
                   </div>
                 </div>
                 <div className="dsr-card">
                   <div className="dsr-icon"><i className="fa-solid fa-book-open"></i></div>
                   <div className="dsr-info">
-                    <span className="dsr-val">5 formations</span>
+                    <span className="dsr-val">— formations</span>
                     <span className="dsr-lbl">Formations liées</span>
                   </div>
                 </div>
                 <div className="dsr-card">
                   <div className="dsr-icon"><i className="fa-regular fa-calendar"></i></div>
                   <div className="dsr-info">
-                    <span className="dsr-val">{modalDetail.dateCreation}</span>
+                    <span className="dsr-val">{formatDate(modalDetail.date_creation)}</span>
                     <span className="dsr-lbl">Date de création</span>
                   </div>
                 </div>
@@ -325,13 +327,12 @@ function Categories() {
                 </div>
               </div>
 
-              {/* Section description */}
               <div className="detail-sections">
                 <div className="detail-sec">
                   <div className="detail-sec-title">
                     <i className="fa-solid fa-align-left"></i> Description
                   </div>
-                  <p className="detail-sec-text">{modalDetail.description}</p>
+                  <p className="detail-sec-text">{modalDetail.description || "Aucune description."}</p>
                 </div>
               </div>
             </div>
@@ -346,7 +347,6 @@ function Categories() {
         </div>
       )}
 
-
       {/* ══════════════ MODALE AJOUTER ══════════════ */}
       {modalAjout && (
         <div className="modal-overlay show" onClick={(e) => handleOverlay(e, () => setModalAjout(false))}>
@@ -358,8 +358,12 @@ function Categories() {
               </button>
             </div>
             <div className="modal-body">
+              {erreurAjout && (
+                <div className="alert-error">
+                  <i className="fa-solid fa-triangle-exclamation"></i> {erreurAjout}
+                </div>
+              )}
               <div className="form-grid">
-
                 <div className="form-group full">
                   <label>Nom de la catégorie <span className="req">*</span></label>
                   <input
@@ -371,7 +375,7 @@ function Categories() {
                 </div>
 
                 <div className="form-group full">
-                  <label>Description <span className="req">*</span></label>
+                  <label>Description</label>
                   <textarea
                     rows="5"
                     placeholder="Décrivez cette catégorie, son public cible et ses objectifs généraux…"
@@ -396,19 +400,22 @@ function Categories() {
                     </span>
                   </div>
                 </div>
-
               </div>
             </div>
             <div className="modal-footer">
               <button className="btn btn-cancel" onClick={() => setModalAjout(false)}>Annuler</button>
-              <button className="btn btn-save"><i className="fa-solid fa-floppy-disk"></i> Enregistrer</button>
+              <button className="btn btn-save" onClick={handleAjouter} disabled={submitLoading}>
+                {submitLoading
+                  ? <><i className="fa-solid fa-spinner fa-spin"></i> En cours…</>
+                  : <><i className="fa-solid fa-floppy-disk"></i> Enregistrer</>
+                }
+              </button>
             </div>
           </div>
         </div>
       )}
 
-
-      {/* ══════════════ MODALE MODIFIER ══════════════ */}
+      {/* ══════════════ MODALE MODIFIER (inchangée pour l'instant) ══════════════ */}
       {modalModif && (
         <div className="modal-overlay show" onClick={(e) => handleOverlay(e, () => setModalModif(null))}>
           <div className="modal">
@@ -420,7 +427,6 @@ function Categories() {
             </div>
             <div className="modal-body">
               <div className="form-grid">
-
                 <div className="form-group full">
                   <label>Nom de la catégorie <span className="req">*</span></label>
                   <input
@@ -429,16 +435,14 @@ function Categories() {
                     onChange={(e) => setFormModif({ ...formModif, nom: e.target.value })}
                   />
                 </div>
-
                 <div className="form-group full">
-                  <label>Description <span className="req">*</span></label>
+                  <label>Description</label>
                   <textarea
                     rows="5"
                     value={formModif.description}
                     onChange={(e) => setFormModif({ ...formModif, description: e.target.value })}
                   />
                 </div>
-
                 <div className="form-group full">
                   <div className="form-toggle-row">
                     <label>Statut</label>
@@ -455,7 +459,6 @@ function Categories() {
                     </span>
                   </div>
                 </div>
-
               </div>
             </div>
             <div className="modal-footer">
@@ -465,9 +468,7 @@ function Categories() {
           </div>
         </div>
       )}
-
     </Layout>
-   
   );
 }
 
