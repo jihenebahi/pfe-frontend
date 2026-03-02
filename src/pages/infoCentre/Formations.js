@@ -1,146 +1,239 @@
 // src/pages/infoCentre/Formations.js
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Layout from "../../components/Layout";
+import { 
+  getFormations, 
+  ajouterFormation, 
+  modifierFormation, 
+  supprimerFormation 
+} from "../../services/infoCentre/formationService";
+import { getCategories } from "../../services/infoCentre/categorieService";
 import "../../styles/infoCentre/formations.css";
 
-const FORMATIONS_DATA = [
-  {
-    id: 1, num: "01",
-    titre: "Développement Web Full Stack",
-    categorie: "Informatique", niveau: "Intermédiaire",
-    prerequis: "Bases informatique", duree: "120h / 15j",
-    prixTTC: "2 400 DT", prixHT: "2 000 DT", format: "Présentiel",
-    dateDebut: "01 Mars 2025", dateFin: "30 Mai 2025",
-    description: "Formation complète couvrant le développement front-end et back-end avec les technologies les plus demandées du marché.",
-    objectifs: [
-      "Maîtriser HTML5, CSS3 et JavaScript ES6+",
-      "Développer des interfaces dynamiques avec React.js",
-      "Construire des API REST avec Node.js et Express",
-      "Gérer des bases de données relationnelles (MySQL/PostgreSQL)",
-      "Déployer des applications sur des serveurs cloud",
-    ],
-  },
-  {
-    id: 2, num: "02",
-    titre: "Management de Projet Agile",
-    categorie: "Soft skills", niveau: "Avancé",
-    prerequis: "Expérience gestion projet", duree: "40h / 5j",
-    prixTTC: "1 800 DT", prixHT: "1 500 DT", format: "Présentiel",
-    dateDebut: "10 Avril 2025", dateFin: "15 Avril 2025",
-    description: "Formation sur les méthodes agiles (Scrum, Kanban) pour la gestion de projets complexes.",
-    objectifs: ["Comprendre le manifeste Agile", "Maîtriser Scrum et Kanban", "Animer des rétrospectives", "Utiliser des outils de suivi de projet"],
-  },
-  {
-    id: 3, num: "03",
-    titre: "Anglais des Affaires",
-    categorie: "Langues", niveau: "Débutant",
-    prerequis: "Niveau A2 minimum", duree: "80h / 10j",
-    prixTTC: "960 DT", prixHT: "800 DT", format: "Hybride",
-    dateDebut: "01 Février 2025", dateFin: "15 Mars 2025",
-    description: "Formation axée sur la communication professionnelle en anglais dans un contexte business.",
-    objectifs: ["Rédiger des emails professionnels", "Conduire des réunions en anglais", "Maîtriser le vocabulaire du commerce international"],
-  },
-  {
-    id: 4, num: "04",
-    titre: "Python pour Data Science",
-    categorie: "Data", niveau: "Intermédiaire",
-    prerequis: "Notions de programmation", duree: "96h / 12j",
-    prixTTC: "2 160 DT", prixHT: "1 800 DT", format: "Présentiel",
-    dateDebut: "01 Juin 2025", dateFin: "30 Juin 2025",
-    description: "Maîtrisez Python et les bibliothèques essentielles pour l'analyse et la visualisation de données.",
-    objectifs: ["Maîtriser Python", "Utiliser NumPy et Pandas", "Visualiser avec Matplotlib", "Introduire le Machine Learning"],
-  },
-  {
-    id: 5, num: "05",
-    titre: "Intelligence Artificielle Appliquée",
-    categorie: "IA", niveau: "Avancé",
-    prerequis: "Python, Maths Bac+2", duree: "80h / 10j",
-    prixTTC: "3 000 DT", prixHT: "2 500 DT", format: "Présentiel",
-    dateDebut: "01 Juillet 2025", dateFin: "15 Juillet 2025",
-    description: "Formation intensive sur les algorithmes d'intelligence artificielle et leur application dans des cas réels.",
-    objectifs: ["Comprendre le Deep Learning", "Utiliser TensorFlow et Keras", "Déployer des modèles ML en production"],
-  },
-  {
-    id: 6, num: "06",
-    titre: "UI/UX Design & Figma",
-    categorie: "Design", niveau: "Débutant",
-    prerequis: "Aucun", duree: "64h / 8j",
-    prixTTC: "1 440 DT", prixHT: "1 200 DT", format: "En ligne",
-    dateDebut: "01 Mai 2025", dateFin: "20 Mai 2025",
-    description: "Apprenez à concevoir des interfaces utilisateur modernes et ergonomiques avec Figma.",
-    objectifs: ["Maîtriser Figma", "Appliquer les principes UX", "Créer des prototypes interactifs", "Conduire des tests utilisateurs"],
-  },
-  {
-    id: 7, num: "07",
-    titre: "Marketing Digital & Réseaux Sociaux",
-    categorie: "Marketing digital", niveau: "Débutant",
-    prerequis: "Aucun", duree: "48h / 6j",
-    prixTTC: "1 200 DT", prixHT: "1 000 DT", format: "Hybride",
-    dateDebut: "15 Mars 2025", dateFin: "30 Mars 2025",
-    description: "Développez une stratégie marketing digitale efficace et gérez les réseaux sociaux professionnellement.",
-    objectifs: ["Créer une stratégie digitale", "Gérer les réseaux sociaux", "Analyser les KPIs", "Maîtriser le SEO/SEA"],
-  },
-];
+const NIVEAU_CLASS = { 
+  "Débutant": "bdg-deb", 
+  "Intermédiaire": "bdg-int", 
+  "Avancé": "bdg-adv" 
+};
 
-const NIVEAU_CLASS = { Débutant: "bdg-deb", Intermédiaire: "bdg-int", Avancé: "bdg-adv" };
+const NIVEAU_MAPPING = {
+  "Débutant": "debutant",
+  "Intermédiaire": "intermediaire",
+  "Avancé": "avance"
+};
+
+const FORMAT_MAPPING = {
+  "Présentiel": "presentiel",
+  "En ligne": "en_ligne",
+  "Hybride": "hybride"
+};
 
 const EMPTY_FORM = {
-  titre: "", categorie: "", niveau: "", description: "",
-  objectifs: "", prerequis: "", dureeH: "", dureeJ: "",
-  format: "", dateDebut: "", dateFin: "", prixTTC: "", prixHT: "",
-  paiementTranches: "1",
+  intitule: "",
+  categorie: "",
+  description: "",
+  objectifs_pedagogiques: "",
+  prerequis: "",
+  niveau: "",
+  duree: "",
+  format: "",
+  date_debut: "",
+  date_fin: "",
+  prix_ht: "",
+  prix_ttc: "",
+  est_active: true,
 };
 
 function Formations() {
-  const [search, setSearch]               = useState("");
-  const [filterNiveau, setFilterNiveau]   = useState("");
-  const [filterCat, setFilterCat]         = useState("");
-  const [currentPage, setCurrentPage]     = useState(1);
+  const [formations, setFormations] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  
+  const [search, setSearch] = useState("");
+  const [filterNiveau, setFilterNiveau] = useState("");
+  const [filterCat, setFilterCat] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
 
-  const [modalDetail, setModalDetail]     = useState(null);
-  const [modalModif, setModalModif]       = useState(null);
-  const [modalAjout, setModalAjout]       = useState(false);
-  const [formAjout, setFormAjout]         = useState(EMPTY_FORM);
-  const [formModif, setFormModif]         = useState(EMPTY_FORM);
+  const [modalDetail, setModalDetail] = useState(null);
+  const [modalModif, setModalModif] = useState(null);
+  const [modalAjout, setModalAjout] = useState(false);
+  const [formAjout, setFormAjout] = useState(EMPTY_FORM);
+  const [formModif, setFormModif] = useState(EMPTY_FORM);
 
   const navigate = useNavigate();
   const itemsPerPage = 7;
 
-  // ---- Filtrage ----
-  const filtered = FORMATIONS_DATA.filter((f) => {
-    const q = search.toLowerCase();
-    return (
-      (f.titre.toLowerCase().includes(q) || f.categorie.toLowerCase().includes(q)) &&
-      (filterNiveau === "" || f.niveau === filterNiveau) &&
-      (filterCat === "" || f.categorie === filterCat)
-    );
-  });
+  // Charger les formations et catégories au montage
+  useEffect(() => {
+    fetchFormations();
+    fetchCategories();
+  }, []);
 
-  const totalPages = Math.ceil(filtered.length / itemsPerPage);
-  const paginated  = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
-
-  const openModif = (f) => {
-    setFormModif({
-      titre: f.titre, categorie: f.categorie, niveau: f.niveau,
-      description: f.description,
-      objectifs: Array.isArray(f.objectifs) ? f.objectifs.join("\n") : f.objectifs,
-      prerequis: f.prerequis,
-      dureeH: f.duree.split("/")[0]?.trim().replace("h", ""),
-      dureeJ: f.duree.split("/")[1]?.trim().replace("j", "") || "",
-      format: f.format, dateDebut: "", dateFin: "",
-      prixTTC: f.prixTTC.replace(" DT", "").replace(" ", ""),
-      prixHT:  f.prixHT.replace(" DT", "").replace(" ", ""),
-      paiementTranches: f.paiementTranches || "1",
-    });
-    setModalModif(f);
+  const fetchFormations = async () => {
+    try {
+      setLoading(true);
+      const response = await getFormations();
+      setFormations(response.data);
+      setError(null);
+    } catch (err) {
+      console.error("Erreur lors du chargement des formations:", err);
+      setError("Impossible de charger les formations");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleOverlay = (e, closeFn) => { if (e.target === e.currentTarget) closeFn(); };
+  const fetchCategories = async () => {
+    try {
+      const response = await getCategories();
+      setCategories(response.data);
+    } catch (err) {
+      console.error("Erreur lors du chargement des catégories:", err);
+    }
+  };
+
+  // Formater les données pour l'affichage
+  // Modifier la fonction formatFormationPourAffichage
+const formatFormationPourAffichage = (f) => {
+  const dureeEnJours = Math.ceil(f.duree / 8); // Approximation 8h = 1 jour
+  return {
+    ...f,
+    num: f.id.toString().padStart(2, '0'),
+    duree: `${f.duree}h / ${dureeEnJours}j`,
+    prixTTC: `${f.prix_ttc} DT`,
+    prixHT: `${f.prix_ht} DT`,
+    categorie: f.categorie_nom || "Non catégorisé",
+    categorie_id: f.categorie, // ✅ Conserver l'ID de la catégorie
+    niveau: Object.keys(NIVEAU_MAPPING).find(key => NIVEAU_MAPPING[key] === f.niveau) || f.niveau,
+    format: Object.keys(FORMAT_MAPPING).find(key => FORMAT_MAPPING[key] === f.format) || f.format,
+    date_debut: f.date_debut, // Garder le format original pour la modification
+    date_fin: f.date_fin,
+    dateDebut: new Date(f.date_debut).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }),
+    dateFin: new Date(f.date_fin).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }),
+  };
+};
+
+  // ---- Filtrage ----
+  const filtered = formations
+    .map(formatFormationPourAffichage)
+    .filter((f) => {
+      const q = search.toLowerCase();
+      return (
+        (f.intitule?.toLowerCase().includes(q) || f.categorie?.toLowerCase().includes(q)) &&
+        (filterNiveau === "" || f.niveau === filterNiveau) &&
+        (filterCat === "" || f.categorie === filterCat)
+      );
+    });
+
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+  const paginated = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+  // Ajouter une formation
+  const handleAjout = async () => {
+    try {
+      // Validation de base
+      if (!formAjout.intitule || !formAjout.categorie || !formAjout.niveau || !formAjout.format || !formAjout.prix_ttc || !formAjout.prix_ht) {
+        alert("Veuillez remplir tous les champs obligatoires");
+        return;
+      }
+
+      const formationData = {
+        ...formAjout,
+        niveau: NIVEAU_MAPPING[formAjout.niveau] || formAjout.niveau,
+        format: FORMAT_MAPPING[formAjout.format] || formAjout.format,
+        duree: parseInt(formAjout.duree) || 0,
+      };
+
+      await ajouterFormation(formationData);
+      await fetchFormations(); // Recharger la liste
+      setModalAjout(false);
+      setFormAjout(EMPTY_FORM);
+      alert("Formation ajoutée avec succès !");
+    } catch (err) {
+      console.error("Erreur lors de l'ajout:", err);
+      alert("Erreur lors de l'ajout de la formation");
+    }
+  };
+
+  // Modifier une formation
+  const handleModif = async () => {
+    try {
+      if (!modalModif?.id) return;
+
+      const formationData = {
+        ...formModif,
+        niveau: NIVEAU_MAPPING[formModif.niveau] || formModif.niveau,
+        format: FORMAT_MAPPING[formModif.format] || formModif.format,
+        duree: parseInt(formModif.duree) || 0,
+      };
+
+      await modifierFormation(modalModif.id, formationData);
+      await fetchFormations();
+      setModalModif(null);
+      setFormModif(EMPTY_FORM);
+      alert("Formation modifiée avec succès !");
+    } catch (err) {
+      console.error("Erreur lors de la modification:", err);
+      alert("Erreur lors de la modification de la formation");
+    }
+  };
+
+  // Supprimer une formation
+  const handleSupprimer = async (id, intitule) => {
+    if (window.confirm(`Êtes-vous sûr de vouloir supprimer la formation "${intitule}" ?`)) {
+      try {
+        await supprimerFormation(id);
+        await fetchFormations();
+        alert("Formation supprimée avec succès !");
+      } catch (err) {
+        console.error("Erreur lors de la suppression:", err);
+        alert("Erreur lors de la suppression de la formation");
+      }
+    }
+  };
+
+ // Remplacer la fonction openModif existante par celle-ci
+const openModif = (f) => {
+  // Récupérer l'ID de la catégorie à partir de la liste des catégories
+  const categorieId = categories.find(cat => cat.nom === f.categorie)?.id || f.categorie_id || '';
+  
+  setFormModif({
+    intitule: f.intitule,
+    categorie: categorieId, // Utiliser l'ID de la catégorie, pas le nom
+    description: f.description || "",
+    objectifs_pedagogiques: f.objectifs_pedagogiques || "",
+    prerequis: f.prerequis || "",
+    duree: f.duree?.split('h')[0]?.trim() || "",
+    niveau: f.niveau,
+    format: f.format,
+    date_debut: f.date_debut?.split('T')[0] || "", // Format YYYY-MM-DD pour l'input date
+    date_fin: f.date_fin?.split('T')[0] || "",
+    prix_ht: f.prix_ht || "",
+    prix_ttc: f.prix_ttc || "",
+    est_active: f.est_active !== undefined ? f.est_active : true,
+  });
+  setModalModif(f);
+};
+
+  const handleOverlay = (e, closeFn) => {
+    if (e.target === e.currentTarget) closeFn();
+  };
+
+  if (loading && formations.length === 0) {
+    return (
+      <Layout>
+        <div className="loading-container">
+          <i className="fa-solid fa-spinner fa-spin"></i>
+          <p>Chargement des formations...</p>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout>
-
       {/* ── En-tête ── */}
       <div className="page-header">
         <h1 className="page-title">
@@ -169,9 +262,9 @@ function Formations() {
           <select className="filter-sel" value={filterCat}
             onChange={(e) => { setFilterCat(e.target.value); setCurrentPage(1); }}>
             <option value="">Toutes les catégories</option>
-            <option>Marketing digital</option><option>Informatique</option>
-            <option>IA</option><option>Design</option>
-            <option>Langues</option><option>Data</option><option>Soft skills</option>
+            {categories.map(cat => (
+              <option key={cat.id} value={cat.nom}>{cat.nom}</option>
+            ))}
           </select>
         </div>
         <div className="toolbar-right">
@@ -208,10 +301,10 @@ function Formations() {
               {paginated.map((f) => (
                 <tr key={f.id}>
                   <td className="td-num">{f.num}</td>
-                  <td className="td-title">{f.titre}</td>
+                  <td className="td-title">{f.intitule}</td>
                   <td><span className="cat-tag">{f.categorie}</span></td>
                   <td><span className={`badge ${NIVEAU_CLASS[f.niveau]}`}>{f.niveau}</span></td>
-                  <td className="td-pre">{f.prerequis}</td>
+                  <td className="td-pre">{f.prerequis || "-"}</td>
                   <td className="td-dur">{f.duree}</td>
                   <td className="td-ttc">{f.prixTTC}</td>
                   <td className="td-ht">{f.prixHT}</td>
@@ -222,7 +315,7 @@ function Formations() {
                     <button className="act-btn act-modif" title="Modifier" onClick={() => openModif(f)}>
                       <i className="fa-solid fa-pen"></i>
                     </button>
-                    <button className="act-btn act-suppr" title="Supprimer">
+                    <button className="act-btn act-suppr" title="Supprimer" onClick={() => handleSupprimer(f.id, f.intitule)}>
                       <i className="fa-solid fa-trash"></i>
                     </button>
                   </td>
@@ -233,21 +326,22 @@ function Formations() {
         </div>
 
         {/* Pagination */}
-        <div className="pagination">
-          <button className="pg-btn" onClick={() => setCurrentPage((p) => p - 1)} disabled={currentPage === 1}>
-            <i className="fa-solid fa-chevron-left"></i>
-          </button>
-          {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-            <button key={p} className={`pg-num${p === currentPage ? " active" : ""}`} onClick={() => setCurrentPage(p)}>
-              {p}
+        {totalPages > 1 && (
+          <div className="pagination">
+            <button className="pg-btn" onClick={() => setCurrentPage((p) => p - 1)} disabled={currentPage === 1}>
+              <i className="fa-solid fa-chevron-left"></i>
             </button>
-          ))}
-          <button className="pg-btn" onClick={() => setCurrentPage((p) => p + 1)} disabled={currentPage === totalPages}>
-            <i className="fa-solid fa-chevron-right"></i>
-          </button>
-        </div>
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+              <button key={p} className={`pg-num${p === currentPage ? " active" : ""}`} onClick={() => setCurrentPage(p)}>
+                {p}
+              </button>
+            ))}
+            <button className="pg-btn" onClick={() => setCurrentPage((p) => p + 1)} disabled={currentPage === totalPages}>
+              <i className="fa-solid fa-chevron-right"></i>
+            </button>
+          </div>
+        )}
       </div>
-
 
       {/* ══════════════ MODALE DÉTAIL ══════════════ */}
       {modalDetail && (
@@ -259,7 +353,7 @@ function Formations() {
                   <i className="fa-solid fa-book-open"></i>
                 </div>
                 <div className="detail-header-info">
-                  <h2>{modalDetail.titre}</h2>
+                  <h2>{modalDetail.intitule}</h2>
                   <div className="detail-badges">
                     <span className="cat-tag">{modalDetail.categorie}</span>
                     <span className={`badge ${NIVEAU_CLASS[modalDetail.niveau]}`}>{modalDetail.niveau}</span>
@@ -330,12 +424,12 @@ function Formations() {
                 <div className="detail-sec">
                   <div className="detail-sec-title"><i className="fa-solid fa-bullseye"></i> Objectifs pédagogiques</div>
                   <ul className="detail-list">
-                    {modalDetail.objectifs.map((o, i) => <li key={i}>{o}</li>)}
+                    {modalDetail.objectifs_pedagogiques?.split('\n').filter(o => o.trim()).map((o, i) => <li key={i}>{o}</li>)}
                   </ul>
                 </div>
                 <div className="detail-sec">
                   <div className="detail-sec-title"><i className="fa-solid fa-circle-exclamation"></i> Prérequis</div>
-                  <p className="detail-sec-text">{modalDetail.prerequis}</p>
+                  <p className="detail-sec-text">{modalDetail.prerequis || "Aucun prérequis spécifique"}</p>
                 </div>
               </div>
             </div>
@@ -350,7 +444,6 @@ function Formations() {
         </div>
       )}
 
-
       {/* ══════════════ MODALE AJOUTER ══════════════ */}
       {modalAjout && (
         <div className="modal-overlay show" onClick={(e) => handleOverlay(e, () => setModalAjout(false))}>
@@ -363,105 +456,156 @@ function Formations() {
               <div className="form-grid">
                 <div className="form-group full">
                   <label>Intitulé de la formation <span className="req">*</span></label>
-                  <input type="text" placeholder="Ex : Développement Web Full Stack"
-                    value={formAjout.titre} onChange={(e) => setFormAjout({...formAjout, titre: e.target.value})} />
+                  <input 
+                    type="text" 
+                    placeholder="Ex : Développement Web Full Stack"
+                    value={formAjout.intitule} 
+                    onChange={(e) => setFormAjout({...formAjout, intitule: e.target.value})} 
+                  />
                 </div>
+                
                 <div className="form-group">
                   <label>Catégorie <span className="req">*</span></label>
-                  <select value={formAjout.categorie} onChange={(e) => setFormAjout({...formAjout, categorie: e.target.value})}>
-                    <option value="" disabled>Sélectionner…</option>
-                    <option>Marketing digital</option><option>Informatique</option><option>IA</option>
-                    <option>Design</option><option>Langues</option><option>Data</option><option>Soft skills</option>
+                  <select 
+                    value={formAjout.categorie} 
+                    onChange={(e) => setFormAjout({...formAjout, categorie: e.target.value})}
+                  >
+                    <option value="">Sélectionner une catégorie</option>
+                    {categories.map(cat => (
+                      <option key={cat.id} value={cat.id}>{cat.nom}</option>
+                    ))}
                   </select>
                 </div>
+
                 <div className="form-group">
                   <label>Niveau <span className="req">*</span></label>
-                  <select value={formAjout.niveau} onChange={(e) => setFormAjout({...formAjout, niveau: e.target.value})}>
-                    <option value="" disabled>Sélectionner…</option>
-                    <option>Débutant</option><option>Intermédiaire</option><option>Avancé</option>
+                  <select 
+                    value={formAjout.niveau} 
+                    onChange={(e) => setFormAjout({...formAjout, niveau: e.target.value})}
+                  >
+                    <option value="">Sélectionner le niveau</option>
+                    <option>Débutant</option>
+                    <option>Intermédiaire</option>
+                    <option>Avancé</option>
                   </select>
                 </div>
+
                 <div className="form-group full">
                   <label>Description détaillée</label>
-                  <textarea rows="3" placeholder="Décrivez le contenu et le déroulement de la formation…"
-                    value={formAjout.description} onChange={(e) => setFormAjout({...formAjout, description: e.target.value})} />
+                  <textarea 
+                    rows="3" 
+                    placeholder="Décrivez le contenu et le déroulement de la formation…"
+                    value={formAjout.description} 
+                    onChange={(e) => setFormAjout({...formAjout, description: e.target.value})}
+                  />
                 </div>
+
                 <div className="form-group full">
                   <label>Objectifs pédagogiques <span className="req">*</span></label>
-                  <textarea rows="3" placeholder="Listez les compétences acquises…"
-                    value={formAjout.objectifs} onChange={(e) => setFormAjout({...formAjout, objectifs: e.target.value})} />
+                  <textarea 
+                    rows="3" 
+                    placeholder="Listez les compétences acquises (une par ligne)…"
+                    value={formAjout.objectifs_pedagogiques} 
+                    onChange={(e) => setFormAjout({...formAjout, objectifs_pedagogiques: e.target.value})}
+                  />
                 </div>
+
                 <div className="form-group full">
                   <label>Prérequis</label>
-                  <input type="text" placeholder="Ex : Notions de base en informatique…"
-                    value={formAjout.prerequis} onChange={(e) => setFormAjout({...formAjout, prerequis: e.target.value})} />
+                  <input 
+                    type="text" 
+                    placeholder="Ex : Notions de base en informatique…"
+                    value={formAjout.prerequis} 
+                    onChange={(e) => setFormAjout({...formAjout, prerequis: e.target.value})}
+                  />
                 </div>
+
                 <div className="form-group">
-                  <label>Durée (Heures)</label>
-                  <input type="number" min="0" placeholder="Ex : 40"
-                    value={formAjout.dureeH} onChange={(e) => setFormAjout({...formAjout, dureeH: e.target.value})} />
+                  <label>Durée (Heures) <span className="req">*</span></label>
+                  <input 
+                    type="number" 
+                    min="1" 
+                    placeholder="Ex : 40"
+                    value={formAjout.duree} 
+                    onChange={(e) => setFormAjout({...formAjout, duree: e.target.value})}
+                  />
                 </div>
-                <div className="form-group">
-                  <label>Durée (Jours)</label>
-                  <input type="number" min="0" placeholder="Ex : 5"
-                    value={formAjout.dureeJ} onChange={(e) => setFormAjout({...formAjout, dureeJ: e.target.value})} />
-                </div>
+
                 <div className="form-group">
                   <label>Format <span className="req">*</span></label>
-                  <select value={formAjout.format} onChange={(e) => setFormAjout({...formAjout, format: e.target.value})}>
-                    <option value="" disabled>Sélectionner…</option>
-                    <option>Présentiel</option><option>En ligne</option><option>Hybride</option>
+                  <select 
+                    value={formAjout.format} 
+                    onChange={(e) => setFormAjout({...formAjout, format: e.target.value})}
+                  >
+                    <option value="">Sélectionner le format</option>
+                    <option>Présentiel</option>
+                    <option>En ligne</option>
+                    <option>Hybride</option>
                   </select>
                 </div>
-                <div className="form-group"></div>
+
                 <div className="form-group">
-                  <label>Date de début</label>
-                  <input type="date" value={formAjout.dateDebut} onChange={(e) => setFormAjout({...formAjout, dateDebut: e.target.value})} />
+                  <label>Date de début <span className="req">*</span></label>
+                  <input 
+                    type="date" 
+                    value={formAjout.date_debut} 
+                    onChange={(e) => setFormAjout({...formAjout, date_debut: e.target.value})}
+                  />
                 </div>
+
                 <div className="form-group">
-                  <label>Date de fin</label>
-                  <input type="date" value={formAjout.dateFin} onChange={(e) => setFormAjout({...formAjout, dateFin: e.target.value})} />
+                  <label>Date de fin <span className="req">*</span></label>
+                  <input 
+                    type="date" 
+                    value={formAjout.date_fin} 
+                    onChange={(e) => setFormAjout({...formAjout, date_fin: e.target.value})}
+                  />
                 </div>
-                <div className="form-group">
-                  <label>Prix TTC (DT) <span className="req">*</span></label>
-                  <input type="number" min="0" placeholder="Ex : 1 200"
-                    value={formAjout.prixTTC} onChange={(e) => setFormAjout({...formAjout, prixTTC: e.target.value})} />
-                </div>
+
                 <div className="form-group">
                   <label>Prix HT (DT) <span className="req">*</span></label>
-                  <input type="number" min="0" placeholder="Ex : 1 000"
-                    value={formAjout.prixHT} onChange={(e) => setFormAjout({...formAjout, prixHT: e.target.value})} />
+                  <input 
+                    type="number" 
+                    min="0" 
+                    step="0.01"
+                    placeholder="Ex : 1000"
+                    value={formAjout.prix_ht} 
+                    onChange={(e) => setFormAjout({...formAjout, prix_ht: e.target.value})}
+                  />
                 </div>
-                      {/* Dans la section du formulaire d'ajout, après les champs de prix */}
+
                 <div className="form-group">
-                  <label>Paiement échelonné</label>
-                  <select 
-                    value={formAjout.paiementTranches} 
-                    onChange={(e) => setFormAjout({...formAjout, paiementTranches: e.target.value})}
-                    className="tranche-select"
-                  >
-                    <option value="1">Paiement unique</option>
-                    <option value="2">2 tranches</option>
-                    <option value="3">3 tranches</option>
-                    <option value="4">4 tranches</option>
-                    <option value="6">6 tranches</option>
-                  </select>
-                  <small className="field-hint">
-                    Montant par tranche : {formAjout.prixTTC && !isNaN(formAjout.prixTTC) 
-                      ? (parseFloat(formAjout.prixTTC) / parseInt(formAjout.paiementTranches || 1)).toFixed(2) 
-                      : "0"} DT
-                  </small>
+                  <label>Prix TTC (DT) <span className="req">*</span></label>
+                  <input 
+                    type="number" 
+                    min="0" 
+                    step="0.01"
+                    placeholder="Ex : 1200"
+                    value={formAjout.prix_ttc} 
+                    onChange={(e) => setFormAjout({...formAjout, prix_ttc: e.target.value})}
+                  />
+                </div>
+
+                <div className="form-group full">
+                  <label>
+                    <input 
+                      type="checkbox" 
+                      checked={formAjout.est_active} 
+                      onChange={(e) => setFormAjout({...formAjout, est_active: e.target.checked})}
+                    /> Formation active
+                  </label>
                 </div>
               </div>
             </div>
             <div className="modal-footer">
               <button className="btn btn-cancel" onClick={() => setModalAjout(false)}>Annuler</button>
-              <button className="btn btn-save"><i className="fa-solid fa-floppy-disk"></i> Enregistrer</button>
+              <button className="btn btn-save" onClick={handleAjout}>
+                <i className="fa-solid fa-floppy-disk"></i> Enregistrer
+              </button>
             </div>
           </div>
         </div>
       )}
-
 
       {/* ══════════════ MODALE MODIFIER ══════════════ */}
       {modalModif && (
@@ -475,94 +619,144 @@ function Formations() {
               <div className="form-grid">
                 <div className="form-group full">
                   <label>Intitulé de la formation <span className="req">*</span></label>
-                  <input type="text" value={formModif.titre} onChange={(e) => setFormModif({...formModif, titre: e.target.value})} />
+                  <input 
+                    type="text" 
+                    value={formModif.intitule} 
+                    onChange={(e) => setFormModif({...formModif, intitule: e.target.value})} 
+                  />
                 </div>
+
                 <div className="form-group">
                   <label>Catégorie <span className="req">*</span></label>
-                  <select value={formModif.categorie} onChange={(e) => setFormModif({...formModif, categorie: e.target.value})}>
-                    <option>Marketing digital</option><option>Informatique</option><option>IA</option>
-                    <option>Design</option><option>Langues</option><option>Data</option><option>Soft skills</option>
+                  <select 
+                    value={formModif.categorie} 
+                    onChange={(e) => setFormModif({...formModif, categorie: e.target.value})}
+                  >
+                    <option value="">Sélectionner une catégorie</option>
+                    {categories.map(cat => (
+                      <option key={cat.id} value={cat.id}>{cat.nom}</option>
+                    ))}
                   </select>
                 </div>
+
                 <div className="form-group">
                   <label>Niveau <span className="req">*</span></label>
-                  <select value={formModif.niveau} onChange={(e) => setFormModif({...formModif, niveau: e.target.value})}>
-                    <option>Débutant</option><option>Intermédiaire</option><option>Avancé</option>
+                  <select 
+                    value={formModif.niveau} 
+                    onChange={(e) => setFormModif({...formModif, niveau: e.target.value})}
+                  >
+                    <option>Débutant</option>
+                    <option>Intermédiaire</option>
+                    <option>Avancé</option>
                   </select>
                 </div>
+
                 <div className="form-group full">
                   <label>Description détaillée</label>
-                  <textarea rows="3" value={formModif.description} onChange={(e) => setFormModif({...formModif, description: e.target.value})} />
+                  <textarea 
+                    rows="3" 
+                    value={formModif.description} 
+                    onChange={(e) => setFormModif({...formModif, description: e.target.value})}
+                  />
                 </div>
+
                 <div className="form-group full">
                   <label>Objectifs pédagogiques <span className="req">*</span></label>
-                  <textarea rows="3" value={formModif.objectifs} onChange={(e) => setFormModif({...formModif, objectifs: e.target.value})} />
+                  <textarea 
+                    rows="3" 
+                    value={formModif.objectifs_pedagogiques} 
+                    onChange={(e) => setFormModif({...formModif, objectifs_pedagogiques: e.target.value})}
+                  />
                 </div>
+
                 <div className="form-group full">
                   <label>Prérequis</label>
-                  <input type="text" value={formModif.prerequis} onChange={(e) => setFormModif({...formModif, prerequis: e.target.value})} />
+                  <input 
+                    type="text" 
+                    value={formModif.prerequis} 
+                    onChange={(e) => setFormModif({...formModif, prerequis: e.target.value})}
+                  />
                 </div>
+
                 <div className="form-group">
                   <label>Durée (Heures)</label>
-                  <input type="number" value={formModif.dureeH} onChange={(e) => setFormModif({...formModif, dureeH: e.target.value})} />
+                  <input 
+                    type="number" 
+                    value={formModif.duree} 
+                    onChange={(e) => setFormModif({...formModif, duree: e.target.value})}
+                  />
                 </div>
-                <div className="form-group">
-                  <label>Durée (Jours)</label>
-                  <input type="number" value={formModif.dureeJ} onChange={(e) => setFormModif({...formModif, dureeJ: e.target.value})} />
-                </div>
+
                 <div className="form-group">
                   <label>Format <span className="req">*</span></label>
-                  <select value={formModif.format} onChange={(e) => setFormModif({...formModif, format: e.target.value})}>
-                    <option>Présentiel</option><option>En ligne</option><option>Hybride</option>
+                  <select 
+                    value={formModif.format} 
+                    onChange={(e) => setFormModif({...formModif, format: e.target.value})}
+                  >
+                    <option>Présentiel</option>
+                    <option>En ligne</option>
+                    <option>Hybride</option>
                   </select>
                 </div>
-                <div className="form-group"></div>
+
                 <div className="form-group">
                   <label>Date de début</label>
-                  <input type="date" value={formModif.dateDebut} onChange={(e) => setFormModif({...formModif, dateDebut: e.target.value})} />
+                  <input 
+                    type="date" 
+                    value={formModif.date_debut} 
+                    onChange={(e) => setFormModif({...formModif, date_debut: e.target.value})}
+                  />
                 </div>
+
                 <div className="form-group">
                   <label>Date de fin</label>
-                  <input type="date" value={formModif.dateFin} onChange={(e) => setFormModif({...formModif, dateFin: e.target.value})} />
+                  <input 
+                    type="date" 
+                    value={formModif.date_fin} 
+                    onChange={(e) => setFormModif({...formModif, date_fin: e.target.value})}
+                  />
                 </div>
-                <div className="form-group">
-                  <label>Prix TTC (DT) <span className="req">*</span></label>
-                  <input type="number" value={formModif.prixTTC} onChange={(e) => setFormModif({...formModif, prixTTC: e.target.value})} />
-                </div>
+
                 <div className="form-group">
                   <label>Prix HT (DT) <span className="req">*</span></label>
-                  <input type="number" value={formModif.prixHT} onChange={(e) => setFormModif({...formModif, prixHT: e.target.value})} />
+                  <input 
+                    type="number" 
+                    step="0.01"
+                    value={formModif.prix_ht} 
+                    onChange={(e) => setFormModif({...formModif, prix_ht: e.target.value})}
+                  />
                 </div>
-                {/* Dans la section du formulaire de modification */}
+
                 <div className="form-group">
-                  <label>Paiement échelonné</label>
-                  <select 
-                    value={formModif.paiementTranches} 
-                    onChange={(e) => setFormModif({...formModif, paiementTranches: e.target.value})}
-                    className="tranche-select"
-                  >
-                    <option value="1">Paiement unique</option>
-                    <option value="2">2 tranches</option>
-                    <option value="3">3 tranches</option>
-                    <option value="4">4 tranches</option>
-                    <option value="6">6 tranches</option>
-                  </select>
-                  <small className="field-hint">
-                    Montant par tranche : {formModif.prixTTC && !isNaN(formModif.prixTTC) 
-                      ? (parseFloat(formModif.prixTTC) / parseInt(formModif.paiementTranches || 1)).toFixed(2) 
-                      : "0"} DT
-                  </small>
+                  <label>Prix TTC (DT) <span className="req">*</span></label>
+                  <input 
+                    type="number" 
+                    step="0.01"
+                    value={formModif.prix_ttc} 
+                    onChange={(e) => setFormModif({...formModif, prix_ttc: e.target.value})}
+                  />
+                </div>
+
+                <div className="form-group full">
+                  <label>
+                    <input 
+                      type="checkbox" 
+                      checked={formModif.est_active} 
+                      onChange={(e) => setFormModif({...formModif, est_active: e.target.checked})}
+                    /> Formation active
+                  </label>
                 </div>
               </div>
             </div>
             <div className="modal-footer">
               <button className="btn btn-cancel" onClick={() => setModalModif(null)}>Annuler</button>
-              <button className="btn btn-update"><i className="fa-solid fa-rotate"></i> Mettre à jour</button>
+              <button className="btn btn-update" onClick={handleModif}>
+                <i className="fa-solid fa-rotate"></i> Mettre à jour
+              </button>
             </div>
           </div>
         </div>
       )}
-
     </Layout>
   );
 }
