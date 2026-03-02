@@ -89,6 +89,7 @@ const EMPTY_FORM = {
   titre: "", categorie: "", niveau: "", description: "",
   objectifs: "", prerequis: "", dureeH: "", dureeJ: "",
   format: "", dateDebut: "", dateFin: "", prixTTC: "", prixHT: "",
+  paiementTranches: "1",
 };
 
 function Formations() {
@@ -130,6 +131,7 @@ function Formations() {
       format: f.format, dateDebut: "", dateFin: "",
       prixTTC: f.prixTTC.replace(" DT", "").replace(" ", ""),
       prixHT:  f.prixHT.replace(" DT", "").replace(" ", ""),
+      paiementTranches: f.paiementTranches || "1",
     });
     setModalModif(f);
   };
@@ -430,6 +432,26 @@ function Formations() {
                   <input type="number" min="0" placeholder="Ex : 1 000"
                     value={formAjout.prixHT} onChange={(e) => setFormAjout({...formAjout, prixHT: e.target.value})} />
                 </div>
+                      {/* Dans la section du formulaire d'ajout, après les champs de prix */}
+                <div className="form-group">
+                  <label>Paiement échelonné</label>
+                  <select 
+                    value={formAjout.paiementTranches} 
+                    onChange={(e) => setFormAjout({...formAjout, paiementTranches: e.target.value})}
+                    className="tranche-select"
+                  >
+                    <option value="1">Paiement unique</option>
+                    <option value="2">2 tranches</option>
+                    <option value="3">3 tranches</option>
+                    <option value="4">4 tranches</option>
+                    <option value="6">6 tranches</option>
+                  </select>
+                  <small className="field-hint">
+                    Montant par tranche : {formAjout.prixTTC && !isNaN(formAjout.prixTTC) 
+                      ? (parseFloat(formAjout.prixTTC) / parseInt(formAjout.paiementTranches || 1)).toFixed(2) 
+                      : "0"} DT
+                  </small>
+                </div>
               </div>
             </div>
             <div className="modal-footer">
@@ -510,6 +532,26 @@ function Formations() {
                 <div className="form-group">
                   <label>Prix HT (DT) <span className="req">*</span></label>
                   <input type="number" value={formModif.prixHT} onChange={(e) => setFormModif({...formModif, prixHT: e.target.value})} />
+                </div>
+                {/* Dans la section du formulaire de modification */}
+                <div className="form-group">
+                  <label>Paiement échelonné</label>
+                  <select 
+                    value={formModif.paiementTranches} 
+                    onChange={(e) => setFormModif({...formModif, paiementTranches: e.target.value})}
+                    className="tranche-select"
+                  >
+                    <option value="1">Paiement unique</option>
+                    <option value="2">2 tranches</option>
+                    <option value="3">3 tranches</option>
+                    <option value="4">4 tranches</option>
+                    <option value="6">6 tranches</option>
+                  </select>
+                  <small className="field-hint">
+                    Montant par tranche : {formModif.prixTTC && !isNaN(formModif.prixTTC) 
+                      ? (parseFloat(formModif.prixTTC) / parseInt(formModif.paiementTranches || 1)).toFixed(2) 
+                      : "0"} DT
+                  </small>
                 </div>
               </div>
             </div>
