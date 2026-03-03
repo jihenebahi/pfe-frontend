@@ -66,6 +66,7 @@ function Categories() {
   const [erreursModif, setErreursModif]       = useState({});
   const [errServeurModif, setErrServeurModif] = useState("");
   const [errSuppr, setErrSuppr]               = useState("");
+  const [errToggle, setErrToggle]             = useState(""); // Pour les erreurs de toggle
   const [submitLoading, setSubmitLoading]     = useState(false);
 
   useEffect(() => { fetchCategories(); }, []);
@@ -111,7 +112,11 @@ function Categories() {
       setSubmitLoading(true);
       setErreursAjout({});
       setErrServeurAjout("");
-      await ajouterCategorie({ nom: formAjout.nom.trim(), description: formAjout.description.trim(), actif: formAjout.actif });
+      await ajouterCategorie({ 
+        nom: formAjout.nom.trim(), 
+        description: formAjout.description.trim(), 
+        actif: formAjout.actif 
+      });
       setModalAjout(false);
       setFormAjout(EMPTY_FORM);
       await fetchCategories();
@@ -128,15 +133,28 @@ function Categories() {
 
   // ── MODIFIER ──
   const openModif = (cat) => {
-    setFormModif({ nom: cat.nom, description: cat.description || "", actif: cat.actif });
+    setFormModif({ 
+      nom: cat.nom, 
+      description: cat.description || "", 
+      actif: cat.actif,
+      formations_count: cat.formations_count || 0 
+    });
     setErreursModif({});
     setErrServeurModif("");
+    setErrToggle("");
     setModalModif(cat);
   };
 
   const handleModifier = async () => {
     const e = valider(formModif);
     if (Object.keys(e).length) { setErreursModif(e); return; }
+    
+    // Vérifier si on essaie de désactiver une catégorie qui a des formations
+    if (!formModif.actif && modalModif.formations_count > 0) {
+      setErrServeurModif("Impossible de désactiver : cette catégorie est liée à " + modalModif.formations_count + " formation(s).");
+      return;
+    }
+    
     try {
       setSubmitLoading(true);
       setErreursModif({});
@@ -151,6 +169,8 @@ function Categories() {
     } catch (err) {
       if (err.response?.data?.nom) {
         setErreursModif({ nom: "Une catégorie avec ce nom existe déjà." });
+      } else if (err.response?.data?.detail) {
+        setErrServeurModif(err.response.data.detail);
       } else {
         setErrServeurModif("Erreur serveur. Veuillez réessayer.");
       }
@@ -159,8 +179,43 @@ function Categories() {
     }
   };
 
+  // ── TOGGLE DIRECT DEPUIS LA LISTE ──
+  const handleToggleActif = async (cat) => {
+    // Si la catégorie a des formations et qu'on veut la désactiver
+    if (cat.actif && cat.formations_count > 0) {
+      setErrToggle("Impossible de désactiver : cette catégorie est liée à " + cat.formations_count + " formation(s).");
+      setTimeout(() => setErrToggle(""), 5000); // Effacer le message après 5 secondes
+      return;
+    }
+    
+    try {
+      setSubmitLoading(true);
+      await modifierCategorie(cat.id, {
+        nom: cat.nom,
+        description: cat.description,
+        actif: !cat.actif, // Inverser le statut
+      });
+      await fetchCategories();
+    } catch (err) {
+      console.error("Erreur lors de la modification du statut:", err);
+      if (err.response?.data?.detail) {
+        setErrToggle(err.response.data.detail);
+        setTimeout(() => setErrToggle(""), 5000);
+      }
+    } finally {
+      setSubmitLoading(false);
+    }
+  };
+
   // ── SUPPRIMER ──
-  const openSuppr = (cat) => { setErrSuppr(""); setModalSuppr(cat); };
+  const openSuppr = (cat) => { 
+    if (cat.formations_count > 0) {
+      setErrSuppr("Impossible de supprimer : cette catégorie est liée à " + cat.formations_count + " formation(s).");
+      return;
+    }
+    setErrSuppr(""); 
+    setModalSuppr(cat); 
+  };
 
   const handleSupprimer = async () => {
     try {
@@ -188,6 +243,13 @@ function Categories() {
         <h1 className="page-title"><i className="fa-solid fa-tags"></i> Gestion des Catégories</h1>
         <p className="page-sub">Gérez les catégories associées aux formations du centre</p>
       </div>
+
+      {/* Message d'erreur global pour les toggles */}
+      {errToggle && (
+        <div style={{ ...styleErreurBox, marginBottom: "16px" }}>
+          <i className="fa-solid fa-triangle-exclamation"></i> {errToggle}
+        </div>
+      )}
 
       <div className="toolbar">
         <div className="toolbar-left">
@@ -229,12 +291,17 @@ function Categories() {
             <table>
               <thead>
                 <tr>
-                  <th>#</th><th>Nom de la catégorie</th><th>Date de création</th><th>Statut</th><th>Actions</th>
+                  <th>#</th>
+                  <th>Nom de la catégorie</th>
+                  <th>Formations liées</th>
+                  <th>Date de création</th>
+                  <th>Statut</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {paginated.length === 0 ? (
-                  <tr><td colSpan="5" style={{ textAlign: "center", padding: "30px", color: "#94A3B8" }}>Aucune catégorie trouvée.</td></tr>
+                  <tr><td colSpan="6" style={{ textAlign: "center", padding: "30px", color: "#94A3B8" }}>Aucune catégorie trouvée.</td></tr>
                 ) : (
                   paginated.map((cat, index) => (
                     <tr key={cat.id}>
@@ -245,20 +312,51 @@ function Categories() {
                           {cat.nom}
                         </div>
                       </td>
+                      <td className="td-count">
+                        <span className={`formations-count ${cat.formations_count > 0 ? 'has-formations' : ''}`}>
+                          {cat.formations_count || 0} formation{cat.formations_count > 1 ? 's' : ''}
+                        </span>
+                      </td>
                       <td className="td-date">{formatDate(cat.date_creation)}</td>
                       <td>
                         <div className="toggle-wrap">
                           <label className="toggle">
-                            <input type="checkbox" checked={cat.actif} readOnly />
+                            <input 
+                              type="checkbox" 
+                              checked={cat.actif} 
+                              onChange={() => handleToggleActif(cat)}
+                              disabled={submitLoading || (cat.actif && cat.formations_count > 0)}
+                            />
                             <span className="toggle-slider"></span>
                           </label>
-                          <span className={`toggle-lbl ${cat.actif ? "on" : "off"}`}>{cat.actif ? "Actif" : "Inactif"}</span>
+                          <span className={`toggle-lbl ${cat.actif ? "on" : "off"}`}>
+                            {cat.actif ? "Actif" : "Inactif"}
+                          </span>
                         </div>
                       </td>
                       <td className="td-actions">
-                        <button className="act-btn act-detail" title="Détail"   onClick={() => setModalDetail(cat)}><i className="fa-solid fa-eye"></i></button>
-                        <button className="act-btn act-modif"  title="Modifier"  onClick={() => openModif(cat)}><i className="fa-solid fa-pen"></i></button>
-                        <button className="act-btn act-suppr"  title="Supprimer" onClick={() => openSuppr(cat)}><i className="fa-solid fa-trash"></i></button>
+                        <button 
+                          className="act-btn act-detail" 
+                          title="Détail"   
+                          onClick={() => setModalDetail(cat)}
+                        >
+                          <i className="fa-solid fa-eye"></i>
+                        </button>
+                        <button 
+                          className="act-btn act-modif"  
+                          title="Modifier"  
+                          onClick={() => openModif(cat)}
+                        >
+                          <i className="fa-solid fa-pen"></i>
+                        </button>
+                        <button 
+                          className={`act-btn act-suppr ${cat.formations_count > 0 ? 'disabled' : ''}`}  
+                          title={cat.formations_count > 0 ? "Impossible de supprimer (formations liées)" : "Supprimer"}
+                          onClick={() => openSuppr(cat)}
+                          disabled={cat.formations_count > 0}
+                        >
+                          <i className="fa-solid fa-trash"></i>
+                        </button>
                       </td>
                     </tr>
                   ))
@@ -301,20 +399,31 @@ function Categories() {
               <div className="detail-stat-row">
                 <div className="dsr-card">
                   <div className="dsr-icon"><i className="fa-solid fa-hashtag"></i></div>
-                  <div className="dsr-info"><span className="dsr-val">#{modalDetail.id}</span><span className="dsr-lbl">ID catégorie</span></div>
+                  <div className="dsr-info">
+                    <span className="dsr-val">#{modalDetail.id}</span>
+                    <span className="dsr-lbl">ID catégorie</span>
+                  </div>
                 </div>
                 <div className="dsr-card">
                   <div className="dsr-icon"><i className="fa-solid fa-book-open"></i></div>
-                  <div className="dsr-info"><span className="dsr-val">— formations</span><span className="dsr-lbl">Formations liées</span></div>
+                  <div className="dsr-info">
+                    <span className="dsr-val">{modalDetail.formations_count || 0}</span>
+                    <span className="dsr-lbl">Formation{modalDetail.formations_count > 1 ? 's' : ''} liée{modalDetail.formations_count > 1 ? 's' : ''}</span>
+                  </div>
                 </div>
                 <div className="dsr-card">
                   <div className="dsr-icon"><i className="fa-regular fa-calendar"></i></div>
-                  <div className="dsr-info"><span className="dsr-val">{formatDate(modalDetail.date_creation)}</span><span className="dsr-lbl">Date de création</span></div>
+                  <div className="dsr-info">
+                    <span className="dsr-val">{formatDate(modalDetail.date_creation)}</span>
+                    <span className="dsr-lbl">Date de création</span>
+                  </div>
                 </div>
                 <div className="dsr-card">
                   <div className="dsr-icon"><i className="fa-solid fa-circle-check"></i></div>
                   <div className="dsr-info">
-                    <span className={`dsr-val ${modalDetail.actif ? "dsr-active" : "dsr-inactive"}`}>{modalDetail.actif ? "Active" : "Inactive"}</span>
+                    <span className={`dsr-val ${modalDetail.actif ? "dsr-active" : "dsr-inactive"}`}>
+                      {modalDetail.actif ? "Active" : "Inactive"}
+                    </span>
                     <span className="dsr-lbl">Statut</span>
                   </div>
                 </div>
@@ -328,7 +437,11 @@ function Categories() {
             </div>
             <div className="modal-footer">
               <button className="btn btn-cancel" onClick={() => setModalDetail(null)}>Fermer</button>
-              <button className="btn btn-update" onClick={() => { setModalDetail(null); openModif(modalDetail); }}>
+              <button 
+                className="btn btn-update" 
+                onClick={() => { setModalDetail(null); openModif(modalDetail); }}
+                disabled={modalDetail.formations_count > 0 && !modalDetail.actif}
+              >
                 <i className="fa-solid fa-pen"></i> Modifier
               </button>
             </div>
@@ -426,11 +539,23 @@ function Categories() {
                   <div className="form-toggle-row">
                     <label>Statut</label>
                     <label className="toggle">
-                      <input type="checkbox" checked={formModif.actif} onChange={(e) => setFormModif({ ...formModif, actif: e.target.checked })} />
+                      <input 
+                        type="checkbox" 
+                        checked={formModif.actif} 
+                        onChange={(e) => setFormModif({ ...formModif, actif: e.target.checked })}
+                        disabled={!formModif.actif && modalModif.formations_count > 0}
+                      />
                       <span className="toggle-slider"></span>
                     </label>
-                    <span className={`toggle-lbl ${formModif.actif ? "on" : "off"}`}>{formModif.actif ? "Active" : "Inactive"}</span>
+                    <span className={`toggle-lbl ${formModif.actif ? "on" : "off"}`}>
+                      {formModif.actif ? "Active" : "Inactive"}
+                    </span>
                   </div>
+                  {!formModif.actif && modalModif.formations_count > 0 && (
+                    <small style={{ color: "#ef4444", marginTop: "4px", display: "block" }}>
+                      <i className="fa-solid fa-info-circle"></i> Cette catégorie a {modalModif.formations_count} formation(s) liée(s). Vous ne pouvez pas la désactiver.
+                    </small>
+                  )}
                 </div>
               </div>
             </div>
