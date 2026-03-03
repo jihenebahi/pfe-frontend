@@ -35,6 +35,23 @@ const styleErreurBox = {
   gap: "8px",
   marginTop: "6px",
 };
+
+const styleSuccesBox = {
+  border: "1.5px solid #22c55e",
+  borderRadius: "10px",
+  padding: "14px 18px",
+  backgroundColor: "#f0fdf4",
+  color: "#16a34a",
+  fontSize: "14px",
+  display: "flex",
+  alignItems: "center",
+  gap: "10px",
+  marginBottom: "16px",
+  fontWeight: "500",
+  boxShadow: "0 2px 8px rgba(34,197,94,0.10)",
+  animation: "fadeInDown 0.3s ease",
+};
+
 const styleInputErreur = { border: "1.5px solid #ef4444" };
 
 function ErrMsg({ msg }) {
@@ -42,6 +59,16 @@ function ErrMsg({ msg }) {
   return (
     <div style={styleErreurBox}>
       <i className="fa-solid fa-triangle-exclamation"></i> {msg}
+    </div>
+  );
+}
+
+function SuccesMsg({ msg }) {
+  if (!msg) return null;
+  return (
+    <div style={styleSuccesBox}>
+      <i className="fa-solid fa-circle-check" style={{ fontSize: "18px" }}></i>
+      {msg}
     </div>
   );
 }
@@ -66,8 +93,16 @@ function Categories() {
   const [erreursModif, setErreursModif]       = useState({});
   const [errServeurModif, setErrServeurModif] = useState("");
   const [errSuppr, setErrSuppr]               = useState("");
-  const [errToggle, setErrToggle]             = useState(""); // Pour les erreurs de toggle
+  const [errToggle, setErrToggle]             = useState("");
   const [submitLoading, setSubmitLoading]     = useState(false);
+
+  // ── MESSAGES DE SUCCÈS ──
+  const [succesGlobal, setSuccesGlobal] = useState("");
+
+  const afficherSucces = (msg) => {
+    setSuccesGlobal(msg);
+    setTimeout(() => setSuccesGlobal(""), 4000);
+  };
 
   useEffect(() => { fetchCategories(); }, []);
 
@@ -83,10 +118,10 @@ function Categories() {
     }
   };
 
-  // Recherche en temps réel par nom uniquement
-  const filtered = data.filter((c) =>
-    c.nom.toLowerCase().includes(search.toLowerCase())
-  );
+  // Recherche en temps réel par nom uniquement + tri par date décroissante (plus récente en premier)
+  const filtered = data
+    .filter((c) => c.nom.toLowerCase().includes(search.toLowerCase()))
+    .sort((a, b) => new Date(b.date_creation) - new Date(a.date_creation));
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
   const paginated  = filtered.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
@@ -120,6 +155,7 @@ function Categories() {
       setModalAjout(false);
       setFormAjout(EMPTY_FORM);
       await fetchCategories();
+      afficherSucces("Catégorie ajoutée avec succès !");
     } catch (err) {
       if (err.response?.data?.nom) {
         setErreursAjout({ nom: "Une catégorie avec ce nom existe déjà." });
@@ -166,6 +202,7 @@ function Categories() {
       });
       setModalModif(null);
       await fetchCategories();
+      afficherSucces("Modification faite avec succès !");
     } catch (err) {
       if (err.response?.data?.nom) {
         setErreursModif({ nom: "Une catégorie avec ce nom existe déjà." });
@@ -184,7 +221,7 @@ function Categories() {
     // Si la catégorie a des formations et qu'on veut la désactiver
     if (cat.actif && cat.formations_count > 0) {
       setErrToggle("Impossible de désactiver : cette catégorie est liée à " + cat.formations_count + " formation(s).");
-      setTimeout(() => setErrToggle(""), 5000); // Effacer le message après 5 secondes
+      setTimeout(() => setErrToggle(""), 5000);
       return;
     }
     
@@ -193,7 +230,7 @@ function Categories() {
       await modifierCategorie(cat.id, {
         nom: cat.nom,
         description: cat.description,
-        actif: !cat.actif, // Inverser le statut
+        actif: !cat.actif,
       });
       await fetchCategories();
     } catch (err) {
@@ -243,6 +280,11 @@ function Categories() {
         <h1 className="page-title"><i className="fa-solid fa-tags"></i> Gestion des Catégories</h1>
         <p className="page-sub">Gérez les catégories associées aux formations du centre</p>
       </div>
+
+      {/* ══════════ MESSAGE DE SUCCÈS GLOBAL ══════════ */}
+      {succesGlobal && (
+        <SuccesMsg msg={succesGlobal} />
+      )}
 
       {/* Message d'erreur global pour les toggles */}
       {errToggle && (
