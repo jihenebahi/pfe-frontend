@@ -81,32 +81,21 @@ const FORMATEURS_INIT = [
   },
 ];
 
-const FORMATIONS_LIST = [
-  "Développement Web Full Stack",
-  "Intelligence Artificielle Appliquée",
-  "Python pour Data Science",
-  "Marketing Digital et Réseaux Sociaux",
-  "UI/UX Design et Figma",
-  "Anglais des Affaires",
-  "Management de Projet Agile",
-];
-
 const FORM_VIDE = {
   nom: "", prenom: "", email: "", telephone: "", adresse: "",
   specialites: "", niveau: "", contrat: "", disponibilites: "",
-  formations: [], heures: "",
+  heures: "",
 };
 
 // ─── Composant principal ──────────────────────────────────────────────────────
 function Formateurs() {
   const [formateurs, setFormateurs] = useState(FORMATEURS_INIT);
   const [search, setSearch] = useState("");
-  const [filterFormation, setFilterFormation] = useState("");
 
   // Modales
-  const [modalDetail, setModalDetail] = useState(null);   // formateur sélectionné
+  const [modalDetail, setModalDetail] = useState(null);
   const [modalAjout, setModalAjout] = useState(false);
-  const [modalModif, setModalModif] = useState(null);     // formateur sélectionné
+  const [modalModif, setModalModif] = useState(null);
 
   // Formulaire ajout
   const [formAjout, setFormAjout] = useState(FORM_VIDE);
@@ -123,15 +112,12 @@ function Formateurs() {
   // ── Filtrage ────────────────────────────────────────────────────────────────
   const filtered = formateurs.filter((f) => {
     const q = search.toLowerCase();
-    const matchSearch =
+    return (
       !q ||
       f.nom.toLowerCase().includes(q) ||
       f.prenom.toLowerCase().includes(q) ||
-      f.specialites.some((s) => s.toLowerCase().includes(q));
-    const matchFormation =
-      !filterFormation ||
-      f.formations.includes(filterFormation);
-    return matchSearch && matchFormation;
+      f.specialites.some((s) => s.toLowerCase().includes(q))
+    );
   });
 
   const totalPages = Math.ceil(filtered.length / PER_PAGE);
@@ -151,11 +137,6 @@ function Formateurs() {
     setFormAjout((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleAjoutFormations = (e) => {
-    const selected = Array.from(e.target.selectedOptions).map((o) => o.value);
-    setFormAjout((prev) => ({ ...prev, formations: selected }));
-  };
-
   const handleSaveAjout = () => {
     if (!formAjout.nom || !formAjout.prenom || !formAjout.email) return;
     const newF = {
@@ -163,6 +144,7 @@ function Formateurs() {
       ...formAjout,
       specialites: formAjout.specialites.split(",").map((s) => s.trim()).filter(Boolean),
       heures: Number(formAjout.heures) || 0,
+      formations: [],
       docs: {
         contrat: fileNamesAjout.contrat || "—",
         cv: fileNamesAjout.cv || "—",
@@ -188,7 +170,6 @@ function Formateurs() {
       niveau: f.niveau,
       contrat: f.contrat,
       disponibilites: f.disponibilites,
-      formations: f.formations,
       heures: f.heures,
     });
     setFileNamesModif({ contrat: "", cv: "", diplome: "" });
@@ -200,11 +181,6 @@ function Formateurs() {
     setFormModif((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleModifFormations = (e) => {
-    const selected = Array.from(e.target.selectedOptions).map((o) => o.value);
-    setFormModif((prev) => ({ ...prev, formations: selected }));
-  };
-
   const handleSaveModif = () => {
     setFormateurs((prev) =>
       prev.map((f) =>
@@ -214,6 +190,7 @@ function Formateurs() {
               ...formModif,
               specialites: formModif.specialites.split(",").map((s) => s.trim()).filter(Boolean),
               heures: Number(formModif.heures) || 0,
+              formations: f.formations, // on garde les formations existantes
               docs: {
                 contrat: fileNamesModif.contrat || f.docs.contrat,
                 cv: fileNamesModif.cv || f.docs.cv,
@@ -266,16 +243,6 @@ function Formateurs() {
               onChange={(e) => { setSearch(e.target.value); setPage(1); }}
             />
           </div>
-          <select
-            className="filter-sel"
-            value={filterFormation}
-            onChange={(e) => { setFilterFormation(e.target.value); setPage(1); }}
-          >
-            <option value="">Toutes les formations</option>
-            {FORMATIONS_LIST.map((f) => (
-              <option key={f} value={f}>{f}</option>
-            ))}
-          </select>
         </div>
         <div className="toolbar-right">
           <button className="btn btn-add" onClick={() => setModalAjout(true)}>
@@ -319,25 +286,13 @@ function Formateurs() {
                     ))}
                   </td>
                   <td className="td-actions">
-                    <button
-                      className="act-btn act-detail"
-                      title="Détail"
-                      onClick={() => setModalDetail(f)}
-                    >
+                    <button className="act-btn act-detail" title="Détail" onClick={() => setModalDetail(f)}>
                       <i className="fa-solid fa-eye"></i>
                     </button>
-                    <button
-                      className="act-btn act-modif"
-                      title="Modifier"
-                      onClick={() => openModif(f)}
-                    >
+                    <button className="act-btn act-modif" title="Modifier" onClick={() => openModif(f)}>
                       <i className="fa-solid fa-pen"></i>
                     </button>
-                    <button
-                      className="act-btn act-suppr"
-                      title="Supprimer"
-                      onClick={() => handleDelete(f.id)}
-                    >
+                    <button className="act-btn act-suppr" title="Supprimer" onClick={() => handleDelete(f.id)}>
                       <i className="fa-solid fa-trash"></i>
                     </button>
                   </td>
@@ -486,7 +441,7 @@ function Formateurs() {
                   </div>
                 </div>
 
-                {/* Suivi */}
+                {/* Suivi — visible uniquement dans le détail */}
                 <div className="detail-sec">
                   <div className="detail-sec-title">
                     <i className="fa-solid fa-chart-bar"></i> Suivi
@@ -495,7 +450,10 @@ function Formateurs() {
                     <div className="info-item full-info">
                       <span className="info-lbl">Formations assurées</span>
                       <span className="info-val">
-                        {modalDetail.formations.map((f) => <span key={f} className="fmt-badge">{f}</span>)}
+                        {modalDetail.formations.length > 0
+                          ? modalDetail.formations.map((f) => <span key={f} className="fmt-badge">{f}</span>)
+                          : <span style={{ color: "#94A3B8", fontSize: "13px" }}>Aucune formation renseignée</span>
+                        }
                       </span>
                     </div>
                     <div className="info-item">
@@ -566,6 +524,8 @@ function Formateurs() {
               </button>
             </div>
             <div className="modal-body">
+
+              {/* Informations personnelles */}
               <div className="form-section-title"><i className="fa-solid fa-user"></i> Informations personnelles</div>
               <div className="form-grid">
                 <div className="form-group">
@@ -590,6 +550,7 @@ function Formateurs() {
                 </div>
               </div>
 
+              {/* Informations professionnelles */}
               <div className="form-section-title"><i className="fa-solid fa-briefcase"></i> Informations professionnelles</div>
               <div className="form-grid">
                 <div className="form-group full">
@@ -617,23 +578,13 @@ function Formateurs() {
                   <label>Disponibilités</label>
                   <input type="text" name="disponibilites" value={formAjout.disponibilites} onChange={handleAjoutChange} placeholder="Ex : Lundi - Vendredi, 08h00 - 17h00" />
                 </div>
-              </div>
-
-              <div className="form-section-title"><i className="fa-solid fa-chart-bar"></i> Suivi</div>
-              <div className="form-grid">
-                <div className="form-group full">
-                  <label>Formations assurées</label>
-                  <select multiple className="multi-select" value={formAjout.formations} onChange={handleAjoutFormations}>
-                    {FORMATIONS_LIST.map((f) => <option key={f}>{f}</option>)}
-                  </select>
-                  <span className="field-hint">Maintenez Ctrl (ou Cmd) pour sélectionner plusieurs</span>
-                </div>
                 <div className="form-group">
                   <label>Heures réalisées</label>
                   <input type="number" name="heures" min="0" value={formAjout.heures} onChange={handleAjoutChange} placeholder="Ex : 120" />
                 </div>
               </div>
 
+              {/* Documents administratifs */}
               <div className="form-section-title"><i className="fa-solid fa-folder-open"></i> Documents administratifs</div>
               <div className="form-grid">
                 {[
@@ -658,6 +609,7 @@ function Formateurs() {
                   </div>
                 ))}
               </div>
+
             </div>
             <div className="modal-footer">
               <button className="btn btn-cancel" onClick={() => setModalAjout(false)}>Annuler</button>
@@ -682,6 +634,8 @@ function Formateurs() {
               </button>
             </div>
             <div className="modal-body">
+
+              {/* Informations personnelles */}
               <div className="form-section-title"><i className="fa-solid fa-user"></i> Informations personnelles</div>
               <div className="form-grid">
                 <div className="form-group">
@@ -706,6 +660,7 @@ function Formateurs() {
                 </div>
               </div>
 
+              {/* Informations professionnelles */}
               <div className="form-section-title"><i className="fa-solid fa-briefcase"></i> Informations professionnelles</div>
               <div className="form-grid">
                 <div className="form-group full">
@@ -731,23 +686,13 @@ function Formateurs() {
                   <label>Disponibilités</label>
                   <input type="text" name="disponibilites" value={formModif.disponibilites} onChange={handleModifChange} />
                 </div>
-              </div>
-
-              <div className="form-section-title"><i className="fa-solid fa-chart-bar"></i> Suivi</div>
-              <div className="form-grid">
-                <div className="form-group full">
-                  <label>Formations assurées</label>
-                  <select multiple className="multi-select" value={formModif.formations} onChange={handleModifFormations}>
-                    {FORMATIONS_LIST.map((f) => <option key={f}>{f}</option>)}
-                  </select>
-                  <span className="field-hint">Maintenez Ctrl (ou Cmd) pour sélectionner plusieurs</span>
-                </div>
                 <div className="form-group">
                   <label>Heures réalisées</label>
                   <input type="number" name="heures" min="0" value={formModif.heures} onChange={handleModifChange} />
                 </div>
               </div>
 
+              {/* Documents administratifs */}
               <div className="form-section-title"><i className="fa-solid fa-folder-open"></i> Documents administratifs</div>
               <div className="form-grid">
                 {[
@@ -777,6 +722,7 @@ function Formateurs() {
                   </div>
                 ))}
               </div>
+
             </div>
             <div className="modal-footer">
               <button className="btn btn-cancel" onClick={() => setModalModif(null)}>Annuler</button>
