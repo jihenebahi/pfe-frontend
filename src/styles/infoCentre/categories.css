@@ -455,3 +455,76 @@ tbody td { padding: 13px 14px; vertical-align: middle; }
 @media (max-width: 500px) {
   .detail-stat-row { grid-template-columns: 1fr; }
 }
+
+/* Styles pour le compteur de formations */
+.formations-count {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+  background-color: #f1f5f9;
+  color: #475569;
+}
+
+.formations-count.has-formations {
+  background-color: #e0f2fe;
+  color: #0369a1;
+  font-weight: 600;
+}
+
+/* Style pour le bouton supprimer désactivé */
+.act-btn.act-suppr.disabled,
+.act-btn.act-suppr:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background-color: #e2e8f0 !important;
+  color: #94a3b8 !important;
+}
+
+.act-btn.act-suppr.disabled:hover,
+.act-btn.act-suppr:disabled:hover {
+  background-color: #e2e8f0 !important;
+  color: #94a3b8 !important;
+  transform: none !important;
+}
+
+/* Styles pour la colonne du compteur */
+.td-count {
+  text-align: center;
+  font-weight: 500;
+}
+
+/* Style pour le toggle désactivé */
+.toggle input:disabled + .toggle-slider {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.toggle input:disabled ~ .toggle-lbl {
+  opacity: 0.5;
+}
+
+/* Message d'info dans la modale de modification */
+.form-group small {
+  font-size: 11px;
+  margin-top: 4px;
+}
+
+/* Animation pour les messages d'erreur */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+[style*="styleErreurBox"] {
+  animation: fadeIn 0.3s ease;
+}
+
+
