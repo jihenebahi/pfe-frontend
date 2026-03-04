@@ -122,7 +122,7 @@ function Formations() {
 
   // Formater les données pour l'affichage
   const formatFormationPourAffichage = (f) => {
-    const dureeEnJours = Math.ceil(f.duree / 8);
+    const dureeEnJours = Math.round((new Date(f.date_fin) - new Date(f.date_debut)) / (1000 * 60 * 60 * 24)) + 1;
     return {
       ...f,
       num: f.id.toString().padStart(2, '0'),
@@ -437,11 +437,9 @@ const handleModif = async () => {
           <table>
             <thead>
               <tr>
-                <th>#</th>
                 <th>Intitulé de la formation</th>
                 <th>Catégorie</th>
                 <th>Niveau</th>
-                <th>Prérequis</th>
                 <th>Durée</th>
                 <th>Prix TTC</th>
                 <th>Prix HT</th>
@@ -453,11 +451,9 @@ const handleModif = async () => {
             <tbody>
               {paginated.map((f) => (
                 <tr key={f.id} className={getRowClassName(f)}>
-                  <td className="td-num">{f.num}</td>
                   <td className="td-title">{f.intitule}</td>
                   <td><span className="cat-tag">{f.categorie}</span></td>
                   <td><span className={`badge ${NIVEAU_CLASS[f.niveau]}`}>{f.niveau}</span></td>
-                  <td className="td-pre">{f.prerequis || "-"}</td>
                   <td className="td-dur">{f.duree}</td>
                   <td className="td-ttc">{f.prixTTC}</td>
                   <td className="td-ht">{f.prixHT}</td>
@@ -542,7 +538,7 @@ const handleModif = async () => {
                 <div className="stat-card sc-navy">
                   <div className="sc-icon"><i className="fa-solid fa-calendar-days"></i></div>
                   <div className="sc-info">
-                    <span className="sc-val">{modalDetail.duree.split("/")[1]?.trim()}</span>
+                    <span className="sc-val">{Math.round((new Date(modalDetail.date_fin) - new Date(modalDetail.date_debut)) / (1000 * 60 * 60 * 24)) + 1}j</span>
                     <span className="sc-lbl">En jours</span>
                   </div>
                 </div>
@@ -590,10 +586,6 @@ const handleModif = async () => {
                   <ul className="detail-list">
                     {modalDetail.objectifs_pedagogiques?.split('\n').filter(o => o.trim()).map((o, i) => <li key={i}>{o}</li>)}
                   </ul>
-                </div>
-                <div className="detail-sec">
-                  <div className="detail-sec-title"><i className="fa-solid fa-circle-exclamation"></i> Prérequis</div>
-                  <p className="detail-sec-text">{modalDetail.prerequis || "Aucun prérequis spécifique"}</p>
                 </div>
               </div>
             </div>
@@ -693,16 +685,6 @@ const handleModif = async () => {
                     }}
                   />
                   <ErrMsg msg={erreursAjout.objectifs_pedagogiques} />
-                </div>
-
-                <div className="form-group full">
-                  <label>Prérequis</label>
-                  <input 
-                    type="text" 
-                    placeholder="Ex : Notions de base en informatique…"
-                    value={formAjout.prerequis} 
-                    onChange={(e) => setFormAjout({...formAjout, prerequis: e.target.value})}
-                  />
                 </div>
 
                 <div className="form-group">
@@ -928,15 +910,6 @@ const handleModif = async () => {
                     }}
                   />
                   <ErrMsg msg={erreursModif.objectifs_pedagogiques} />
-                </div>
-
-                <div className="form-group full">
-                  <label>Prérequis</label>
-                  <input 
-                    type="text" 
-                    value={formModif.prerequis} 
-                    onChange={(e) => setFormModif({...formModif, prerequis: e.target.value})}
-                  />
                 </div>
 
                 <div className="form-group">
