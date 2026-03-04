@@ -53,6 +53,7 @@ const EMPTY_FORM = {
   prix_ttc: "",
   nb_tranches_paiement: "1",
   est_active: true,
+  ordre: "", // Ajout du champ ordre
 };
 
 function Formations() {
@@ -69,7 +70,7 @@ function Formations() {
   const [modalDetail, setModalDetail] = useState(null);
   const [modalModif, setModalModif] = useState(null);
   const [modalAjout, setModalAjout] = useState(false);
-  const [modalSuppr, setModalSuppr] = useState(null); // Nouvel état pour la modale de suppression
+  const [modalSuppr, setModalSuppr] = useState(null);
   const [formAjout, setFormAjout] = useState(EMPTY_FORM);
   const [formModif, setFormModif] = useState(EMPTY_FORM);
 
@@ -120,6 +121,9 @@ function Formations() {
     }
   };
 
+  // Filtrer les catégories actives pour les selects
+  const categoriesActives = categories.filter(cat => cat.actif);
+
   // Formater les données pour l'affichage
   const formatFormationPourAffichage = (f) => {
     const dureeEnJours = Math.round((new Date(f.date_fin) - new Date(f.date_debut)) / (1000 * 60 * 60 * 24)) + 1;
@@ -138,7 +142,8 @@ function Formations() {
       date_fin: f.date_fin,
       dateDebut: new Date(f.date_debut).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }),
       dateFin: new Date(f.date_fin).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }),
-      status: getFormationStatus(f)
+      status: getFormationStatus(f),
+      ordre: f.ordre || "", // Ajout de l'ordre dans l'affichage
     };
   };
 
@@ -152,148 +157,148 @@ function Formations() {
         (filterNiveau === "" || f.niveau === filterNiveau) &&
         (filterCat === "" || f.categorie === filterCat)
       );
+    })
+    .sort((a, b) => { // Tri par ordre puis par date de création
+      if (a.ordre && b.ordre) return a.ordre - b.ordre;
+      if (a.ordre) return -1;
+      if (b.ordre) return 1;
+      return new Date(b.date_creation) - new Date(a.date_creation);
     });
 
   const totalPages = Math.ceil(filtered.length / itemsPerPage);
   const paginated = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
-
-
   const handleAjout = async () => {
-  // Utiliser la validation complète au lieu de validerFormulaire
-  const validation = validateFormationForm(formAjout, 'ajout', { allowPastDates: false });
-  
-  if (!validation.isValid) {
-    // Transformer les erreurs en objet pour l'affichage par champ
-    const erreurs = {};
-    validation.errors.forEach(err => {
-      if (err.includes("intitulé")) erreurs.intitule = err;
-      else if (err.includes("catégorie")) erreurs.categorie = err;
-      else if (err.includes("niveau")) erreurs.niveau = err;
-      else if (err.includes("format")) erreurs.format = err;
-      else if (err.includes("objectifs")) erreurs.objectifs_pedagogiques = err;
-      else if (err.includes("durée")) erreurs.duree = err;
-      else if (err.includes("début")) erreurs.date_debut = err;
-      else if (err.includes("fin")) erreurs.date_fin = err;
-      else if (err.includes("HT")) erreurs.prix_ht = err;
-      else if (err.includes("TTC")) erreurs.prix_ttc = err;
-      else if (err.includes("tranches")) erreurs.nb_tranches_paiement = err;
-      else {
-        // Erreur générale
-        setErrServeurAjout(err);
-      }
-    });
-    if (validation.coherenceError) {
-      erreurs.duree_coherence = validation.coherenceError;
-    }
+    const validation = validateFormationForm(formAjout, 'ajout', { allowPastDates: false });
     
-    if (Object.keys(erreurs).length > 0) {
-      setErreursAjout(erreurs);
-    }
-    return;
-  }
-
-  try {
-    setSubmitLoading(true);
-    setErreursAjout({});
-    setErrServeurAjout("");
-
-    const formationData = {
-      ...formAjout,
-      niveau: NIVEAU_MAPPING[formAjout.niveau] || formAjout.niveau,
-      format: FORMAT_MAPPING[formAjout.format] || formAjout.format,
-    };
-
-    const cleanedData = cleanFormData(formationData);
-    await ajouterFormation(cleanedData);
-    await fetchFormations();
-    setModalAjout(false);
-    setFormAjout(EMPTY_FORM);
-    afficherSucces("Formation ajoutée avec succès !");
-  } catch (err) {
-    console.error("Erreur lors de l'ajout:", err);
-    if (err.response?.data) {
-      const messages = Object.values(err.response.data).flat();
-      setErrServeurAjout(messages.join('\n'));
-    } else {
-      setErrServeurAjout("Erreur lors de l'ajout de la formation");
-    }
-  } finally {
-    setSubmitLoading(false);
-  }
-};
-// Modifier une formation
-const handleModif = async () => {
-  if (!modalModif?.id) return;
-
-  // Utiliser la validation complète
-  const validation = validateFormationForm(formModif, 'modif', { allowPastDates: false });
-  
-  if (!validation.isValid) {
-    // Transformer les erreurs en objet pour l'affichage par champ
-    const erreurs = {};
-    validation.errors.forEach(err => {
-      if (err.includes("intitulé")) erreurs.intitule = err;
-      else if (err.includes("catégorie")) erreurs.categorie = err;
-      else if (err.includes("niveau")) erreurs.niveau = err;
-      else if (err.includes("format")) erreurs.format = err;
-      else if (err.includes("objectifs")) erreurs.objectifs_pedagogiques = err;
-      else if (err.includes("durée")) erreurs.duree = err;
-      else if (err.includes("début")) erreurs.date_debut = err;
-      else if (err.includes("fin")) erreurs.date_fin = err;
-      else if (err.includes("HT")) erreurs.prix_ht = err;
-      else if (err.includes("TTC")) erreurs.prix_ttc = err;
-      else if (err.includes("tranches")) erreurs.nb_tranches_paiement = err;
-      else {
-        setErrServeurModif(err);
+    if (!validation.isValid) {
+      const erreurs = {};
+      validation.errors.forEach(err => {
+        if (err.includes("intitulé")) erreurs.intitule = err;
+        else if (err.includes("catégorie")) erreurs.categorie = err;
+        else if (err.includes("niveau")) erreurs.niveau = err;
+        else if (err.includes("format")) erreurs.format = err;
+        else if (err.includes("objectifs")) erreurs.objectifs_pedagogiques = err;
+        else if (err.includes("durée")) erreurs.duree = err;
+        else if (err.includes("début")) erreurs.date_debut = err;
+        else if (err.includes("fin")) erreurs.date_fin = err;
+        else if (err.includes("HT")) erreurs.prix_ht = err;
+        else if (err.includes("TTC")) erreurs.prix_ttc = err;
+        else if (err.includes("tranches")) erreurs.nb_tranches_paiement = err;
+        else if (err.includes("ordre")) erreurs.ordre = err; // Ajout
+        else {
+          setErrServeurAjout(err);
+        }
+      });
+      if (validation.coherenceError) {
+        erreurs.duree_coherence = validation.coherenceError;
       }
-    });
-    if (validation.coherenceError) {
-      erreurs.duree_coherence = validation.coherenceError;
+      
+      if (Object.keys(erreurs).length > 0) {
+        setErreursAjout(erreurs);
+      }
+      return;
     }
+
+    try {
+      setSubmitLoading(true);
+      setErreursAjout({});
+      setErrServeurAjout("");
+
+      const formationData = {
+        ...formAjout,
+        niveau: NIVEAU_MAPPING[formAjout.niveau] || formAjout.niveau,
+        format: FORMAT_MAPPING[formAjout.format] || formAjout.format,
+      };
+
+      const cleanedData = cleanFormData(formationData);
+      await ajouterFormation(cleanedData);
+      await fetchFormations();
+      setModalAjout(false);
+      setFormAjout(EMPTY_FORM);
+      afficherSucces("Formation ajoutée avec succès !");
+    } catch (err) {
+      console.error("Erreur lors de l'ajout:", err);
+      if (err.response?.data) {
+        const messages = Object.values(err.response.data).flat();
+        setErrServeurAjout(messages.join('\n'));
+      } else {
+        setErrServeurAjout("Erreur lors de l'ajout de la formation");
+      }
+    } finally {
+      setSubmitLoading(false);
+    }
+  };
+
+  const handleModif = async () => {
+    if (!modalModif?.id) return;
+
+    const validation = validateFormationForm(formModif, 'modif', { allowPastDates: false });
     
-    if (Object.keys(erreurs).length > 0) {
-      setErreursModif(erreurs);
+    if (!validation.isValid) {
+      const erreurs = {};
+      validation.errors.forEach(err => {
+        if (err.includes("intitulé")) erreurs.intitule = err;
+        else if (err.includes("catégorie")) erreurs.categorie = err;
+        else if (err.includes("niveau")) erreurs.niveau = err;
+        else if (err.includes("format")) erreurs.format = err;
+        else if (err.includes("objectifs")) erreurs.objectifs_pedagogiques = err;
+        else if (err.includes("durée")) erreurs.duree = err;
+        else if (err.includes("début")) erreurs.date_debut = err;
+        else if (err.includes("fin")) erreurs.date_fin = err;
+        else if (err.includes("HT")) erreurs.prix_ht = err;
+        else if (err.includes("TTC")) erreurs.prix_ttc = err;
+        else if (err.includes("tranches")) erreurs.nb_tranches_paiement = err;
+        else if (err.includes("ordre")) erreurs.ordre = err; // Ajout
+        else {
+          setErrServeurModif(err);
+        }
+      });
+      if (validation.coherenceError) {
+        erreurs.duree_coherence = validation.coherenceError;
+      }
+      
+      if (Object.keys(erreurs).length > 0) {
+        setErreursModif(erreurs);
+      }
+      return;
     }
-    return;
-  }
 
-  try {
-    setSubmitLoading(true);
-    setErreursModif({});
-    setErrServeurModif("");
+    try {
+      setSubmitLoading(true);
+      setErreursModif({});
+      setErrServeurModif("");
 
-    const formationData = {
-      ...formModif,
-      niveau: NIVEAU_MAPPING[formModif.niveau] || formModif.niveau,
-      format: FORMAT_MAPPING[formModif.format] || formModif.format,
-    };
+      const formationData = {
+        ...formModif,
+        niveau: NIVEAU_MAPPING[formModif.niveau] || formModif.niveau,
+        format: FORMAT_MAPPING[formModif.format] || formModif.format,
+      };
 
-    const cleanedData = cleanFormData(formationData);
-    await modifierFormation(modalModif.id, cleanedData);
-    await fetchFormations();
-    setModalModif(null);
-    setFormModif(EMPTY_FORM);
-    afficherSucces("Formation modifiée avec succès !");
-  } catch (err) {
-    console.error("Erreur lors de la modification:", err);
-    if (err.response?.data) {
-      const messages = Object.values(err.response.data).flat();
-      setErrServeurModif(messages.join('\n'));
-    } else {
-      setErrServeurModif("Erreur lors de la modification de la formation");
+      const cleanedData = cleanFormData(formationData);
+      await modifierFormation(modalModif.id, cleanedData);
+      await fetchFormations();
+      setModalModif(null);
+      setFormModif(EMPTY_FORM);
+      afficherSucces("Formation modifiée avec succès !");
+    } catch (err) {
+      console.error("Erreur lors de la modification:", err);
+      if (err.response?.data) {
+        const messages = Object.values(err.response.data).flat();
+        setErrServeurModif(messages.join('\n'));
+      } else {
+        setErrServeurModif("Erreur lors de la modification de la formation");
+      }
+    } finally {
+      setSubmitLoading(false);
     }
-  } finally {
-    setSubmitLoading(false);
-  }
-};
-  // Ouvrir la modale de suppression
+  };
+
   const openSuppr = (formation) => {
     setErrSuppr("");
     setModalSuppr(formation);
   };
 
-  // Supprimer une formation
   const handleSupprimer = async () => {
     if (!modalSuppr) return;
     
@@ -330,6 +335,7 @@ const handleModif = async () => {
       prix_ttc: f.prix_ttc || "",
       nb_tranches_paiement: f.nb_tranches_paiement || "1", 
       est_active: f.est_active !== undefined ? f.est_active : true,
+      ordre: f.ordre || "", // Ajout de l'ordre
     });
     setErreursModif({});
     setErrServeurModif("");
@@ -437,6 +443,7 @@ const handleModif = async () => {
           <table>
             <thead>
               <tr>
+                <th>#</th> {/* Ajout de la colonne numéro */}
                 <th>Intitulé de la formation</th>
                 <th>Catégorie</th>
                 <th>Niveau</th>
@@ -449,8 +456,9 @@ const handleModif = async () => {
               </tr>
             </thead>
             <tbody>
-              {paginated.map((f) => (
+              {paginated.map((f, index) => (
                 <tr key={f.id} className={getRowClassName(f)}>
+                  <td className="td-num">{(currentPage - 1) * itemsPerPage + index + 1}</td> {/* Numéro d'ordre */}
                   <td className="td-title">{f.intitule}</td>
                   <td><span className="cat-tag">{f.categorie}</span></td>
                   <td><span className={`badge ${NIVEAU_CLASS[f.niveau]}`}>{f.niveau}</span></td>
@@ -556,6 +564,14 @@ const handleModif = async () => {
                     <span className="sc-lbl">Prix HT</span>
                   </div>
                 </div>
+                {/* Ajout de l'ordre dans les stats */}
+                <div className="stat-card sc-purple">
+                  <div className="sc-icon"><i className="fa-solid fa-sort"></i></div>
+                  <div className="sc-info">
+                    <span className="sc-val">{modalDetail.ordre || "-"}</span>
+                    <span className="sc-lbl">Ordre</span>
+                  </div>
+                </div>
               </div>
 
               <div className="detail-dates">
@@ -637,7 +653,7 @@ const handleModif = async () => {
                     }}
                   >
                     <option value="">Sélectionner une catégorie</option>
-                    {categories.map(cat => (
+                    {categoriesActives.map(cat => ( // Utilisation de categoriesActives au lieu de categories
                       <option key={cat.id} value={cat.id}>{cat.nom}</option>
                     ))}
                   </select>
@@ -660,6 +676,23 @@ const handleModif = async () => {
                     <option>Avancé</option>
                   </select>
                   <ErrMsg msg={erreursAjout.niveau} />
+                </div>
+
+                <div className="form-group">
+                  <label>Ordre d'affichage</label>
+                  <input 
+                    type="number" 
+                    min="1"
+                    placeholder="Ex : 1"
+                    value={formAjout.ordre}
+                    style={erreursAjout.ordre ? styleInputErreur : {}}
+                    onChange={(e) => { 
+                      setFormAjout({...formAjout, ordre: e.target.value});
+                      setErreursAjout({...erreursAjout, ordre: ""});
+                    }}
+                  />
+                  <small className="field-hint">Ordre d'affichage dans les listes</small>
+                  <ErrMsg msg={erreursAjout.ordre} />
                 </div>
 
                 <div className="form-group full">
@@ -865,7 +898,7 @@ const handleModif = async () => {
                     }}
                   >
                     <option value="">Sélectionner une catégorie</option>
-                    {categories.map(cat => (
+                    {categoriesActives.map(cat => ( // Utilisation de categoriesActives au lieu de categories
                       <option key={cat.id} value={cat.id}>{cat.nom}</option>
                     ))}
                   </select>
@@ -887,6 +920,22 @@ const handleModif = async () => {
                     <option>Avancé</option>
                   </select>
                   <ErrMsg msg={erreursModif.niveau} />
+                </div>
+
+                <div className="form-group">
+                  <label>Ordre d'affichage</label>
+                  <input 
+                    type="number" 
+                    min="1"
+                    value={formModif.ordre}
+                    style={erreursModif.ordre ? styleInputErreur : {}}
+                    onChange={(e) => { 
+                      setFormModif({...formModif, ordre: e.target.value});
+                      setErreursModif({...erreursModif, ordre: ""});
+                    }}
+                  />
+                  <small className="field-hint">Ordre d'affichage dans les listes</small>
+                  <ErrMsg msg={erreursModif.ordre} />
                 </div>
 
                 <div className="form-group full">
