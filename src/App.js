@@ -18,6 +18,7 @@ import NouveauMDP from "./pages/auth/nouveauxMDP";
 // Pages Info Centre
 import Formations from "./pages/infoCentre/Formations";
 import Categories from "./pages/infoCentre/Categories";
+import Formateurs from "./pages/infoCentre/Formateurs"; // ← NOUVEAU
 
 // Composants
 import PrivateRoute from "./components/PrivateRoute";
@@ -40,6 +41,7 @@ function App() {
           {/* Informations du Centre */}
           <Route path="/formations" element={<PrivateRoute><Formations /></PrivateRoute>} />
           <Route path="/categories" element={<PrivateRoute><Categories /></PrivateRoute>} />
+          <Route path="/formateurs" element={<PrivateRoute><Formateurs /></PrivateRoute>} /> {/* ← NOUVEAU */}
 
           {/* Mot de passe oublié */}
           <Route path="/mot-de-passe-oublie" element={<MotPassOublier />} />
