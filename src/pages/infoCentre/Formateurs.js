@@ -1,161 +1,127 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Layout from "../../components/Layout";
 import "../../styles/infoCentre/Formateurs.css";
+import {
+  getFormateurs,
+  createFormateur,
+  updateFormateur,
+  deleteFormateur,
+} from "../../services/infoCentre/Formateurservice";
 
-// ─── Données fictives ────────────────────────────────────────────────────────
-const FORMATEURS_INIT = [
-  {
-    id: 1,
-    nom: "Ben Ali",
-    prenom: "Mohamed",
-    email: "m.benali@centre.tn",
-    telephone: "+216 55 123 456",
-    adresse: "12 Rue de la Liberté, Tunis 1001",
-    specialites: ["Informatique", "Data"],
-    niveau: "Expert",
-    contrat: "Interne",
-    disponibilites: "Lundi - Vendredi, 08h00 - 17h00",
-    formations: ["Développement Web Full Stack", "Intelligence Artificielle Appliquée", "Python pour Data Science"],
-    heures: 240,
-    docs: { contrat: "contrat_benali.pdf", cv: "cv_benali.pdf", diplome: "diplomes_benali.pdf" },
-  },
-  {
-    id: 2,
-    nom: "Trabelsi",
-    prenom: "Sonia",
-    email: "s.trabelsi@centre.tn",
-    telephone: "+216 98 234 567",
-    adresse: "45 Avenue Habib Bourguiba, Sfax 3000",
-    specialites: ["IA", "Data"],
-    niveau: "Expert",
-    contrat: "Vacation",
-    disponibilites: "Mardi - Jeudi, 09h00 - 16h00",
-    formations: ["Intelligence Artificielle Appliquée", "Python pour Data Science"],
-    heures: 180,
-    docs: { contrat: "contrat_trabelsi.pdf", cv: "cv_trabelsi.pdf", diplome: "diplomes_trabelsi.pdf" },
-  },
-  {
-    id: 3,
-    nom: "Hamdi",
-    prenom: "Karim",
-    email: "k.hamdi@centre.tn",
-    telephone: "+216 22 345 678",
-    adresse: "78 Rue Ibn Khaldoun, Sousse 4000",
-    specialites: ["Marketing", "Soft skills"],
-    niveau: "Universitaire",
-    contrat: "Interne",
-    disponibilites: "Lundi - Mercredi, 08h00 - 14h00",
-    formations: ["Marketing Digital et Réseaux Sociaux", "Management de Projet Agile"],
-    heures: 120,
-    docs: { contrat: "contrat_hamdi.pdf", cv: "cv_hamdi.pdf", diplome: "diplomes_hamdi.pdf" },
-  },
-  {
-    id: 4,
-    nom: "Mejri",
-    prenom: "Ines",
-    email: "i.mejri@centre.tn",
-    telephone: "+216 50 456 789",
-    adresse: "23 Rue du Printemps, Monastir 5000",
-    specialites: ["Design"],
-    niveau: "Junior",
-    contrat: "Vacation",
-    disponibilites: "Mercredi - Vendredi, 10h00 - 17h00",
-    formations: ["UI/UX Design et Figma"],
-    heures: 80,
-    docs: { contrat: "contrat_mejri.pdf", cv: "cv_mejri.pdf", diplome: "diplomes_mejri.pdf" },
-  },
-  {
-    id: 5,
-    nom: "Gharbi",
-    prenom: "Nabil",
-    email: "n.gharbi@centre.tn",
-    telephone: "+216 27 567 890",
-    adresse: "10 Rue des Roses, Nabeul 8000",
-    specialites: ["Langues"],
-    niveau: "Expert",
-    contrat: "Interne",
-    disponibilites: "Lundi - Vendredi, 08h00 - 17h00",
-    formations: ["Anglais des Affaires"],
-    heures: 300,
-    docs: { contrat: "contrat_gharbi.pdf", cv: "cv_gharbi.pdf", diplome: "diplomes_gharbi.pdf" },
-  },
-];
-
+// ─── Valeur initiale du formulaire ───────────────────────────────────────────
 const FORM_VIDE = {
   nom: "", prenom: "", email: "", telephone: "", adresse: "",
-  specialites: "", niveau: "", contrat: "", disponibilites: "",
-  heures: "",
+  specialites: "", niveau_intervention: "", type_contrat: "",
+  disponibilites: "", heures_realisees: "",
+  contrat_pdf: null, cv_pdf: null, diplomes_pdf: null,
+};
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+const pad = (n) => String(n).padStart(2, "0");
+
+const levelClass = (n) =>
+  n === "expert" ? "level-expert" : n === "universitaire" ? "level-universitaire" : "level-junior";
+
+const contractClass = (c) =>
+  c === "interne" ? "contract-interne" : "contract-vacation";
+
+const niveauLabel = { junior: "Junior", universitaire: "Universitaire", expert: "Expert" };
+const contratLabel = { interne: "Interne", vacation: "Vacation" };
+
+// Convertit "Django, IA" (string) en tableau ["Django", "IA"]
+const toArray = (val) => {
+  if (Array.isArray(val)) return val;
+  if (typeof val === "string") return val.split(",").map((s) => s.trim()).filter(Boolean);
+  return [];
 };
 
 // ─── Composant principal ──────────────────────────────────────────────────────
 function Formateurs() {
-  const [formateurs, setFormateurs] = useState(FORMATEURS_INIT);
-  const [search, setSearch] = useState("");
+  const [formateurs, setFormateurs] = useState([]);
+  const [loading, setLoading]       = useState(true);
+  const [error, setError]           = useState(null);
+  const [search, setSearch]         = useState("");
 
   // Modales
   const [modalDetail, setModalDetail] = useState(null);
-  const [modalAjout, setModalAjout] = useState(false);
-  const [modalModif, setModalModif] = useState(null);
+  const [modalAjout,  setModalAjout]  = useState(false);
+  const [modalModif,  setModalModif]  = useState(null);
 
-  // Formulaire ajout
+  // Formulaires
   const [formAjout, setFormAjout] = useState(FORM_VIDE);
-  const [fileNamesAjout, setFileNamesAjout] = useState({ contrat: "", cv: "", diplome: "" });
-
-  // Formulaire modif
   const [formModif, setFormModif] = useState(FORM_VIDE);
-  const [fileNamesModif, setFileNamesModif] = useState({ contrat: "", cv: "", diplome: "" });
+
+  // Noms de fichiers affichés dans l'UI
+  const [fileNamesAjout, setFileNamesAjout] = useState({ contrat_pdf: "", cv_pdf: "", diplomes_pdf: "" });
+  const [fileNamesModif, setFileNamesModif] = useState({ contrat_pdf: "", cv_pdf: "", diplomes_pdf: "" });
+
+  // Soumission
+  const [saving, setSaving] = useState(false);
 
   // Pagination
   const [page, setPage] = useState(1);
   const PER_PAGE = 5;
 
-  // ── Filtrage ────────────────────────────────────────────────────────────────
+  // ── Chargement initial ───────────────────────────────────────────────────────
+  useEffect(() => {
+    fetchFormateurs();
+  }, []);
+
+  const fetchFormateurs = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await getFormateurs();
+      setFormateurs(data);
+    } catch (err) {
+      setError("Impossible de charger les formateurs.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ── Filtrage & pagination ────────────────────────────────────────────────────
   const filtered = formateurs.filter((f) => {
     const q = search.toLowerCase();
     return (
       !q ||
       f.nom.toLowerCase().includes(q) ||
       f.prenom.toLowerCase().includes(q) ||
-      f.specialites.some((s) => s.toLowerCase().includes(q))
+      toArray(f.specialites).some((s) => s.toLowerCase().includes(q))
     );
   });
 
   const totalPages = Math.ceil(filtered.length / PER_PAGE);
-  const paginated = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
+  const paginated  = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
 
-  // ── Helpers ──────────────────────────────────────────────────────────────────
-  const pad = (n) => String(n).padStart(2, "0");
-
-  const handleFileChange = (e, field, setter) => {
+  // ── Handlers fichiers ────────────────────────────────────────────────────────
+  const handleFileChange = (e, field, setForm, setFileNames) => {
     const file = e.target.files[0];
-    setter((prev) => ({ ...prev, [field]: file ? file.name : "" }));
+    setForm((prev) => ({ ...prev, [field]: file || null }));
+    setFileNames((prev) => ({ ...prev, [field]: file ? file.name : "" }));
   };
 
-  // ── Ajout ────────────────────────────────────────────────────────────────────
+  // ── Ajout ─────────────────────────────────────────────────────────────────────
   const handleAjoutChange = (e) => {
     const { name, value } = e.target;
     setFormAjout((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSaveAjout = () => {
+  const handleSaveAjout = async () => {
     if (!formAjout.nom || !formAjout.prenom || !formAjout.email) return;
-    const newF = {
-      id: Date.now(),
-      ...formAjout,
-      specialites: formAjout.specialites.split(",").map((s) => s.trim()).filter(Boolean),
-      heures: Number(formAjout.heures) || 0,
-      formations: [],
-      docs: {
-        contrat: fileNamesAjout.contrat || "—",
-        cv: fileNamesAjout.cv || "—",
-        diplome: fileNamesAjout.diplome || "—",
-      },
-    };
-    setFormateurs((prev) => [...prev, newF]);
-    setModalAjout(false);
-    setFormAjout(FORM_VIDE);
-    setFileNamesAjout({ contrat: "", cv: "", diplome: "" });
-    setPage(1);
+    try {
+      setSaving(true);
+      const newF = await createFormateur(formAjout);
+      setFormateurs((prev) => [newF, ...prev]);
+      setModalAjout(false);
+      setFormAjout(FORM_VIDE);
+      setFileNamesAjout({ contrat_pdf: "", cv_pdf: "", diplomes_pdf: "" });
+      setPage(1);
+    } catch (err) {
+      alert("Erreur lors de l'ajout : " + (err.response?.data ? JSON.stringify(err.response.data) : err.message));
+    } finally {
+      setSaving(false);
+    }
   };
 
   // ── Modification ──────────────────────────────────────────────────────────────
@@ -164,15 +130,18 @@ function Formateurs() {
       nom: f.nom,
       prenom: f.prenom,
       email: f.email,
-      telephone: f.telephone,
-      adresse: f.adresse,
-      specialites: f.specialites.join(", "),
-      niveau: f.niveau,
-      contrat: f.contrat,
-      disponibilites: f.disponibilites,
-      heures: f.heures,
+      telephone: f.telephone || "",
+      adresse: f.adresse || "",
+      specialites: toArray(f.specialites).join(", "),
+      niveau_intervention: f.niveau_intervention || "",
+      type_contrat: f.type_contrat || "",
+      disponibilites: f.disponibilites || "",
+      heures_realisees: f.heures_realisees || 0,
+      contrat_pdf: null,
+      cv_pdf: null,
+      diplomes_pdf: null,
     });
-    setFileNamesModif({ contrat: "", cv: "", diplome: "" });
+    setFileNamesModif({ contrat_pdf: "", cv_pdf: "", diplomes_pdf: "" });
     setModalModif(f);
   };
 
@@ -181,42 +150,30 @@ function Formateurs() {
     setFormModif((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSaveModif = () => {
-    setFormateurs((prev) =>
-      prev.map((f) =>
-        f.id === modalModif.id
-          ? {
-              ...f,
-              ...formModif,
-              specialites: formModif.specialites.split(",").map((s) => s.trim()).filter(Boolean),
-              heures: Number(formModif.heures) || 0,
-              formations: f.formations, // on garde les formations existantes
-              docs: {
-                contrat: fileNamesModif.contrat || f.docs.contrat,
-                cv: fileNamesModif.cv || f.docs.cv,
-                diplome: fileNamesModif.diplome || f.docs.diplome,
-              },
-            }
-          : f
-      )
-    );
-    setModalModif(null);
-  };
-
-  // ── Suppression ───────────────────────────────────────────────────────────────
-  const handleDelete = (id) => {
-    if (window.confirm("Confirmer la suppression de ce formateur ?")) {
-      setFormateurs((prev) => prev.filter((f) => f.id !== id));
-      setPage(1);
+  const handleSaveModif = async () => {
+    try {
+      setSaving(true);
+      const updated = await updateFormateur(modalModif.id, formModif);
+      setFormateurs((prev) => prev.map((f) => (f.id === updated.id ? updated : f)));
+      setModalModif(null);
+    } catch (err) {
+      alert("Erreur lors de la modification : " + (err.response?.data ? JSON.stringify(err.response.data) : err.message));
+    } finally {
+      setSaving(false);
     }
   };
 
-  // ── Niveau / Contrat helpers ───────────────────────────────────────────────────
-  const levelClass = (n) =>
-    n === "Expert" ? "level-expert" : n === "Universitaire" ? "level-universitaire" : "level-junior";
-
-  const contractClass = (c) =>
-    c === "Interne" ? "contract-interne" : "contract-vacation";
+  // ── Suppression ───────────────────────────────────────────────────────────────
+  const handleDelete = async (id) => {
+    if (!window.confirm("Confirmer la suppression de ce formateur ?")) return;
+    try {
+      await deleteFormateur(id);
+      setFormateurs((prev) => prev.filter((f) => f.id !== id));
+      setPage(1);
+    } catch (err) {
+      alert("Erreur lors de la suppression.");
+    }
+  };
 
   // ═══════════════════════════════════════════════════════════════════════════════
   // RENDER
@@ -254,8 +211,16 @@ function Formateurs() {
       {/* ── Tableau ── */}
       <div className="table-card">
         <div className="table-top">
-          Affichage de <strong>{paginated.length}</strong> formateurs sur{" "}
-          <strong>{filtered.length}</strong>
+          {loading ? (
+            <span>Chargement...</span>
+          ) : error ? (
+            <span style={{ color: "red" }}>{error}</span>
+          ) : (
+            <>
+              Affichage de <strong>{paginated.length}</strong> formateurs sur{" "}
+              <strong>{filtered.length}</strong>
+            </>
+          )}
         </div>
         <div className="table-wrap">
           <table>
@@ -271,39 +236,46 @@ function Formateurs() {
               </tr>
             </thead>
             <tbody>
-              {paginated.map((f, idx) => (
-                <tr key={f.id}>
-                  <td className="td-num">{pad((page - 1) * PER_PAGE + idx + 1)}</td>
-                  <td className="td-name">{f.nom}</td>
-                  <td className="td-firstname">{f.prenom}</td>
-                  <td className="td-email">
-                    <a href={`mailto:${f.email}`}>{f.email}</a>
-                  </td>
-                  <td className="td-phone">{f.telephone}</td>
-                  <td>
-                    {f.specialites.map((s) => (
-                      <span key={s} className="spec-tag">{s}</span>
-                    ))}
-                  </td>
-                  <td className="td-actions">
-                    <button className="act-btn act-detail" title="Détail" onClick={() => setModalDetail(f)}>
-                      <i className="fa-solid fa-eye"></i>
-                    </button>
-                    <button className="act-btn act-modif" title="Modifier" onClick={() => openModif(f)}>
-                      <i className="fa-solid fa-pen"></i>
-                    </button>
-                    <button className="act-btn act-suppr" title="Supprimer" onClick={() => handleDelete(f.id)}>
-                      <i className="fa-solid fa-trash"></i>
-                    </button>
+              {loading ? (
+                <tr>
+                  <td colSpan="7" style={{ textAlign: "center", padding: "30px", color: "#94A3B8" }}>
+                    <i className="fa-solid fa-spinner fa-spin"></i> Chargement des formateurs...
                   </td>
                 </tr>
-              ))}
-              {paginated.length === 0 && (
+              ) : paginated.length === 0 ? (
                 <tr>
                   <td colSpan="7" style={{ textAlign: "center", padding: "30px", color: "#94A3B8" }}>
                     Aucun formateur trouvé.
                   </td>
                 </tr>
+              ) : (
+                paginated.map((f, idx) => (
+                  <tr key={f.id}>
+                    <td className="td-num">{pad((page - 1) * PER_PAGE + idx + 1)}</td>
+                    <td className="td-name">{f.nom}</td>
+                    <td className="td-firstname">{f.prenom}</td>
+                    <td className="td-email">
+                      <a href={`mailto:${f.email}`}>{f.email}</a>
+                    </td>
+                    <td className="td-phone">{f.telephone}</td>
+                    <td>
+                      {toArray(f.specialites).map((s) => (
+                        <span key={s} className="spec-tag">{s}</span>
+                      ))}
+                    </td>
+                    <td className="td-actions">
+                      <button className="act-btn act-detail" title="Détail" onClick={() => setModalDetail(f)}>
+                        <i className="fa-solid fa-eye"></i>
+                      </button>
+                      <button className="act-btn act-modif" title="Modifier" onClick={() => openModif(f)}>
+                        <i className="fa-solid fa-pen"></i>
+                      </button>
+                      <button className="act-btn act-suppr" title="Supprimer" onClick={() => handleDelete(f.id)}>
+                        <i className="fa-solid fa-trash"></i>
+                      </button>
+                    </td>
+                  </tr>
+                ))
               )}
             </tbody>
           </table>
@@ -345,14 +317,14 @@ function Formateurs() {
                 <div className="detail-header-info">
                   <h2>{modalDetail.prenom} {modalDetail.nom}</h2>
                   <div className="detail-badges">
-                    {modalDetail.specialites.map((s) => (
+                    {toArray(modalDetail.specialites).map((s) => (
                       <span key={s} className="spec-tag">{s}</span>
                     ))}
-                    <span className={`contract-tag ${contractClass(modalDetail.contrat)}`}>
-                      <i className="fa-solid fa-id-card"></i> {modalDetail.contrat}
+                    <span className={`contract-tag ${contractClass(modalDetail.type_contrat)}`}>
+                      <i className="fa-solid fa-id-card"></i> {contratLabel[modalDetail.type_contrat] || modalDetail.type_contrat}
                     </span>
-                    <span className={`level-tag ${levelClass(modalDetail.niveau)}`}>
-                      <i className="fa-solid fa-star"></i> {modalDetail.niveau}
+                    <span className={`level-tag ${levelClass(modalDetail.niveau_intervention)}`}>
+                      <i className="fa-solid fa-star"></i> {niveauLabel[modalDetail.niveau_intervention] || modalDetail.niveau_intervention}
                     </span>
                   </div>
                 </div>
@@ -382,15 +354,8 @@ function Formateurs() {
                 <div className="stat-card sc-green">
                   <div className="sc-icon"><i className="fa-solid fa-clock"></i></div>
                   <div className="sc-info">
-                    <span className="sc-val">{modalDetail.heures}h</span>
+                    <span className="sc-val">{modalDetail.heures_realisees}h</span>
                     <span className="sc-lbl">Heures réalisées</span>
-                  </div>
-                </div>
-                <div className="stat-card sc-sand">
-                  <div className="sc-icon"><i className="fa-solid fa-book-open"></i></div>
-                  <div className="sc-info">
-                    <span className="sc-val">{modalDetail.formations.length} formations</span>
-                    <span className="sc-lbl">Formations assurées</span>
                   </div>
                 </div>
               </div>
@@ -417,21 +382,25 @@ function Formateurs() {
                   </div>
                   <div className="detail-info-grid">
                     <div className="info-item">
-                      <span className="info-lbl">Spécialités / Domaines</span>
+                      <span className="info-lbl">Spécialités</span>
                       <span className="info-val">
-                        {modalDetail.specialites.map((s) => <span key={s} className="spec-tag">{s}</span>)}
+                        {toArray(modalDetail.specialites).map((s) => <span key={s} className="spec-tag">{s}</span>)}
                       </span>
                     </div>
                     <div className="info-item">
                       <span className="info-lbl">Niveau d'intervention</span>
                       <span className="info-val">
-                        <span className={`level-tag ${levelClass(modalDetail.niveau)}`}>{modalDetail.niveau}</span>
+                        <span className={`level-tag ${levelClass(modalDetail.niveau_intervention)}`}>
+                          {niveauLabel[modalDetail.niveau_intervention]}
+                        </span>
                       </span>
                     </div>
                     <div className="info-item">
                       <span className="info-lbl">Type de contrat</span>
                       <span className="info-val">
-                        <span className={`contract-tag ${contractClass(modalDetail.contrat)}`}>{modalDetail.contrat}</span>
+                        <span className={`contract-tag ${contractClass(modalDetail.type_contrat)}`}>
+                          {contratLabel[modalDetail.type_contrat]}
+                        </span>
                       </span>
                     </div>
                     <div className="info-item">
@@ -441,58 +410,38 @@ function Formateurs() {
                   </div>
                 </div>
 
-                {/* Suivi — visible uniquement dans le détail */}
-                <div className="detail-sec">
-                  <div className="detail-sec-title">
-                    <i className="fa-solid fa-chart-bar"></i> Suivi
-                  </div>
-                  <div className="detail-info-grid">
-                    <div className="info-item full-info">
-                      <span className="info-lbl">Formations assurées</span>
-                      <span className="info-val">
-                        {modalDetail.formations.length > 0
-                          ? modalDetail.formations.map((f) => <span key={f} className="fmt-badge">{f}</span>)
-                          : <span style={{ color: "#94A3B8", fontSize: "13px" }}>Aucune formation renseignée</span>
-                        }
-                      </span>
-                    </div>
-                    <div className="info-item">
-                      <span className="info-lbl">Heures réalisées</span>
-                      <span className="info-val info-val-accent">{modalDetail.heures} heures</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Documents */}
+                {/* Documents PDF */}
                 <div className="detail-sec">
                   <div className="detail-sec-title">
                     <i className="fa-solid fa-folder-open"></i> Documents administratifs
                   </div>
                   <div className="docs-grid">
-                    <div className="doc-card doc-contrat">
-                      <div className="doc-icon"><i className="fa-solid fa-file-contract"></i></div>
-                      <div className="doc-info">
-                        <span className="doc-name">Contrat</span>
-                        <span className="doc-file">{modalDetail.docs.contrat}</span>
+                    {[
+                      { key: "contrat_pdf",  label: "Contrat",  icon: "fa-file-contract",  cls: "doc-contrat" },
+                      { key: "cv_pdf",       label: "CV",       icon: "fa-file-lines",     cls: "doc-cv"      },
+                      { key: "diplomes_pdf", label: "Diplômes", icon: "fa-graduation-cap", cls: "doc-diplome" },
+                    ].map(({ key, label, icon, cls }) => (
+                      <div className={`doc-card ${cls}`} key={key}>
+                        <div className="doc-icon"><i className={`fa-solid ${icon}`}></i></div>
+                        <div className="doc-info">
+                          <span className="doc-name">{label}</span>
+                          <span className="doc-file">
+                            {modalDetail[key] ? "PDF disponible" : "Non fourni"}
+                          </span>
+                        </div>
+                        {modalDetail[key] && (
+                          <a
+                            href={modalDetail[key]}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="doc-download"
+                            title="Télécharger"
+                          >
+                            <i className="fa-solid fa-download"></i>
+                          </a>
+                        )}
                       </div>
-                      <a href="#" className="doc-download" title="Télécharger"><i className="fa-solid fa-download"></i></a>
-                    </div>
-                    <div className="doc-card doc-cv">
-                      <div className="doc-icon"><i className="fa-solid fa-file-lines"></i></div>
-                      <div className="doc-info">
-                        <span className="doc-name">CV</span>
-                        <span className="doc-file">{modalDetail.docs.cv}</span>
-                      </div>
-                      <a href="#" className="doc-download" title="Télécharger"><i className="fa-solid fa-download"></i></a>
-                    </div>
-                    <div className="doc-card doc-diplome">
-                      <div className="doc-icon"><i className="fa-solid fa-graduation-cap"></i></div>
-                      <div className="doc-info">
-                        <span className="doc-name">Diplômes</span>
-                        <span className="doc-file">{modalDetail.docs.diplome}</span>
-                      </div>
-                      <a href="#" className="doc-download" title="Télécharger"><i className="fa-solid fa-download"></i></a>
-                    </div>
+                    ))}
                   </div>
                 </div>
               </div>
@@ -542,7 +491,7 @@ function Formateurs() {
                 </div>
                 <div className="form-group">
                   <label>Téléphone</label>
-                  <input type="tel" name="telephone" value={formAjout.telephone} onChange={handleAjoutChange} placeholder="Ex : +216 55 123 456" />
+                  <input type="tel" name="telephone" value={formAjout.telephone} onChange={handleAjoutChange} placeholder="Ex : +21655123456" />
                 </div>
                 <div className="form-group full">
                   <label>Adresse</label>
@@ -555,23 +504,23 @@ function Formateurs() {
               <div className="form-grid">
                 <div className="form-group full">
                   <label>Spécialités / Domaines <span className="req">*</span></label>
-                  <input type="text" name="specialites" value={formAjout.specialites} onChange={handleAjoutChange} placeholder="Ex : Informatique, Data Science, IA..." />
+                  <input type="text" name="specialites" value={formAjout.specialites} onChange={handleAjoutChange} placeholder="Ex : Django, IA, Marketing Digital" />
                 </div>
                 <div className="form-group">
                   <label>Niveau d'intervention <span className="req">*</span></label>
-                  <select name="niveau" value={formAjout.niveau} onChange={handleAjoutChange}>
+                  <select name="niveau_intervention" value={formAjout.niveau_intervention} onChange={handleAjoutChange}>
                     <option value="" disabled>Sélectionner...</option>
-                    <option>Junior</option>
-                    <option>Universitaire</option>
-                    <option>Expert</option>
+                    <option value="junior">Junior</option>
+                    <option value="universitaire">Universitaire</option>
+                    <option value="expert">Expert</option>
                   </select>
                 </div>
                 <div className="form-group">
                   <label>Type de contrat <span className="req">*</span></label>
-                  <select name="contrat" value={formAjout.contrat} onChange={handleAjoutChange}>
+                  <select name="type_contrat" value={formAjout.type_contrat} onChange={handleAjoutChange}>
                     <option value="" disabled>Sélectionner...</option>
-                    <option>Interne</option>
-                    <option>Vacation</option>
+                    <option value="interne">Interne</option>
+                    <option value="vacation">Vacation</option>
                   </select>
                 </div>
                 <div className="form-group full">
@@ -580,29 +529,29 @@ function Formateurs() {
                 </div>
                 <div className="form-group">
                   <label>Heures réalisées</label>
-                  <input type="number" name="heures" min="0" value={formAjout.heures} onChange={handleAjoutChange} placeholder="Ex : 120" />
+                  <input type="number" name="heures_realisees" min="0" value={formAjout.heures_realisees} onChange={handleAjoutChange} placeholder="Ex : 120" />
                 </div>
               </div>
 
               {/* Documents administratifs */}
-              <div className="form-section-title"><i className="fa-solid fa-folder-open"></i> Documents administratifs</div>
+              <div className="form-section-title"><i className="fa-solid fa-folder-open"></i> Documents administratifs (PDF)</div>
               <div className="form-grid">
                 {[
-                  { field: "contrat", label: "Contrat", icon: "fa-file-contract", id: "fileContrat" },
-                  { field: "cv", label: "CV", icon: "fa-file-lines", id: "fileCv" },
-                  { field: "diplome", label: "Diplômes", icon: "fa-graduation-cap", id: "fileDiplome" },
+                  { field: "contrat_pdf",  label: "Contrat",  icon: "fa-file-contract",  id: "fileContrat"  },
+                  { field: "cv_pdf",       label: "CV",       icon: "fa-file-lines",     id: "fileCv"       },
+                  { field: "diplomes_pdf", label: "Diplômes", icon: "fa-graduation-cap", id: "fileDiplome"  },
                 ].map(({ field, label, icon, id }) => (
                   <div className="form-group" key={field}>
                     <label><i className={`fa-solid ${icon} doc-lbl-icon`}></i> {label}</label>
                     <div className="file-upload-wrap">
                       <label className="file-upload-label" htmlFor={id}>
-                        <i className="fa-solid fa-upload"></i> Choisir un fichier
+                        <i className="fa-solid fa-upload"></i> Choisir un PDF
                       </label>
                       <input
                         type="file"
                         id={id}
-                        accept=".pdf,.doc,.docx,.zip"
-                        onChange={(e) => handleFileChange(e, field, setFileNamesAjout)}
+                        accept=".pdf"
+                        onChange={(e) => handleFileChange(e, field, setFormAjout, setFileNamesAjout)}
                       />
                       <span className="file-name">{fileNamesAjout[field] || "Aucun fichier choisi"}</span>
                     </div>
@@ -613,8 +562,11 @@ function Formateurs() {
             </div>
             <div className="modal-footer">
               <button className="btn btn-cancel" onClick={() => setModalAjout(false)}>Annuler</button>
-              <button className="btn btn-save" onClick={handleSaveAjout}>
-                <i className="fa-solid fa-floppy-disk"></i> Enregistrer
+              <button className="btn btn-save" onClick={handleSaveAjout} disabled={saving}>
+                {saving
+                  ? <><i className="fa-solid fa-spinner fa-spin"></i> Enregistrement...</>
+                  : <><i className="fa-solid fa-floppy-disk"></i> Enregistrer</>
+                }
               </button>
             </div>
           </div>
@@ -669,17 +621,17 @@ function Formateurs() {
                 </div>
                 <div className="form-group">
                   <label>Niveau d'intervention <span className="req">*</span></label>
-                  <select name="niveau" value={formModif.niveau} onChange={handleModifChange}>
-                    <option>Junior</option>
-                    <option>Universitaire</option>
-                    <option>Expert</option>
+                  <select name="niveau_intervention" value={formModif.niveau_intervention} onChange={handleModifChange}>
+                    <option value="junior">Junior</option>
+                    <option value="universitaire">Universitaire</option>
+                    <option value="expert">Expert</option>
                   </select>
                 </div>
                 <div className="form-group">
                   <label>Type de contrat <span className="req">*</span></label>
-                  <select name="contrat" value={formModif.contrat} onChange={handleModifChange}>
-                    <option>Interne</option>
-                    <option>Vacation</option>
+                  <select name="type_contrat" value={formModif.type_contrat} onChange={handleModifChange}>
+                    <option value="interne">Interne</option>
+                    <option value="vacation">Vacation</option>
                   </select>
                 </div>
                 <div className="form-group full">
@@ -688,34 +640,38 @@ function Formateurs() {
                 </div>
                 <div className="form-group">
                   <label>Heures réalisées</label>
-                  <input type="number" name="heures" min="0" value={formModif.heures} onChange={handleModifChange} />
+                  <input type="number" name="heures_realisees" min="0" value={formModif.heures_realisees} onChange={handleModifChange} />
                 </div>
               </div>
 
               {/* Documents administratifs */}
-              <div className="form-section-title"><i className="fa-solid fa-folder-open"></i> Documents administratifs</div>
+              <div className="form-section-title"><i className="fa-solid fa-folder-open"></i> Documents administratifs (PDF)</div>
               <div className="form-grid">
                 {[
-                  { field: "contrat", label: "Contrat", icon: "fa-file-contract", id: "modifContrat" },
-                  { field: "cv", label: "CV", icon: "fa-file-lines", id: "modifCv" },
-                  { field: "diplome", label: "Diplômes", icon: "fa-graduation-cap", id: "modifDiplome" },
+                  { field: "contrat_pdf",  label: "Contrat",  icon: "fa-file-contract",  id: "modifContrat"  },
+                  { field: "cv_pdf",       label: "CV",       icon: "fa-file-lines",     id: "modifCv"       },
+                  { field: "diplomes_pdf", label: "Diplômes", icon: "fa-graduation-cap", id: "modifDiplome"  },
                 ].map(({ field, label, icon, id }) => (
                   <div className="form-group" key={field}>
                     <label><i className={`fa-solid ${icon} doc-lbl-icon`}></i> {label}</label>
-                    <div className="file-existing">
-                      <i className="fa-solid fa-file-pdf"></i>
-                      <span>{modalModif.docs[field]}</span>
-                      <a href="#" className="file-view-link" title="Voir"><i className="fa-solid fa-eye"></i></a>
-                    </div>
+                    {modalModif[field] && (
+                      <div className="file-existing">
+                        <i className="fa-solid fa-file-pdf"></i>
+                        <span>PDF existant</span>
+                        <a href={modalModif[field]} target="_blank" rel="noreferrer" className="file-view-link" title="Voir">
+                          <i className="fa-solid fa-eye"></i>
+                        </a>
+                      </div>
+                    )}
                     <div className="file-upload-wrap" style={{ marginTop: "6px" }}>
                       <label className="file-upload-label file-replace" htmlFor={id}>
-                        <i className="fa-solid fa-rotate"></i> Remplacer
+                        <i className="fa-solid fa-rotate"></i> {modalModif[field] ? "Remplacer" : "Choisir un PDF"}
                       </label>
                       <input
                         type="file"
                         id={id}
-                        accept=".pdf,.doc,.docx,.zip"
-                        onChange={(e) => handleFileChange(e, field, setFileNamesModif)}
+                        accept=".pdf"
+                        onChange={(e) => handleFileChange(e, field, setFormModif, setFileNamesModif)}
                       />
                       <span className="file-name">{fileNamesModif[field]}</span>
                     </div>
@@ -726,8 +682,11 @@ function Formateurs() {
             </div>
             <div className="modal-footer">
               <button className="btn btn-cancel" onClick={() => setModalModif(null)}>Annuler</button>
-              <button className="btn btn-update" onClick={handleSaveModif}>
-                <i className="fa-solid fa-rotate"></i> Mettre à jour
+              <button className="btn btn-update" onClick={handleSaveModif} disabled={saving}>
+                {saving
+                  ? <><i className="fa-solid fa-spinner fa-spin"></i> Mise à jour...</>
+                  : <><i className="fa-solid fa-rotate"></i> Mettre à jour</>
+                }
               </button>
             </div>
           </div>
