@@ -2,45 +2,47 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Layout from "../../components/Layout";
-import { 
-  getFormations, 
-  ajouterFormation, 
-  modifierFormation, 
-  supprimerFormation 
+import {
+  getFormations,
+  ajouterFormation,
+  modifierFormation,
+  supprimerFormation,
+  getFormateursDisponibles,   // ✅ NOUVEAU
 } from "../../services/infoCentre/formationService";
 import { getCategories } from "../../services/infoCentre/categorieService";
-import { 
-  validateFormationForm, 
-  formatErrorMessage, 
-  cleanFormData, 
+import {
+  validateFormationForm,
+  formatErrorMessage,
+  cleanFormData,
   getFormationStatus,
   ErrMsg,
   SuccesMsg,
-  styleInputErreur
+  styleInputErreur,
 } from "../../script/infoCentre/formationValidation";
 import "../../styles/infoCentre/formations.css";
 
-const NIVEAU_CLASS = { 
-  "Débutant": "bdg-deb", 
-  "Intermédiaire": "bdg-int", 
-  "Avancé": "bdg-adv" 
+const NIVEAU_CLASS = {
+  "Débutant": "bdg-deb",
+  "Intermédiaire": "bdg-int",
+  "Avancé": "bdg-adv",
 };
 
 const NIVEAU_MAPPING = {
   "Débutant": "debutant",
   "Intermédiaire": "intermediaire",
-  "Avancé": "avance"
+  "Avancé": "avance",
 };
 
 const FORMAT_MAPPING = {
   "Présentiel": "presentiel",
   "En ligne": "en_ligne",
-  "Hybride": "hybride"
+  "Hybride": "hybride",
 };
 
 const EMPTY_FORM = {
   intitule: "",
   categorie: "",
+  formateurs: [],          // ✅ NOUVEAU — liste d'IDs
   description: "",
   objectifs_pedagogiques: "",
   prerequis: "",
@@ -53,15 +55,125 @@ const EMPTY_FORM = {
   prix_ttc: "",
   nb_tranches_paiement: "1",
   est_active: true,
-  ordre: "", // Ajout du champ ordre
 };
 
+/* ─────────────────────────────────────────
+   Composant multi-select formateurs
+───────────────────────────────────────── */
+function FormateurMultiSelect({ formateurs, selected, onChange }) {
+  return (
+    <div style={{
+      border: "1px solid #e2e8f0",
+      borderRadius: "8px",
+      maxHeight: "180px",
+      overflowY: "auto",
+      background: "#fff",
+      display: "grid",
+      gridTemplateColumns: "1fr 1fr",
+    }}>
+      {formateurs.length === 0 ? (
+        <div style={{ gridColumn: "1/-1", padding: "12px 16px", color: "#94a3b8", fontSize: "13px" }}>
+          Aucun formateur disponible
+        </div>
+      ) : (
+        formateurs.map((f) => {
+          const isChecked = selected.includes(f.id);
+          return (
+            <label
+              key={f.id}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "10px",
+                padding: "10px 14px",
+                cursor: "pointer",
+                borderBottom: "1px solid #f1f5f9",
+                transition: "background 0.15s",
+                fontSize: "13px",
+                fontWeight: isChecked ? "600" : "400",
+                color: isChecked ? "#336699" : "#334155",
+                background: isChecked ? "#f0f7ff" : "#fff",
+                userSelect: "none",
+              }}
+            >
+              <span style={{
+                width: "18px",
+                height: "18px",
+                borderRadius: "4px",
+                border: isChecked ? "2px solid #336699" : "2px solid #cbd5e1",
+                background: isChecked ? "#336699" : "#fff",
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
+                transition: "all 0.15s",
+              }}>
+                {isChecked && (
+                  <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+                    <path d="M1 4L3.5 6.5L9 1" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                )}
+              </span>
+              <input
+                type="checkbox"
+                checked={isChecked}
+                onChange={() => {
+                  if (isChecked) onChange(selected.filter((id) => id !== f.id));
+                  else onChange([...selected, f.id]);
+                }}
+                style={{ display: "none" }}
+              />
+              <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {f.prenom} {f.nom}
+              </span>
+            </label>
+          );
+        })
+      )}
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────
+   Composant badges formateurs (tableau)
+───────────────────────────────────────── */
+function FormateurBadges({ noms }) {
+  if (!noms || noms.length === 0)
+    return <span style={{ color: "#94a3b8", fontSize: "12px" }}>—</span>;
+
+  return (
+    <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>
+      {noms.map((f) => (
+        <span
+          key={f.id}
+          title={f.nom_complet}
+          style={{
+            background: "#e8f0fe",
+            color: "#336699",
+            borderRadius: "20px",
+            padding: "2px 8px",
+            fontSize: "11px",
+            fontWeight: "600",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {f.nom_complet}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════
+   COMPOSANT PRINCIPAL
+═══════════════════════════════════════════════════════════ */
 function Formations() {
   const [formations, setFormations] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [formateurs, setFormateurs] = useState([]);   // ✅ NOUVEAU
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  
+
   const [search, setSearch] = useState("");
   const [filterNiveau, setFilterNiveau] = useState("");
   const [filterCat, setFilterCat] = useState("");
@@ -74,7 +186,6 @@ function Formations() {
   const [formAjout, setFormAjout] = useState(EMPTY_FORM);
   const [formModif, setFormModif] = useState(EMPTY_FORM);
 
-  // États pour les messages d'erreur et de succès
   const [erreursAjout, setErreursAjout] = useState({});
   const [errServeurAjout, setErrServeurAjout] = useState("");
   const [erreursModif, setErreursModif] = useState({});
@@ -86,16 +197,15 @@ function Formations() {
   const navigate = useNavigate();
   const itemsPerPage = 7;
 
-  // Afficher un message de succès temporaire
   const afficherSucces = (msg) => {
     setSuccesGlobal(msg);
     setTimeout(() => setSuccesGlobal(""), 4000);
   };
 
-  // Charger les formations et catégories au montage
   useEffect(() => {
     fetchFormations();
     fetchCategories();
+    fetchFormateurs();   // ✅ NOUVEAU
   }, []);
 
   const fetchFormations = async () => {
@@ -121,29 +231,56 @@ function Formations() {
     }
   };
 
-  // Filtrer les catégories actives pour les selects
-  const categoriesActives = categories.filter(cat => cat.actif);
+  // ✅ NOUVEAU
+  const fetchFormateurs = async () => {
+    try {
+      const response = await getFormateursDisponibles();
+      setFormateurs(response.data);
+    } catch (err) {
+      console.error("Erreur lors du chargement des formateurs:", err);
+    }
+  };
 
-  // Formater les données pour l'affichage
+  const categoriesActives = categories.filter((cat) => cat.actif);
+
   const formatFormationPourAffichage = (f) => {
-    const dureeEnJours = Math.round((new Date(f.date_fin) - new Date(f.date_debut)) / (1000 * 60 * 60 * 24)) + 1;
+    const dureeEnJours =
+      Math.round(
+        (new Date(f.date_fin) - new Date(f.date_debut)) / (1000 * 60 * 60 * 24)
+      ) + 1;
     return {
       ...f,
-      num: f.id.toString().padStart(2, '0'),
+      num: f.id.toString().padStart(2, "0"),
       duree: `${f.duree}h / ${dureeEnJours}j`,
       prixTTC: `${f.prix_ttc} DT`,
       prixHT: `${f.prix_ht} DT`,
       nb_tranches: f.nb_tranches_paiement || 1,
       categorie: f.categorie_nom || "Non catégorisé",
       categorie_id: f.categorie,
-      niveau: Object.keys(NIVEAU_MAPPING).find(key => NIVEAU_MAPPING[key] === f.niveau) || f.niveau,
-      format: Object.keys(FORMAT_MAPPING).find(key => FORMAT_MAPPING[key] === f.format) || f.format,
+      niveau:
+        Object.keys(NIVEAU_MAPPING).find(
+          (key) => NIVEAU_MAPPING[key] === f.niveau
+        ) || f.niveau,
+      format:
+        Object.keys(FORMAT_MAPPING).find(
+          (key) => FORMAT_MAPPING[key] === f.format
+        ) || f.format,
       date_debut: f.date_debut,
       date_fin: f.date_fin,
-      dateDebut: new Date(f.date_debut).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }),
-      dateFin: new Date(f.date_fin).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }),
+      dateDebut: new Date(f.date_debut).toLocaleDateString("fr-FR", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      }),
+      dateFin: new Date(f.date_fin).toLocaleDateString("fr-FR", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      }),
       status: getFormationStatus(f),
-      ordre: f.ordre || "", // Ajout de l'ordre dans l'affichage
+      // ✅ NOUVEAU — formateurs_noms vient du serializer
+      formateurs_noms: f.formateurs_noms || [],
+      formateurs_ids: f.formateurs || [],
     };
   };
 
@@ -153,27 +290,29 @@ function Formations() {
     .filter((f) => {
       const q = search.toLowerCase();
       return (
-        (f.intitule?.toLowerCase().includes(q) || f.categorie?.toLowerCase().includes(q)) &&
+        (f.intitule?.toLowerCase().includes(q) ||
+          f.categorie?.toLowerCase().includes(q)) &&
         (filterNiveau === "" || f.niveau === filterNiveau) &&
         (filterCat === "" || f.categorie === filterCat)
       );
     })
-    .sort((a, b) => { // Tri par ordre puis par date de création
-      if (a.ordre && b.ordre) return a.ordre - b.ordre;
-      if (a.ordre) return -1;
-      if (b.ordre) return 1;
-      return new Date(b.date_creation) - new Date(a.date_creation);
-    });
+    .sort((a, b) => new Date(b.date_creation) - new Date(a.date_creation));
 
   const totalPages = Math.ceil(filtered.length / itemsPerPage);
-  const paginated = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const paginated = filtered.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
+  // ─── AJOUTER ───
   const handleAjout = async () => {
-    const validation = validateFormationForm(formAjout, 'ajout', { allowPastDates: false });
-    
+    const validation = validateFormationForm(formAjout, "ajout", {
+      allowPastDates: false,
+    });
+
     if (!validation.isValid) {
       const erreurs = {};
-      validation.errors.forEach(err => {
+      validation.errors.forEach((err) => {
         if (err.includes("intitulé")) erreurs.intitule = err;
         else if (err.includes("catégorie")) erreurs.categorie = err;
         else if (err.includes("niveau")) erreurs.niveau = err;
@@ -185,18 +324,10 @@ function Formations() {
         else if (err.includes("HT")) erreurs.prix_ht = err;
         else if (err.includes("TTC")) erreurs.prix_ttc = err;
         else if (err.includes("tranches")) erreurs.nb_tranches_paiement = err;
-        else if (err.includes("ordre")) erreurs.ordre = err; // Ajout
-        else {
-          setErrServeurAjout(err);
-        }
+        else setErrServeurAjout(err);
       });
-      if (validation.coherenceError) {
-        erreurs.duree_coherence = validation.coherenceError;
-      }
-      
-      if (Object.keys(erreurs).length > 0) {
-        setErreursAjout(erreurs);
-      }
+      if (validation.coherenceError) erreurs.duree_coherence = validation.coherenceError;
+      if (Object.keys(erreurs).length > 0) setErreursAjout(erreurs);
       return;
     }
 
@@ -209,6 +340,7 @@ function Formations() {
         ...formAjout,
         niveau: NIVEAU_MAPPING[formAjout.niveau] || formAjout.niveau,
         format: FORMAT_MAPPING[formAjout.format] || formAjout.format,
+        formateurs: formAjout.formateurs,   // ✅ tableau d'IDs
       };
 
       const cleanedData = cleanFormData(formationData);
@@ -221,7 +353,7 @@ function Formations() {
       console.error("Erreur lors de l'ajout:", err);
       if (err.response?.data) {
         const messages = Object.values(err.response.data).flat();
-        setErrServeurAjout(messages.join('\n'));
+        setErrServeurAjout(messages.join("\n"));
       } else {
         setErrServeurAjout("Erreur lors de l'ajout de la formation");
       }
@@ -230,14 +362,17 @@ function Formations() {
     }
   };
 
+  // ─── MODIFIER ───
   const handleModif = async () => {
     if (!modalModif?.id) return;
 
-    const validation = validateFormationForm(formModif, 'modif', { allowPastDates: false });
-    
+    const validation = validateFormationForm(formModif, "modif", {
+      allowPastDates: false,
+    });
+
     if (!validation.isValid) {
       const erreurs = {};
-      validation.errors.forEach(err => {
+      validation.errors.forEach((err) => {
         if (err.includes("intitulé")) erreurs.intitule = err;
         else if (err.includes("catégorie")) erreurs.categorie = err;
         else if (err.includes("niveau")) erreurs.niveau = err;
@@ -249,18 +384,10 @@ function Formations() {
         else if (err.includes("HT")) erreurs.prix_ht = err;
         else if (err.includes("TTC")) erreurs.prix_ttc = err;
         else if (err.includes("tranches")) erreurs.nb_tranches_paiement = err;
-        else if (err.includes("ordre")) erreurs.ordre = err; // Ajout
-        else {
-          setErrServeurModif(err);
-        }
+        else setErrServeurModif(err);
       });
-      if (validation.coherenceError) {
-        erreurs.duree_coherence = validation.coherenceError;
-      }
-      
-      if (Object.keys(erreurs).length > 0) {
-        setErreursModif(erreurs);
-      }
+      if (validation.coherenceError) erreurs.duree_coherence = validation.coherenceError;
+      if (Object.keys(erreurs).length > 0) setErreursModif(erreurs);
       return;
     }
 
@@ -273,6 +400,7 @@ function Formations() {
         ...formModif,
         niveau: NIVEAU_MAPPING[formModif.niveau] || formModif.niveau,
         format: FORMAT_MAPPING[formModif.format] || formModif.format,
+        formateurs: formModif.formateurs,   // ✅ tableau d'IDs
       };
 
       const cleanedData = cleanFormData(formationData);
@@ -285,7 +413,7 @@ function Formations() {
       console.error("Erreur lors de la modification:", err);
       if (err.response?.data) {
         const messages = Object.values(err.response.data).flat();
-        setErrServeurModif(messages.join('\n'));
+        setErrServeurModif(messages.join("\n"));
       } else {
         setErrServeurModif("Erreur lors de la modification de la formation");
       }
@@ -301,7 +429,6 @@ function Formations() {
 
   const handleSupprimer = async () => {
     if (!modalSuppr) return;
-    
     try {
       setSubmitLoading(true);
       setErrSuppr("");
@@ -317,25 +444,29 @@ function Formations() {
     }
   };
 
+  // ✅ MODIFIÉ — récupère aussi les IDs des formateurs
   const openModif = (f) => {
-    const categorieId = categories.find(cat => cat.nom === f.categorie)?.id || f.categorie_id || '';
-    
+    const categorieId =
+      categories.find((cat) => cat.nom === f.categorie)?.id ||
+      f.categorie_id ||
+      "";
+
     setFormModif({
       intitule: f.intitule,
       categorie: categorieId,
+      formateurs: f.formateurs_ids || [],   // ✅ IDs des formateurs existants
       description: f.description || "",
       objectifs_pedagogiques: f.objectifs_pedagogiques || "",
       prerequis: f.prerequis || "",
-      duree: f.duree?.split('h')[0]?.trim() || "",
+      duree: f.duree?.split("h")[0]?.trim() || "",
       niveau: f.niveau,
       format: f.format,
-      date_debut: f.date_debut?.split('T')[0] || "",
-      date_fin: f.date_fin?.split('T')[0] || "",
+      date_debut: f.date_debut?.split("T")[0] || "",
+      date_fin: f.date_fin?.split("T")[0] || "",
       prix_ht: f.prix_ht || "",
       prix_ttc: f.prix_ttc || "",
-      nb_tranches_paiement: f.nb_tranches_paiement || "1", 
+      nb_tranches_paiement: f.nb_tranches_paiement || "1",
       est_active: f.est_active !== undefined ? f.est_active : true,
-      ordre: f.ordre || "", // Ajout de l'ordre
     });
     setErreursModif({});
     setErrServeurModif("");
@@ -347,15 +478,15 @@ function Formations() {
   };
 
   const getRowClassName = (formation) => {
-    switch(formation.status) {
-      case 'past': return 'row-past';
-      case 'ongoing': return 'row-ongoing';
-      case 'upcoming': return 'row-upcoming';
-      default: return '';
+    switch (formation.status) {
+      case "past": return "row-past";
+      case "ongoing": return "row-ongoing";
+      case "upcoming": return "row-upcoming";
+      default: return "";
     }
   };
 
-  const initiales = (nom) => nom ? nom.slice(0, 2).toUpperCase() : "??";
+  const initiales = (nom) => (nom ? nom.slice(0, 2).toUpperCase() : "??");
 
   const getCategorieColor = (nom) => {
     const colors = {
@@ -391,7 +522,6 @@ function Formations() {
         <p className="page-sub">Liste et gestion de toutes les formations du centre</p>
       </div>
 
-      {/* Message de succès global */}
       {succesGlobal && <SuccesMsg msg={succesGlobal} />}
 
       {/* ── Toolbar ── */}
@@ -409,12 +539,14 @@ function Formations() {
           <select className="filter-sel" value={filterNiveau}
             onChange={(e) => { setFilterNiveau(e.target.value); setCurrentPage(1); }}>
             <option value="">Tous les niveaux</option>
-            <option>Débutant</option><option>Intermédiaire</option><option>Avancé</option>
+            <option>Débutant</option>
+            <option>Intermédiaire</option>
+            <option>Avancé</option>
           </select>
           <select className="filter-sel" value={filterCat}
             onChange={(e) => { setFilterCat(e.target.value); setCurrentPage(1); }}>
             <option value="">Toutes les catégories</option>
-            {categories.map(cat => (
+            {categories.map((cat) => (
               <option key={cat.id} value={cat.nom}>{cat.nom}</option>
             ))}
           </select>
@@ -423,11 +555,11 @@ function Formations() {
           <button className="btn btn-cat" onClick={() => navigate("/categories")}>
             <i className="fa-solid fa-tags"></i> Catégories
           </button>
-          <button className="btn btn-add" onClick={() => { 
+          <button className="btn btn-add" onClick={() => {
             setFormAjout(EMPTY_FORM);
             setErreursAjout({});
             setErrServeurAjout("");
-            setModalAjout(true); 
+            setModalAjout(true);
           }}>
             <i className="fa-solid fa-plus"></i> Nouvelle Formation
           </button>
@@ -437,15 +569,17 @@ function Formations() {
       {/* ── Tableau ── */}
       <div className="table-card">
         <div className="table-top">
-          Affichage de <strong>{paginated.length}</strong> formations sur <strong>{filtered.length}</strong>
+          Affichage de <strong>{paginated.length}</strong> formations sur{" "}
+          <strong>{filtered.length}</strong>
         </div>
         <div className="table-wrap">
           <table>
             <thead>
               <tr>
-                <th>#</th> {/* Ajout de la colonne numéro */}
+                <th>#</th>
                 <th>Intitulé de la formation</th>
                 <th>Catégorie</th>
+                <th>Formateurs</th>          {/* ✅ NOUVEAU */}
                 <th>Niveau</th>
                 <th>Durée</th>
                 <th>Prix TTC</th>
@@ -458,22 +592,24 @@ function Formations() {
             <tbody>
               {paginated.map((f, index) => (
                 <tr key={f.id} className={getRowClassName(f)}>
-                  <td className="td-num">{(currentPage - 1) * itemsPerPage + index + 1}</td> {/* Numéro d'ordre */}
+                  <td className="td-num">{(currentPage - 1) * itemsPerPage + index + 1}</td>
                   <td className="td-title">{f.intitule}</td>
                   <td><span className="cat-tag">{f.categorie}</span></td>
+                  {/* ✅ NOUVEAU — colonne formateurs */}
+                  <td><FormateurBadges noms={f.formateurs_noms} /></td>
                   <td><span className={`badge ${NIVEAU_CLASS[f.niveau]}`}>{f.niveau}</span></td>
                   <td className="td-dur">{f.duree}</td>
                   <td className="td-ttc">{f.prixTTC}</td>
                   <td className="td-ht">{f.prixHT}</td>
                   <td className="td-tranches">
                     <span className="tranche-badge">
-                      {f.nb_tranches || 1} tranche{f.nb_tranches > 1 ? 's' : ''}
+                      {f.nb_tranches || 1} tranche{f.nb_tranches > 1 ? "s" : ""}
                     </span>
                   </td>
                   <td className="td-status">
-                    <span className={`status-badge ${f.est_active ? 'active' : 'inactive'}`}>
-                      <i className={`fa-solid ${f.est_active ? 'fa-check-circle' : 'fa-ban'}`}></i>
-                      {f.est_active ? 'Active' : 'Inactive'}
+                    <span className={`status-badge ${f.est_active ? "active" : "inactive"}`}>
+                      <i className={`fa-solid ${f.est_active ? "fa-check-circle" : "fa-ban"}`}></i>
+                      {f.est_active ? "Active" : "Inactive"}
                     </span>
                   </td>
                   <td className="td-actions">
@@ -493,7 +629,6 @@ function Formations() {
           </table>
         </div>
 
-        {/* Pagination */}
         {totalPages > 1 && (
           <div className="pagination">
             <button className="pg-btn" onClick={() => setCurrentPage((p) => p - 1)} disabled={currentPage === 1}>
@@ -546,7 +681,9 @@ function Formations() {
                 <div className="stat-card sc-navy">
                   <div className="sc-icon"><i className="fa-solid fa-calendar-days"></i></div>
                   <div className="sc-info">
-                    <span className="sc-val">{Math.round((new Date(modalDetail.date_fin) - new Date(modalDetail.date_debut)) / (1000 * 60 * 60 * 24)) + 1}j</span>
+                    <span className="sc-val">
+                      {Math.round((new Date(modalDetail.date_fin) - new Date(modalDetail.date_debut)) / (1000 * 60 * 60 * 24)) + 1}j
+                    </span>
                     <span className="sc-lbl">En jours</span>
                   </div>
                 </div>
@@ -562,14 +699,6 @@ function Formations() {
                   <div className="sc-info">
                     <span className="sc-val">{modalDetail.prixHT}</span>
                     <span className="sc-lbl">Prix HT</span>
-                  </div>
-                </div>
-                {/* Ajout de l'ordre dans les stats */}
-                <div className="stat-card sc-purple">
-                  <div className="sc-icon"><i className="fa-solid fa-sort"></i></div>
-                  <div className="sc-info">
-                    <span className="sc-val">{modalDetail.ordre || "-"}</span>
-                    <span className="sc-lbl">Ordre</span>
                   </div>
                 </div>
               </div>
@@ -592,6 +721,30 @@ function Formations() {
                 </div>
               </div>
 
+              {/* ✅ NOUVEAU — Section formateurs dans le détail */}
+              {modalDetail.formateurs_noms?.length > 0 && (
+                <div className="detail-sec" style={{ marginTop: "16px" }}>
+                  <div className="detail-sec-title">
+                    <i className="fa-solid fa-chalkboard-user"></i> Formateurs
+                  </div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginTop: "8px" }}>
+                    {modalDetail.formateurs_noms.map((f) => (
+                      <span key={f.id} style={{
+                        background: "#e8f0fe",
+                        color: "#336699",
+                        borderRadius: "20px",
+                        padding: "4px 12px",
+                        fontSize: "13px",
+                        fontWeight: "600",
+                      }}>
+                        <i className="fa-solid fa-user" style={{ marginRight: "6px", fontSize: "11px" }}></i>
+                        {f.nom_complet}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className="detail-sections">
                 <div className="detail-sec">
                   <div className="detail-sec-title"><i className="fa-solid fa-align-left"></i> Description détaillée</div>
@@ -600,7 +753,9 @@ function Formations() {
                 <div className="detail-sec">
                   <div className="detail-sec-title"><i className="fa-solid fa-bullseye"></i> Objectifs pédagogiques</div>
                   <ul className="detail-list">
-                    {modalDetail.objectifs_pedagogiques?.split('\n').filter(o => o.trim()).map((o, i) => <li key={i}>{o}</li>)}
+                    {modalDetail.objectifs_pedagogiques?.split("\n").filter((o) => o.trim()).map((o, i) => (
+                      <li key={i}>{o}</li>
+                    ))}
                   </ul>
                 </div>
               </div>
@@ -622,38 +777,31 @@ function Formations() {
           <div className="modal modal-wide">
             <div className="modal-header">
               <h2><i className="fa-solid fa-plus-circle"></i> Ajouter une Formation</h2>
-              <button className="modal-close" onClick={() => setModalAjout(false)}><i className="fa-solid fa-xmark"></i></button>
+              <button className="modal-close" onClick={() => setModalAjout(false)}>
+                <i className="fa-solid fa-xmark"></i>
+              </button>
             </div>
             <div className="modal-body">
               {errServeurAjout && <ErrMsg msg={errServeurAjout} />}
               <div className="form-grid">
+
                 <div className="form-group full">
                   <label>Intitulé de la formation <span className="req">*</span></label>
-                  <input 
-                    type="text" 
-                    placeholder="Ex : Développement Web Full Stack"
-                    value={formAjout.intitule} 
+                  <input type="text" placeholder="Ex : Développement Web Full Stack"
+                    value={formAjout.intitule}
                     style={erreursAjout.intitule ? styleInputErreur : {}}
-                    onChange={(e) => { 
-                      setFormAjout({...formAjout, intitule: e.target.value});
-                      setErreursAjout({...erreursAjout, intitule: ""});
-                    }} 
+                    onChange={(e) => { setFormAjout({ ...formAjout, intitule: e.target.value }); setErreursAjout({ ...erreursAjout, intitule: "" }); }}
                   />
                   <ErrMsg msg={erreursAjout.intitule} />
                 </div>
-                
+
                 <div className="form-group">
                   <label>Catégorie <span className="req">*</span></label>
-                  <select 
-                    value={formAjout.categorie} 
+                  <select value={formAjout.categorie}
                     style={erreursAjout.categorie ? styleInputErreur : {}}
-                    onChange={(e) => { 
-                      setFormAjout({...formAjout, categorie: e.target.value});
-                      setErreursAjout({...erreursAjout, categorie: ""});
-                    }}
-                  >
+                    onChange={(e) => { setFormAjout({ ...formAjout, categorie: e.target.value }); setErreursAjout({ ...erreursAjout, categorie: "" }); }}>
                     <option value="">Sélectionner une catégorie</option>
-                    {categoriesActives.map(cat => ( // Utilisation de categoriesActives au lieu de categories
+                    {categoriesActives.map((cat) => (
                       <option key={cat.id} value={cat.id}>{cat.nom}</option>
                     ))}
                   </select>
@@ -662,14 +810,9 @@ function Formations() {
 
                 <div className="form-group">
                   <label>Niveau <span className="req">*</span></label>
-                  <select 
-                    value={formAjout.niveau} 
+                  <select value={formAjout.niveau}
                     style={erreursAjout.niveau ? styleInputErreur : {}}
-                    onChange={(e) => { 
-                      setFormAjout({...formAjout, niveau: e.target.value});
-                      setErreursAjout({...erreursAjout, niveau: ""});
-                    }}
-                  >
+                    onChange={(e) => { setFormAjout({ ...formAjout, niveau: e.target.value }); setErreursAjout({ ...erreursAjout, niveau: "" }); }}>
                     <option value="">Sélectionner le niveau</option>
                     <option>Débutant</option>
                     <option>Intermédiaire</option>
@@ -678,74 +821,56 @@ function Formations() {
                   <ErrMsg msg={erreursAjout.niveau} />
                 </div>
 
-                <div className="form-group">
-                  <label>Ordre d'affichage</label>
-                  <input 
-                    type="number" 
-                    min="1"
-                    placeholder="Ex : 1"
-                    value={formAjout.ordre}
-                    style={erreursAjout.ordre ? styleInputErreur : {}}
-                    onChange={(e) => { 
-                      setFormAjout({...formAjout, ordre: e.target.value});
-                      setErreursAjout({...erreursAjout, ordre: ""});
-                    }}
+                {/* ✅ NOUVEAU — Formateurs multi-select */}
+                <div className="form-group full">
+                  <label>
+                    <i className="fa-solid fa-chalkboard-user" style={{ marginRight: "6px", color: "#336699" }}></i>
+                    Formateurs
+                    <span style={{ fontSize: "12px", color: "#94a3b8", marginLeft: "8px" }}>
+                      ({formAjout.formateurs.length} sélectionné{formAjout.formateurs.length > 1 ? "s" : ""})
+                    </span>
+                  </label>
+                  <FormateurMultiSelect
+                    formateurs={formateurs}
+                    selected={formAjout.formateurs}
+                    onChange={(ids) => setFormAjout({ ...formAjout, formateurs: ids })}
                   />
-                  <small className="field-hint">Ordre d'affichage dans les listes</small>
-                  <ErrMsg msg={erreursAjout.ordre} />
+                  <small className="field-hint">Cochez les formateurs qui enseignent cette formation</small>
                 </div>
 
                 <div className="form-group full">
                   <label>Description détaillée</label>
-                  <textarea 
-                    rows="3" 
-                    placeholder="Décrivez le contenu et le déroulement de la formation…"
-                    value={formAjout.description} 
-                    onChange={(e) => setFormAjout({...formAjout, description: e.target.value})}
+                  <textarea rows="3" placeholder="Décrivez le contenu et le déroulement de la formation…"
+                    value={formAjout.description}
+                    onChange={(e) => setFormAjout({ ...formAjout, description: e.target.value })}
                   />
                 </div>
 
                 <div className="form-group full">
                   <label>Objectifs pédagogiques <span className="req">*</span></label>
-                  <textarea 
-                    rows="3" 
-                    placeholder="Listez les compétences acquises (une par ligne)…"
-                    value={formAjout.objectifs_pedagogiques} 
+                  <textarea rows="3" placeholder="Listez les compétences acquises (une par ligne)…"
+                    value={formAjout.objectifs_pedagogiques}
                     style={erreursAjout.objectifs_pedagogiques ? styleInputErreur : {}}
-                    onChange={(e) => { 
-                      setFormAjout({...formAjout, objectifs_pedagogiques: e.target.value});
-                      setErreursAjout({...erreursAjout, objectifs_pedagogiques: ""});
-                    }}
+                    onChange={(e) => { setFormAjout({ ...formAjout, objectifs_pedagogiques: e.target.value }); setErreursAjout({ ...erreursAjout, objectifs_pedagogiques: "" }); }}
                   />
                   <ErrMsg msg={erreursAjout.objectifs_pedagogiques} />
                 </div>
 
                 <div className="form-group">
                   <label>Durée (Heures) <span className="req">*</span></label>
-                  <input 
-                    type="number" 
-                    min="1" 
-                    placeholder="Ex : 40"
-                    value={formAjout.duree} 
+                  <input type="number" min="1" placeholder="Ex : 40"
+                    value={formAjout.duree}
                     style={erreursAjout.duree ? styleInputErreur : {}}
-                    onChange={(e) => { 
-                      setFormAjout({...formAjout, duree: e.target.value});
-                      setErreursAjout({...erreursAjout, duree: "", duree_coherence: ""});
-                    }}
+                    onChange={(e) => { setFormAjout({ ...formAjout, duree: e.target.value }); setErreursAjout({ ...erreursAjout, duree: "", duree_coherence: "" }); }}
                   />
                   <ErrMsg msg={erreursAjout.duree} />
                 </div>
 
                 <div className="form-group">
                   <label>Format <span className="req">*</span></label>
-                  <select 
-                    value={formAjout.format} 
+                  <select value={formAjout.format}
                     style={erreursAjout.format ? styleInputErreur : {}}
-                    onChange={(e) => { 
-                      setFormAjout({...formAjout, format: e.target.value});
-                      setErreursAjout({...erreursAjout, format: ""});
-                    }}
-                  >
+                    onChange={(e) => { setFormAjout({ ...formAjout, format: e.target.value }); setErreursAjout({ ...erreursAjout, format: "" }); }}>
                     <option value="">Sélectionner le format</option>
                     <option>Présentiel</option>
                     <option>En ligne</option>
@@ -762,94 +887,83 @@ function Formations() {
 
                 <div className="form-group">
                   <label>Date de début <span className="req">*</span></label>
-                  <input 
-                    type="date" 
-                    value={formAjout.date_debut} 
+                  <input type="date" value={formAjout.date_debut}
                     style={erreursAjout.date_debut ? styleInputErreur : {}}
-                    onChange={(e) => { 
-                      setFormAjout({...formAjout, date_debut: e.target.value});
-                      setErreursAjout({...erreursAjout, date_debut: "", duree: "", duree_coherence: ""});
-                    }}
+                    onChange={(e) => { setFormAjout({ ...formAjout, date_debut: e.target.value }); setErreursAjout({ ...erreursAjout, date_debut: "", duree_coherence: "" }); }}
                   />
                   <ErrMsg msg={erreursAjout.date_debut} />
                 </div>
 
                 <div className="form-group">
                   <label>Date de fin <span className="req">*</span></label>
-                  <input 
-                    type="date" 
-                    value={formAjout.date_fin} 
+                  <input type="date" value={formAjout.date_fin}
                     style={erreursAjout.date_fin ? styleInputErreur : {}}
-                    onChange={(e) => { 
-                      setFormAjout({...formAjout, date_fin: e.target.value});
-                      setErreursAjout({...erreursAjout, date_fin: "", duree: "", duree_coherence: ""});
-                    }}
+                    onChange={(e) => { setFormAjout({ ...formAjout, date_fin: e.target.value }); setErreursAjout({ ...erreursAjout, date_fin: "", duree_coherence: "" }); }}
                   />
                   <ErrMsg msg={erreursAjout.date_fin} />
                 </div>
 
                 <div className="form-group">
                   <label>Prix HT (DT) <span className="req">*</span></label>
-                  <input 
-                    type="number" 
-                    min="0" 
-                    step="0.01"
-                    placeholder="Ex : 1000"
-                    value={formAjout.prix_ht} 
+                  <input type="number" min="0" step="0.01" placeholder="Ex : 1000"
+                    value={formAjout.prix_ht}
                     style={erreursAjout.prix_ht ? styleInputErreur : {}}
-                    onChange={(e) => { 
-                      setFormAjout({...formAjout, prix_ht: e.target.value});
-                      setErreursAjout({...erreursAjout, prix_ht: ""});
-                    }}
+                    onChange={(e) => { setFormAjout({ ...formAjout, prix_ht: e.target.value }); setErreursAjout({ ...erreursAjout, prix_ht: "" }); }}
                   />
                   <ErrMsg msg={erreursAjout.prix_ht} />
                 </div>
 
                 <div className="form-group">
                   <label>Prix TTC (DT) <span className="req">*</span></label>
-                  <input 
-                    type="number" 
-                    min="0" 
-                    step="0.01"
-                    placeholder="Ex : 1200"
-                    value={formAjout.prix_ttc} 
+                  <input type="number" min="0" step="0.01" placeholder="Ex : 1200"
+                    value={formAjout.prix_ttc}
                     style={erreursAjout.prix_ttc ? styleInputErreur : {}}
-                    onChange={(e) => { 
-                      setFormAjout({...formAjout, prix_ttc: e.target.value});
-                      setErreursAjout({...erreursAjout, prix_ttc: ""});
-                    }}
+                    onChange={(e) => { setFormAjout({ ...formAjout, prix_ttc: e.target.value }); setErreursAjout({ ...erreursAjout, prix_ttc: "" }); }}
                   />
                   <ErrMsg msg={erreursAjout.prix_ttc} />
                 </div>
 
-                <div className="form-row">
-                  <div className="form-group">
-                    <label>Tranches de paiement</label>
-                    <input 
-                      type="number" 
-                      min="1" 
-                      max="12"
-                      placeholder="Nombre de tranches (1-12)"
-                      value={formAjout.nb_tranches_paiement} 
-                      onChange={(e) => setFormAjout({...formAjout, nb_tranches_paiement: e.target.value})}
-                    />
-                    <small className="field-hint">1 = paiement unique</small>
-                  </div>
-
-                  <div className="form-group checkbox-group">
-                    <label>Formation active</label>
-                    <div className="checkbox-wrapper">
-                      <label className="checkbox-label">
-                        <input 
-                          type="checkbox" 
-                          checked={formAjout.est_active} 
-                          onChange={(e) => setFormAjout({...formAjout, est_active: e.target.checked})}
-                        />
-                        <span>Oui, cette formation est active</span>
-                      </label>
-                    </div>
-                  </div>
+                <div className="form-group">
+                  <label>Tranches de paiement</label>
+                  <input type="number" min="1" max="12" placeholder="Nombre de tranches (1-12)"
+                    value={formAjout.nb_tranches_paiement}
+                    onChange={(e) => setFormAjout({ ...formAjout, nb_tranches_paiement: e.target.value })}
+                  />
+                  <small className="field-hint">1 = paiement unique</small>
                 </div>
+
+                <div className="form-group">
+                  <label>Formation active</label>
+                  <label style={{
+                    display: "flex", alignItems: "center", gap: "10px",
+                    padding: "10px 14px", cursor: "pointer",
+                    border: "1px solid #e2e8f0", borderRadius: "8px",
+                    fontSize: "13px", background: formAjout.est_active ? "#f0f7ff" : "#fff",
+                    fontWeight: formAjout.est_active ? "600" : "400",
+                    color: formAjout.est_active ? "#336699" : "#334155",
+                    transition: "all 0.15s", userSelect: "none",
+                  }}>
+                    <span style={{
+                      width: "18px", height: "18px", borderRadius: "4px",
+                      border: formAjout.est_active ? "2px solid #336699" : "2px solid #cbd5e1",
+                      background: formAjout.est_active ? "#336699" : "#fff",
+                      display: "inline-flex", alignItems: "center", justifyContent: "center",
+                      flexShrink: 0, transition: "all 0.15s",
+                    }}>
+                      {formAjout.est_active && (
+                        <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+                          <path d="M1 4L3.5 6.5L9 1" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      )}
+                    </span>
+                    <input type="checkbox" checked={formAjout.est_active}
+                      onChange={(e) => setFormAjout({ ...formAjout, est_active: e.target.checked })}
+                      style={{ display: "none" }}
+                    />
+                    <span>Oui, cette formation est active</span>
+                  </label>
+                </div>
+
               </div>
             </div>
             <div className="modal-footer">
@@ -868,37 +982,30 @@ function Formations() {
           <div className="modal modal-wide">
             <div className="modal-header modif-header">
               <h2><i className="fa-solid fa-pen"></i> Modifier la Formation</h2>
-              <button className="modal-close" onClick={() => setModalModif(null)}><i className="fa-solid fa-xmark"></i></button>
+              <button className="modal-close" onClick={() => setModalModif(null)}>
+                <i className="fa-solid fa-xmark"></i>
+              </button>
             </div>
             <div className="modal-body">
               {errServeurModif && <ErrMsg msg={errServeurModif} />}
               <div className="form-grid">
+
                 <div className="form-group full">
                   <label>Intitulé de la formation <span className="req">*</span></label>
-                  <input 
-                    type="text" 
-                    value={formModif.intitule} 
+                  <input type="text" value={formModif.intitule}
                     style={erreursModif.intitule ? styleInputErreur : {}}
-                    onChange={(e) => { 
-                      setFormModif({...formModif, intitule: e.target.value});
-                      setErreursModif({...erreursModif, intitule: ""});
-                    }} 
+                    onChange={(e) => { setFormModif({ ...formModif, intitule: e.target.value }); setErreursModif({ ...erreursModif, intitule: "" }); }}
                   />
                   <ErrMsg msg={erreursModif.intitule} />
                 </div>
 
                 <div className="form-group">
                   <label>Catégorie <span className="req">*</span></label>
-                  <select 
-                    value={formModif.categorie} 
+                  <select value={formModif.categorie}
                     style={erreursModif.categorie ? styleInputErreur : {}}
-                    onChange={(e) => { 
-                      setFormModif({...formModif, categorie: e.target.value});
-                      setErreursModif({...erreursModif, categorie: ""});
-                    }}
-                  >
+                    onChange={(e) => { setFormModif({ ...formModif, categorie: e.target.value }); setErreursModif({ ...erreursModif, categorie: "" }); }}>
                     <option value="">Sélectionner une catégorie</option>
-                    {categoriesActives.map(cat => ( // Utilisation de categoriesActives au lieu de categories
+                    {categoriesActives.map((cat) => (
                       <option key={cat.id} value={cat.id}>{cat.nom}</option>
                     ))}
                   </select>
@@ -907,14 +1014,9 @@ function Formations() {
 
                 <div className="form-group">
                   <label>Niveau <span className="req">*</span></label>
-                  <select 
-                    value={formModif.niveau} 
+                  <select value={formModif.niveau}
                     style={erreursModif.niveau ? styleInputErreur : {}}
-                    onChange={(e) => { 
-                      setFormModif({...formModif, niveau: e.target.value});
-                      setErreursModif({...erreursModif, niveau: ""});
-                    }}
-                  >
+                    onChange={(e) => { setFormModif({ ...formModif, niveau: e.target.value }); setErreursModif({ ...erreursModif, niveau: "" }); }}>
                     <option>Débutant</option>
                     <option>Intermédiaire</option>
                     <option>Avancé</option>
@@ -922,69 +1024,53 @@ function Formations() {
                   <ErrMsg msg={erreursModif.niveau} />
                 </div>
 
-                <div className="form-group">
-                  <label>Ordre d'affichage</label>
-                  <input 
-                    type="number" 
-                    min="1"
-                    value={formModif.ordre}
-                    style={erreursModif.ordre ? styleInputErreur : {}}
-                    onChange={(e) => { 
-                      setFormModif({...formModif, ordre: e.target.value});
-                      setErreursModif({...erreursModif, ordre: ""});
-                    }}
+                {/* ✅ NOUVEAU — Formateurs multi-select (modif) */}
+                <div className="form-group full">
+                  <label>
+                    <i className="fa-solid fa-chalkboard-user" style={{ marginRight: "6px", color: "#336699" }}></i>
+                    Formateurs
+                    <span style={{ fontSize: "12px", color: "#94a3b8", marginLeft: "8px" }}>
+                      ({formModif.formateurs.length} sélectionné{formModif.formateurs.length > 1 ? "s" : ""})
+                    </span>
+                  </label>
+                  <FormateurMultiSelect
+                    formateurs={formateurs}
+                    selected={formModif.formateurs}
+                    onChange={(ids) => setFormModif({ ...formModif, formateurs: ids })}
                   />
-                  <small className="field-hint">Ordre d'affichage dans les listes</small>
-                  <ErrMsg msg={erreursModif.ordre} />
+                  <small className="field-hint">Cochez les formateurs qui enseignent cette formation</small>
                 </div>
 
                 <div className="form-group full">
                   <label>Description détaillée</label>
-                  <textarea 
-                    rows="3" 
-                    value={formModif.description} 
-                    onChange={(e) => setFormModif({...formModif, description: e.target.value})}
+                  <textarea rows="3" value={formModif.description}
+                    onChange={(e) => setFormModif({ ...formModif, description: e.target.value })}
                   />
                 </div>
 
                 <div className="form-group full">
                   <label>Objectifs pédagogiques <span className="req">*</span></label>
-                  <textarea 
-                    rows="3" 
-                    value={formModif.objectifs_pedagogiques} 
+                  <textarea rows="3" value={formModif.objectifs_pedagogiques}
                     style={erreursModif.objectifs_pedagogiques ? styleInputErreur : {}}
-                    onChange={(e) => { 
-                      setFormModif({...formModif, objectifs_pedagogiques: e.target.value});
-                      setErreursModif({...erreursModif, objectifs_pedagogiques: ""});
-                    }}
+                    onChange={(e) => { setFormModif({ ...formModif, objectifs_pedagogiques: e.target.value }); setErreursModif({ ...erreursModif, objectifs_pedagogiques: "" }); }}
                   />
                   <ErrMsg msg={erreursModif.objectifs_pedagogiques} />
                 </div>
 
                 <div className="form-group">
                   <label>Durée (Heures)</label>
-                  <input 
-                    type="number" 
-                    value={formModif.duree} 
+                  <input type="number" value={formModif.duree}
                     style={erreursModif.duree ? styleInputErreur : {}}
-                    onChange={(e) => { 
-                      setFormModif({...formModif, duree: e.target.value});
-                      setErreursModif({...erreursModif, duree: "", duree_coherence: ""});
-                    }}
+                    onChange={(e) => { setFormModif({ ...formModif, duree: e.target.value }); setErreursModif({ ...erreursModif, duree: "", duree_coherence: "" }); }}
                   />
                   <ErrMsg msg={erreursModif.duree} />
                 </div>
 
                 <div className="form-group">
                   <label>Format <span className="req">*</span></label>
-                  <select 
-                    value={formModif.format} 
+                  <select value={formModif.format}
                     style={erreursModif.format ? styleInputErreur : {}}
-                    onChange={(e) => { 
-                      setFormModif({...formModif, format: e.target.value});
-                      setErreursModif({...erreursModif, format: ""});
-                    }}
-                  >
+                    onChange={(e) => { setFormModif({ ...formModif, format: e.target.value }); setErreursModif({ ...erreursModif, format: "" }); }}>
                     <option>Présentiel</option>
                     <option>En ligne</option>
                     <option>Hybride</option>
@@ -1000,89 +1086,80 @@ function Formations() {
 
                 <div className="form-group">
                   <label>Date de début</label>
-                  <input 
-                    type="date" 
-                    value={formModif.date_debut} 
+                  <input type="date" value={formModif.date_debut}
                     style={erreursModif.date_debut ? styleInputErreur : {}}
-                    onChange={(e) => { 
-                      setFormModif({...formModif, date_debut: e.target.value});
-                      setErreursModif({...erreursModif, date_debut: "", duree: "", duree_coherence: ""});
-                    }}
+                    onChange={(e) => { setFormModif({ ...formModif, date_debut: e.target.value }); setErreursModif({ ...erreursModif, date_debut: "", duree_coherence: "" }); }}
                   />
                   <ErrMsg msg={erreursModif.date_debut} />
                 </div>
 
                 <div className="form-group">
                   <label>Date de fin</label>
-                  <input 
-                    type="date" 
-                    value={formModif.date_fin} 
+                  <input type="date" value={formModif.date_fin}
                     style={erreursModif.date_fin ? styleInputErreur : {}}
-                    onChange={(e) => { 
-                      setFormModif({...formModif, date_fin: e.target.value});
-                      setErreursModif({...erreursModif, date_fin: "", duree: "", duree_coherence: ""});
-                    }}
+                    onChange={(e) => { setFormModif({ ...formModif, date_fin: e.target.value }); setErreursModif({ ...erreursModif, date_fin: "", duree_coherence: "" }); }}
                   />
                   <ErrMsg msg={erreursModif.date_fin} />
                 </div>
 
                 <div className="form-group">
                   <label>Prix HT (DT) <span className="req">*</span></label>
-                  <input 
-                    type="number" 
-                    step="0.01"
-                    value={formModif.prix_ht} 
+                  <input type="number" step="0.01" value={formModif.prix_ht}
                     style={erreursModif.prix_ht ? styleInputErreur : {}}
-                    onChange={(e) => { 
-                      setFormModif({...formModif, prix_ht: e.target.value});
-                      setErreursModif({...erreursModif, prix_ht: ""});
-                    }}
+                    onChange={(e) => { setFormModif({ ...formModif, prix_ht: e.target.value }); setErreursModif({ ...erreursModif, prix_ht: "" }); }}
                   />
                   <ErrMsg msg={erreursModif.prix_ht} />
                 </div>
 
                 <div className="form-group">
                   <label>Prix TTC (DT) <span className="req">*</span></label>
-                  <input 
-                    type="number" 
-                    step="0.01"
-                    value={formModif.prix_ttc} 
+                  <input type="number" step="0.01" value={formModif.prix_ttc}
                     style={erreursModif.prix_ttc ? styleInputErreur : {}}
-                    onChange={(e) => { 
-                      setFormModif({...formModif, prix_ttc: e.target.value});
-                      setErreursModif({...erreursModif, prix_ttc: ""});
-                    }}
+                    onChange={(e) => { setFormModif({ ...formModif, prix_ttc: e.target.value }); setErreursModif({ ...erreursModif, prix_ttc: "" }); }}
                   />
                   <ErrMsg msg={erreursModif.prix_ttc} />
                 </div>
 
-                <div className="form-row">
-                  <div className="form-group">
-                    <label>Tranches de paiement</label>
-                    <input 
-                      type="number" 
-                      min="1" 
-                      max="12"
-                      value={formModif.nb_tranches_paiement} 
-                      onChange={(e) => setFormModif({...formModif, nb_tranches_paiement: e.target.value})}
-                    />
-                    <small className="field-hint">1 = paiement unique</small>
-                  </div>
-
-                  <div className="form-group checkbox-group">
-                    <label>Formation active</label>
-                    <div className="checkbox-wrapper">
-                      <label className="checkbox-label">
-                        <input 
-                          type="checkbox" 
-                          checked={formModif.est_active} 
-                          onChange={(e) => setFormModif({...formModif, est_active: e.target.checked})}
-                        />
-                        <span>Oui, cette formation est active</span>
-                      </label>
-                    </div>
-                  </div>
+                <div className="form-group">
+                  <label>Tranches de paiement</label>
+                  <input type="number" min="1" max="12" value={formModif.nb_tranches_paiement}
+                    onChange={(e) => setFormModif({ ...formModif, nb_tranches_paiement: e.target.value })}
+                  />
+                  <small className="field-hint">1 = paiement unique</small>
                 </div>
+
+                <div className="form-group">
+                  <label>Formation active</label>
+                  <label style={{
+                    display: "flex", alignItems: "center", gap: "10px",
+                    padding: "10px 14px", cursor: "pointer",
+                    border: "1px solid #e2e8f0", borderRadius: "8px",
+                    fontSize: "13px", background: formModif.est_active ? "#f0f7ff" : "#fff",
+                    fontWeight: formModif.est_active ? "600" : "400",
+                    color: formModif.est_active ? "#336699" : "#334155",
+                    transition: "all 0.15s", userSelect: "none",
+                  }}>
+                    <span style={{
+                      width: "18px", height: "18px", borderRadius: "4px",
+                      border: formModif.est_active ? "2px solid #336699" : "2px solid #cbd5e1",
+                      background: formModif.est_active ? "#336699" : "#fff",
+                      display: "inline-flex", alignItems: "center", justifyContent: "center",
+                      flexShrink: 0, transition: "all 0.15s",
+                    }}>
+                      {formModif.est_active && (
+                        <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+                          <path d="M1 4L3.5 6.5L9 1" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      )}
+                    </span>
+                    <input type="checkbox" checked={formModif.est_active}
+                      onChange={(e) => setFormModif({ ...formModif, est_active: e.target.checked })}
+                      style={{ display: "none" }}
+                    />
+                    <span>Oui, cette formation est active</span>
+                  </label>
+                </div>
+
               </div>
             </div>
             <div className="modal-footer">
@@ -1108,22 +1185,8 @@ function Formations() {
               <h2 style={{ fontSize: "20px", fontWeight: "700", marginBottom: "20px", color: "#1e293b" }}>
                 Supprimer la formation
               </h2>
-              
-              {/* Card formation */}
               <div style={{ display: "flex", alignItems: "center", gap: "12px", background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "12px", padding: "12px 16px", marginBottom: "16px" }}>
-                <div style={{ 
-                  background: getCategorieColor(modalSuppr.categorie), 
-                  borderRadius: "8px", 
-                  width: "40px", 
-                  height: "40px", 
-                  display: "flex", 
-                  alignItems: "center", 
-                  justifyContent: "center", 
-                  color: "#fff", 
-                  fontWeight: "700", 
-                  fontSize: "14px", 
-                  flexShrink: 0 
-                }}>
+                <div style={{ background: getCategorieColor(modalSuppr.categorie), borderRadius: "8px", width: "40px", height: "40px", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: "700", fontSize: "14px", flexShrink: 0 }}>
                   {initiales(modalSuppr.intitule)}
                 </div>
                 <div style={{ textAlign: "left" }}>
@@ -1131,14 +1194,10 @@ function Formations() {
                   <div style={{ fontSize: "12px", color: "#94a3b8" }}>#{String(modalSuppr.id).padStart(3, "0")}</div>
                 </div>
               </div>
-
-              {/* Avertissement */}
               <div style={{ background: "#fff5f5", border: "1px solid #fecaca", borderRadius: "10px", padding: "12px 16px", color: "#dc2626", fontSize: "13px", display: "flex", alignItems: "flex-start", gap: "8px", textAlign: "left", marginBottom: "8px" }}>
                 <i className="fa-solid fa-triangle-exclamation" style={{ marginTop: "2px", flexShrink: 0 }}></i>
                 <span>Cette action est <strong>irréversible</strong>. Toutes les données associées seront définitivement supprimées.</span>
               </div>
-
-              {/* Erreur suppression */}
               {errSuppr && (
                 <div style={{ background: "#fff5f5", border: "1.5px solid #ef4444", borderRadius: "10px", padding: "12px 16px", color: "#dc2626", fontSize: "13px", display: "flex", alignItems: "flex-start", gap: "8px", textAlign: "left", marginTop: "8px" }}>
                   <i className="fa-solid fa-circle-xmark" style={{ marginTop: "2px", flexShrink: 0 }}></i>
@@ -1151,21 +1210,7 @@ function Formations() {
                 <i className="fa-solid fa-xmark"></i> Annuler
               </button>
               <button
-                style={{ 
-                  flex: 1, 
-                  background: errSuppr ? "#fca5a5" : "#ef4444", 
-                  color: "#fff", 
-                  border: "none", 
-                  borderRadius: "10px", 
-                  padding: "10px 20px", 
-                  fontWeight: "600", 
-                  cursor: (submitLoading || errSuppr) ? "not-allowed" : "pointer", 
-                  display: "flex", 
-                  alignItems: "center", 
-                  justifyContent: "center", 
-                  gap: "8px", 
-                  transition: "background 0.2s" 
-                }}
+                style={{ flex: 1, background: errSuppr ? "#fca5a5" : "#ef4444", color: "#fff", border: "none", borderRadius: "10px", padding: "10px 20px", fontWeight: "600", cursor: (submitLoading || errSuppr) ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}
                 onClick={handleSupprimer}
                 disabled={submitLoading || !!errSuppr}
               >

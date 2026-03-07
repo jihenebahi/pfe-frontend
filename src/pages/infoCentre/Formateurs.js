@@ -14,6 +14,7 @@ const FORM_VIDE = {
   specialites: "", niveau_intervention: "", type_contrat: "",
   disponibilites: "", heures_realisees: "",
   contrat_pdf: null, cv_pdf: null, diplomes_pdf: null,
+  est_actif: true,   // ✅ actif par défaut
 };
 
 const ERRORS_VIDE = {

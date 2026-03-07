@@ -257,8 +257,7 @@ export const formatErrorMessage = (errors) => {
 export const cleanFormData = (formData) => {
   const cleaned = { ...formData };
 
-  // Convertir les chaînes vides en null pour les champs optionnels
-  if (cleaned.description === '') cleaned.description = null;
+  // description garde sa valeur vide (le champ est optionnel mais accepte '')
   if (cleaned.prerequis === '') cleaned.prerequis = null;
 
   // S'assurer que les nombres sont bien des nombres
