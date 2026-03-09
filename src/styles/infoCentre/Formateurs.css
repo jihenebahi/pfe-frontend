@@ -1055,3 +1055,187 @@
   .suppr-body { padding: 28px 20px 20px; }
   .suppr-footer { padding: 0 20px 22px; }
 }
+
+/* ═══════════════════════════════════════════
+   COLONNE FORMATIONS (tableau)
+═══════════════════════════════════════════ */
+.td-formations { white-space: nowrap; }
+
+.formation-count-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(51,102,153,.10);
+  color: #336699;
+  border: 1px solid rgba(51,102,153,.22);
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.no-formation { color: #CBD5E1; font-size: 13px; }
+
+/* Badge filtre actif */
+.filter-active-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(51,102,153,.10);
+  color: #336699;
+  border: 1px solid rgba(51,102,153,.22);
+  border-radius: 20px;
+  padding: 2px 8px 2px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  margin-left: 10px;
+}
+
+.filter-active-badge button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #94A3B8;
+  padding: 0 2px;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  transition: .15s;
+}
+.filter-active-badge button:hover { color: #e53e3e; }
+
+/* ═══════════════════════════════════════════
+   SECTION FORMATIONS DANS DÉTAIL
+═══════════════════════════════════════════ */
+.detail-sec-count {
+  margin-left: auto;
+  background: #336699;
+  color: #fff;
+  border-radius: 20px;
+  padding: 1px 9px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.no-formations-msg {
+  padding: 16px 20px;
+  font-size: 13px;
+  color: #94A3B8;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.formations-list {
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.formation-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 10px;
+  transition: .15s;
+}
+
+.formation-item:hover {
+  background: #F1F5F9;
+  border-color: #CBD5E1;
+}
+
+.formation-item-icon {
+  width: 34px; height: 34px;
+  border-radius: 8px;
+  background: rgba(51,102,153,.10);
+  color: #336699;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.formation-item-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.formation-item-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1E3A5F;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.formation-item-cat {
+  font-size: 11px;
+  color: #94A3B8;
+}
+
+.formation-item-niveau {
+  padding: 2px 9px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.niveau-debutant    { background: rgba(51,204,255,.15); color: #1A7A99; border: 1px solid rgba(51,204,255,.35); }
+.niveau-intermediaire { background: rgba(255,204,51,.18); color: #7a5a00; border: 1px solid rgba(255,204,51,.45); }
+.niveau-avance      { background: rgba(51,102,153,.12); color: #1E3A5F; border: 1px solid rgba(51,102,153,.30); }
+
+/* ═══════════════════════════════════════════
+   ERREUR SUPPRESSION BLOQUÉE
+═══════════════════════════════════════════ */
+.suppr-blocked-error {
+  width: 100%;
+  background: #fef2f2;
+  border: 1.5px solid #fca5a5;
+  border-radius: 10px;
+  overflow: hidden;
+  text-align: left;
+}
+
+.suppr-blocked-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 16px;
+  font-size: 13px;
+  color: #dc2626;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.suppr-blocked-header i { font-size: 15px; flex-shrink: 0; margin-top: 1px; }
+
+.suppr-blocked-list {
+  list-style: none;
+  padding: 0 16px 12px 16px;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  border-top: 1px solid #fca5a5;
+}
+
+.suppr-blocked-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  color: #7f1d1d;
+  font-weight: 500;
+  padding: 5px 0;
+}
+
+.suppr-blocked-list li i { color: #dc2626; font-size: 12px; }
