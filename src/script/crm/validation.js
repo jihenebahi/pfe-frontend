@@ -16,8 +16,8 @@ const VALID_TYPE   = ['Particulier','Entreprise'];
 const VALID_SERV   = ['Formation','Consulting','Les deux'];
 const VALID_NIV    = ['Débutant','Intermédiaire','Avancé'];
 const VALID_MODE   = ['Présentiel','En ligne','Hybride'];
-const VALID_STATUT = ['Nouveau','Contacté','En cours','Qualifié','Converti','Perdu'];
-const VALID_RESP   = ['Admin','Assistante','Commercial'];
+const VALID_STATUT = ['Nouveau','Contacté','Intéressé','Converti','Perdu'];
+const VALID_RESP   = ['Admin','Assistante'];
 
 export const validateField = (field, value, context = {}) => {
   const v = (value || '').trim();

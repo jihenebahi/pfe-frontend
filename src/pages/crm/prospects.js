@@ -14,16 +14,15 @@ import { validateField, validateAll } from '../../script/crm/validation';
    CONSTANTES — définies une seule fois en dehors de tout composant
 ══════════════════════════════════════════════════════════ */
 const STATUT_COLORS = {
-  'Nouveau':  { bg: 'rgba(51,204,255,.14)',  color: '#1A7A99', border: 'rgba(51,204,255,.35)' },
-  'Contacté': { bg: 'rgba(255,204,51,.18)',  color: '#8A6800', border: 'rgba(255,204,51,.45)' },
-  'En cours': { bg: 'rgba(51,102,153,.13)',  color: '#1E3A5F', border: 'rgba(51,102,153,.30)' },
-  'Qualifié': { bg: 'rgba(120,80,200,.13)',  color: '#5B2D8E', border: 'rgba(120,80,200,.30)' },
-  'Converti': { bg: 'rgba(26,107,74,.12)',   color: '#1A6B4A', border: 'rgba(26,107,74,.30)'  },
-  'Perdu':    { bg: 'rgba(229,62,62,.10)',   color: '#c0392b', border: 'rgba(229,62,62,.30)'  },
+  'Nouveau':   { bg: 'rgba(51,204,255,.14)',  color: '#1A7A99', border: 'rgba(51,204,255,.35)' },
+  'Contacté':  { bg: 'rgba(255,204,51,.18)',  color: '#8A6800', border: 'rgba(255,204,51,.45)' },
+  'Intéressé': { bg: 'rgba(120,80,200,.13)',  color: '#5B2D8E', border: 'rgba(120,80,200,.30)' },
+  'Converti':  { bg: 'rgba(26,107,74,.12)',   color: '#1A6B4A', border: 'rgba(26,107,74,.30)'  },
+  'Perdu':     { bg: 'rgba(229,62,62,.10)',   color: '#c0392b', border: 'rgba(229,62,62,.30)'  },
 };
 
 const SOURCES      = ['Facebook', 'Instagram', 'TikTok', 'LinkedIn', 'Google', 'Site web', 'Recommandation', 'Autre'];
-const RESPONSABLES = ['Admin', 'Assistante', 'Commercial'];
+const RESPONSABLES = ['Admin', 'Assistante'];
 const PAYS_LIST    = ['Tunisie', 'France', 'Algérie', 'Maroc', 'Belgique', 'Canada', 'Autre'];
 
 /* ══════════════════════════════════════════════════════════
@@ -31,13 +30,14 @@ const PAYS_LIST    = ['Tunisie', 'France', 'Algérie', 'Maroc', 'Belgique', 'Can
    ⚠️ Définir F/S/T à l'intérieur de ProspectForm causait un remount
       à chaque frappe (perte du focus après chaque caractère).
 ══════════════════════════════════════════════════════════ */
-const F = ({ label, name, type = 'text', placeholder = '', fd, set, errors = {} }) => (
+const F = ({ label, name, type = 'text', placeholder = '', autoComplete, fd, set, errors = {} }) => (
   <div className={`pf-group${errors[name] ? ' pf-group--error' : ''}`}>
     <label>{label}</label>
     <input
       type={type}
       value={fd[name] || ''}
       placeholder={placeholder}
+      autoComplete={autoComplete || 'off'}
       onChange={e => set(name, e.target.value)}
       className={errors[name] ? 'input-error' : ''}
     />
@@ -117,13 +117,17 @@ const ProspectForm = ({ initial, formRef, FORMATIONS }) => {
   // Formation désactivée uniquement si le service choisi est "Consulting"
   const formationDisabled = fd.serviceRecherche === 'Consulting';
 
-  // ── Expose fd + triggerValidation au parent ───────────────
+  // ── Expose fd + triggerValidation + setApiErrors au parent ──
   formRef.current = {
     data: fd,
     triggerValidation: () => {
       const { errors: errs, isValid } = validateAll(fd);
       setErrors(errs);
       return isValid;
+    },
+    // Permet au parent d'injecter les erreurs renvoyées par l'API
+    setApiErrors: (apiErrors) => {
+      setErrors(prev => ({ ...prev, ...apiErrors }));
     },
   };
 
@@ -164,15 +168,15 @@ const ProspectForm = ({ initial, formRef, FORMATIONS }) => {
   };
 
   return (
-    <div className="pf-body">
+    <form className="pf-body" autoComplete="on" onSubmit={e => e.preventDefault()}>
       <div className="pf-section-title">
         <i className="fa-solid fa-user"></i> Informations personnelles
       </div>
       <div className="pf-grid">
         <F label="Nom *"        name="nom"    placeholder="Ben Ali"             fd={fd} set={set} errors={errors} />
         <F label="Prénom *"     name="prenom" placeholder="Sami"                fd={fd} set={set} errors={errors} />
-        <F label="Email *"      name="email"  type="email" placeholder="email@exemple.com" fd={fd} set={set} errors={errors} />
-        <F label="Téléphone *"  name="tel"    placeholder="+216 XX XXX XXX"     fd={fd} set={set} errors={errors} />
+        <F label="Email *"      name="email"  type="email" placeholder="email@exemple.com" autoComplete="email" fd={fd} set={set} errors={errors} />
+        <F label="Téléphone *"  name="tel"    placeholder="+216 XX XXX XXX"     autoComplete="tel" fd={fd} set={set} errors={errors} />
         <F label="Ville *"      name="ville"  placeholder="Tunis"               fd={fd} set={set} errors={errors} />
         <S label="Pays *"       name="pays"   options={PAYS_LIST}               fd={fd} set={set} errors={errors} />
       </div>
@@ -225,10 +229,10 @@ const ProspectForm = ({ initial, formRef, FORMATIONS }) => {
         <i className="fa-solid fa-chart-line"></i> Suivi du prospect
       </div>
       <div className="pf-grid">
-        <S label="Statut *"               name="statut"      options={['Nouveau','Contacté','En cours','Qualifié','Converti','Perdu']} fd={fd} set={set} errors={errors} />
+        <S label="Statut *"               name="statut"      options={['Nouveau','Contacté','Intéressé','Converti','Perdu']} fd={fd} set={set} errors={errors} />
         <S label="Responsable du suivi *" name="responsable" options={RESPONSABLES}                                                    fd={fd} set={set} errors={errors} />
       </div>
-    </div>
+    </form>
   );
 };
 
@@ -499,10 +503,41 @@ const Prospects = () => {
       }
       closeDrawer();
     } catch (err) {
-      const msg = err.response?.data
-        ? Object.values(err.response.data).flat().join(' ')
-        : 'Une erreur est survenue.';
-      showToast(msg, 'error');
+      const apiData = err.response?.data;
+      if (apiData && typeof apiData === 'object') {
+        // Mapping champs Django → champs React
+        const FIELD_MAP = { telephone: 'tel' };
+        const fieldErrors = {};
+        const otherMessages = [];
+
+        Object.entries(apiData).forEach(([key, val]) => {
+          const msgs = Array.isArray(val) ? val : [val];
+          const reactField = FIELD_MAP[key] || key;
+          // Si c'est un champ du formulaire, on l'affiche dessus
+          const FORM_FIELDS = ['nom','prenom','email','tel','ville','pays','source',
+            'typeProspect','serviceRecherche','formation','niveau','modePreference',
+            'statut','responsable','disponibilite','commentaires'];
+          if (FORM_FIELDS.includes(reactField)) {
+            fieldErrors[reactField] = msgs.join(' ');
+          } else {
+            otherMessages.push(msgs.join(' '));
+          }
+        });
+
+        // Injecte les erreurs sur les champs du formulaire
+        if (Object.keys(fieldErrors).length > 0 && formRef.current?.setApiErrors) {
+          formRef.current.setApiErrors(fieldErrors);
+        }
+        // Toast pour les erreurs hors-champ
+        const toastMsg = otherMessages.length > 0
+          ? otherMessages.join(' ')
+          : Object.keys(fieldErrors).length > 0
+            ? 'Veuillez corriger les erreurs signalées.'
+            : 'Une erreur est survenue.';
+        showToast(toastMsg, 'error');
+      } else {
+        showToast('Une erreur est survenue.', 'error');
+      }
     } finally {
       setSaving(false);
     }
@@ -745,7 +780,7 @@ const Prospects = () => {
           </div>
           <select className="filter-sel" value={filterStatut} onChange={e => { setFilterStatut(e.target.value); setCurrentPage(1); }}>
             <option>Tous</option><option>Nouveau</option><option>Contacté</option>
-            <option>En cours</option><option>Qualifié</option><option>Converti</option><option>Perdu</option>
+            <option>Intéressé</option><option>Converti</option><option>Perdu</option>
           </select>
           <button className={`btn btn-sort ${sortAlpha ? 'active' : ''}`} onClick={() => setSortAlpha(v => !v)}>
             <i className="fa-solid fa-arrow-down-a-z"></i> A → Z
