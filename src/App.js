@@ -22,7 +22,8 @@ import Formateurs from "./pages/infoCentre/Formateurs";
 
 // Pages CRM (Gestion Relation Client) ← NOUVEAU
 import Prospects from "./pages/crm/prospects"; // ← NOUVEAU
-
+import Etudiants from "./pages/crm/Etudiants";
+import Diplomes  from "./pages/crm/diplomes";
 // Composants
 import PrivateRoute from "./components/PrivateRoute";
 
@@ -50,6 +51,8 @@ function App() {
           
           {/* Gestion Relation Client (CRM) */}
           <Route path="/prospects" element={<PrivateRoute><Prospects /></PrivateRoute>} /> {/* ← NOUVEAU*/}
+          <Route path="/etudiants" element={<PrivateRoute><Etudiants /></PrivateRoute>} />
+          <Route path="/diplomes"  element={<PrivateRoute><Diplomes  /></PrivateRoute>} />
 
           {/* Mot de passe oublié */}
           <Route path="/mot-de-passe-oublie" element={<MotPassOublier />} />
