@@ -621,3 +621,52 @@ textarea.form-control { height: 72px; padding: 8px 11px; resize: vertical; }
 /* ─── UTILITY ─────────────────────────────────────────────── */
 .hidden { display: none !important; }
 .req { color: #e53e3e; }
+
+/* ─── VALIDATION DES CHAMPS ──────────────────────────────── */
+
+/* Bordure rouge sur l'input en erreur */
+.pf-group input.input-error,
+.pf-group textarea.input-error {
+  border-color: #e53e3e !important;
+  background: #fff5f5;
+  box-shadow: 0 0 0 3px rgba(229, 62, 62, 0.12);
+}
+
+/* Message d'erreur sous le champ */
+.pf-error-msg {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 5px;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: #c0392b;
+  font-family: 'Poppins', sans-serif;
+  animation: errorFadeIn .18s ease;
+}
+
+.pf-error-msg i {
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+/* Légère teinte rouge sur le groupe en erreur */
+.pf-group--error label {
+  color: #c0392b;
+}
+
+@keyframes errorFadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0);    }
+}
+/* ─── SELECT DISABLED (champ formation pour Entreprise) ──── */
+.pf-group--disabled label {
+  color: #94A3B8;
+}
+.pf-group--disabled select {
+  background: #F1F5F9;
+  color: #94A3B8;
+  border-color: #E2E8F0;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
