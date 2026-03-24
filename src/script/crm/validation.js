@@ -1,28 +1,27 @@
 // src/script/crm/validation.js
-// ══════════════════════════════════════════════════════════
-//  VALIDATION DES CHAMPS — FORMULAIRE PROSPECT
-//  • Validation au fur et à mesure (onChange)
-//  • Validation globale au submit (validateAll)
-//  • Logique conditionnelle Particulier / Entreprise
-// ══════════════════════════════════════════════════════════
 
-const ALPHA_REGEX = /^[a-zA-ZÀ-ÿ\u0600-\u06FF\s'-]+$/;
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+const ALPHA_REGEX  = /^[a-zA-ZÀ-ÿ\u0600-\u06FF\s'-]+$/;
+const EMAIL_REGEX  = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const TEL_TN_REGEX = /^(\+216|00216)?[\s-]?[24578-9]\d[\s-]?\d{3}[\s-]?\d{3}$/;
 
-const VALID_PAYS   = ['Tunisie','France','Algérie','Maroc','Belgique','Canada','Autre'];
-const VALID_SOURCE = ['Facebook','Instagram','TikTok','LinkedIn','Google','Site web','Recommandation','Appel entrant','Autre'];
-const VALID_TYPE   = ['Particulier','Entreprise'];
-const VALID_SERV   = ['Formation','Consulting','Les deux'];
-const VALID_NIV    = ['Débutant','Intermédiaire','Avancé'];
-const VALID_MODE   = ['Présentiel','En ligne','Hybride'];
-const VALID_STATUT = ['Nouveau','Contacté','Intéressé','Converti','Perdu'];
-const VALID_RESP   = ['Admin','Assistante'];
+const VALID_PAYS   = ['Tunisie', 'France', 'Algérie', 'Maroc', 'Belgique', 'Canada', 'Autre'];
+const VALID_SOURCE = [
+  'Facebook', 'Instagram', 'TikTok', 'LinkedIn',
+  'Google', 'Site web', 'Recommandation', 'Appel entrant', 'Autre',
+];
+const VALID_NIV    = ['Débutant', 'Intermédiaire', 'Avancé'];
+const VALID_MODE   = ['Présentiel', 'En ligne', 'Hybride'];
+const VALID_STATUT = ['Nouveau', 'Contacté', 'Intéressé', 'Converti', 'Perdu'];
 
-export const validateField = (field, value, context = {}) => {
+const VALID_GENRE         = ['Homme', 'Femme', 'Autre'];
+const VALID_NIVEAU_ETUDES = ['Lycée', 'Bac', 'Licence', 'Master', 'Doctorat', 'Autre'];
+const VALID_DIPLOME       = ['Baccalauréat', 'Licence', 'Master', 'Aucun', 'Autre'];
+
+export const validateField = (field, value) => {
   const v = (value || '').trim();
 
   switch (field) {
+
     case 'nom':
       if (!v)                   return 'Le nom est obligatoire.';
       if (v.length < 2)         return 'Le nom doit contenir au moins 2 caractères.';
@@ -49,29 +48,41 @@ export const validateField = (field, value, context = {}) => {
       return '';
 
     case 'ville':
-      if (!v)                    return 'La ville est obligatoire.';
-      if (!ALPHA_REGEX.test(v))  return 'La ville ne doit contenir que des lettres.';
+      if (!v)                   return 'La ville est obligatoire.';
+      if (!ALPHA_REGEX.test(v)) return 'La ville ne doit contenir que des lettres.';
       return '';
 
     case 'pays':
       if (!v || !VALID_PAYS.includes(v)) return 'Veuillez sélectionner un pays.';
       return '';
 
+    case 'dateNaissance': {
+      if (!v) return '';
+      const d = new Date(v);
+      if (isNaN(d.getTime())) return 'Date de naissance invalide.';
+      const ageAns = (Date.now() - d.getTime()) / (1000 * 60 * 60 * 24 * 365.25);
+      if (ageAns < 14)  return "L'âge minimum est 14 ans.";
+      if (ageAns > 100) return 'Date de naissance invalide.';
+      return '';
+    }
+
+    case 'genre':
+      if (v && !VALID_GENRE.includes(v)) return 'Veuillez sélectionner un genre valide.';
+      return '';
+
+    case 'niveauEtudes':
+      if (v && !VALID_NIVEAU_ETUDES.includes(v)) return "Veuillez sélectionner un niveau d'études valide.";
+      return '';
+
+    case 'diplomeObtenu':
+      if (v && !VALID_DIPLOME.includes(v)) return 'Veuillez sélectionner un diplôme valide.';
+      return '';
+
     case 'source':
       if (!v || !VALID_SOURCE.includes(v)) return 'Veuillez sélectionner une source.';
       return '';
 
-    case 'typeProspect':
-      if (!v || !VALID_TYPE.includes(v)) return 'Veuillez sélectionner le type de prospect.';
-      return '';
-
-    case 'serviceRecherche':
-      if (!v || !VALID_SERV.includes(v)) return 'Veuillez sélectionner un service.';
-      return '';
-
     case 'formation':
-      // Formation non requise uniquement si le service choisi est "Consulting"
-      if (context.serviceRecherche === 'Consulting') return '';
       if (!v) return 'Veuillez sélectionner une formation souhaitée.';
       return '';
 
@@ -87,12 +98,9 @@ export const validateField = (field, value, context = {}) => {
       if (!v || !VALID_STATUT.includes(v)) return 'Veuillez sélectionner un statut.';
       return '';
 
-    case 'responsable':
-      if (!v || !VALID_RESP.includes(v)) return 'Veuillez sélectionner un responsable.';
-      return '';
-
-    case 'disponibilite':
-      if (v && v.length > 100) return 'La disponibilité ne peut pas dépasser 100 caractères.';
+    // ── Responsable : maintenant un ID numérique dynamique ──
+    case 'responsableId':
+      if (!v) return 'Veuillez sélectionner un responsable.';
       return '';
 
     case 'canalContact':
@@ -108,18 +116,17 @@ export const validateField = (field, value, context = {}) => {
 };
 
 export const validateAll = (fd) => {
-  const context = { typeProspect: fd.typeProspect, serviceRecherche: fd.serviceRecherche };
   const allFields = [
-    'nom', 'prenom', 'email', 'tel', 'ville',
-    'pays', 'source', 'typeProspect', 'serviceRecherche',
-    'formation', 'niveau', 'modePreference',
-    'statut', 'responsable',
-    'disponibilite', 'commentaires',
+    'nom', 'prenom', 'email', 'tel', 'ville', 'pays',
+    'dateNaissance', 'genre', 'niveauEtudes', 'diplomeObtenu',
+    'source', 'formation', 'niveau', 'modePreference',
+    'statut', 'responsableId',   // ← ID dynamique, plus de liste statique
+    'commentaires',
   ];
 
   const errors = {};
-  allFields.forEach(field => {
-    const msg = validateField(field, fd[field], context);
+  allFields.forEach((field) => {
+    const msg = validateField(field, fd[field]);
     if (msg) errors[field] = msg;
   });
 

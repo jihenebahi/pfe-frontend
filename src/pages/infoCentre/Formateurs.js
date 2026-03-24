@@ -395,7 +395,6 @@ function Formateurs() {
                 <th>Email</th>
                 <th>Téléphone</th>
                 <th>Spécialités / Domaines</th>
-                <th>Formations</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -423,17 +422,7 @@ function Formateurs() {
                           <span key={s} className="spec-tag">{s}</span>
                         ))}
                       </td>
-                      <td className="td-formations">
-                        {fms.length > 0 ? (
-                          fms.map((fm) => (
-                            <span key={fm.id} className="formation-count-badge">
-                              <i className="fa-solid fa-graduation-cap"></i> {fm.intitule}
-                            </span>
-                          ))
-                        ) : (
-                          <span className="no-formation">—</span>
-                        )}
-                      </td>
+                      
                       <td className="td-actions">
                         <button className="act-btn act-detail" title="Détail" onClick={() => setModalDetail(f)}>
                           <i className="fa-solid fa-eye"></i>
