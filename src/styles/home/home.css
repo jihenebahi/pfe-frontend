@@ -1,223 +1,733 @@
 /* ================== RESET & GLOBAL ================== */
 * {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-    font-family: 'Poppins', sans-serif;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Poppins', sans-serif;
 }
 
 body {
-    background: #F8FAFC;
-    color: #1E293B;
-    height: 100vh;
-    overflow: hidden; /* Empêche le défilement global */
+  background: #F8FAFC;
+  color: #1E293B;
 }
 
 a {
-    text-decoration: none;
-    color: inherit;
+  text-decoration: none;
+  color: inherit;
 }
 
-/* ================== NAVBAR ================== */
-.navbar {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 80px;
-    background: #ebedef;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0 50px;
-    border-bottom: 1px solid #E5E7EB;
-    z-index: 1000;
-}
-
-/* Logo */
-.logo-section {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-}
-
-.logo-section img {
-    height: 85px;
-}
-
-.brand-title {
-    font-size: 18px;
-    font-weight: 600;
-    color: #4aa3c7;
-}
-
-/* Partie droite (notifications + avatar) */
-.nav-right {
-    display: flex;
-    align-items: center;
-    gap: 18px;
-}
-
-/* Notification */
-.notification {
-    width: 34px;
-    height: 34px;
-    border-radius: 50%;
-    background: #F1F5F9;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #4aa3c7;
-    font-size: 14px;
-    cursor: pointer;
-}
-
-/* Avatar */
-.avatar {
-    width: 34px;
-    height: 34px;
-    background: #4aa3c7;
-    color: white;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 13px;
-}
-
-.admin-btn {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    cursor: pointer;
-    color: #334155;
-}
-
-/* Dropdown Admin */
-.admin-dropdown {
-    position: relative;
-}
-
-.admin-menu {
-    position: absolute;
-    right: 0;
-    top: 55px;
-    background: white;
-    width: 200px;
-    border-radius: 14px;
-    box-shadow: 0 15px 35px rgba(0,0,0,0.06);
-    padding: 8px;
-    display: none;
-}
-
-.admin-menu.show {
-    display: block;
-}
-
-.admin-menu a {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 10px;
-    border-radius: 10px;
-    font-size: 14px;
-    color: #475569;
-}
-
-.admin-menu a i {
-    color: #4aa3c7;
-}
-
-.logout {
-    color: #050505;
-}
-
-/* ================== LAYOUT PRINCIPAL ================== */
-.container {
-    display: flex;
-    margin-top: 80px; /* espace pour navbar */
-    height: calc(100vh - 80px);
-    width: 100%;
-    overflow: hidden; /* Empêche le débordement du conteneur */
-}
-
-/* ================== SIDEBAR ================== */
-.sidebar {
-    width: 270px;
-    background: #ebedef;
-    padding: 20px 25px;
-    border-right: 1px solid #E5E7EB;
-    display: flex;
-    flex-direction: column;
-    
-    /* Hauteur fixe basée sur la hauteur de l'écran moins la navbar */
-    height: calc(100vh - 80px);
-    overflow-y: auto; /* Permet le défilement interne si nécessaire */
-}
-
-/* Supprimer scrollbars visibles */
-.sidebar::-webkit-scrollbar {
-    width: 0px;
-    background: transparent;
-}
-
-.sidebar {
-    scrollbar-width: none; /* Pour Firefox */
-}
-
-/* Titres des sections */
-.sidebar-title {
-    font-size: 12px;
-    font-weight: 600;
-    color: #4aa3c7;
-    margin-top: 30px;
-    margin-bottom: 15px;
-    letter-spacing: 0.5px;
-}
-
-/* Premier titre n'a pas besoin de marge haute */
-.sidebar-title:first-of-type {
-    margin-top: 0;
-}
-
-/* Liens sidebar */
-.sidebar-link {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    font-size: 14px;
-    color: #475569;
-    padding: 8px 12px;
-    transition: all 0.2s ease;
-    border-radius: 8px; /* Ajouté pour cohérence avec le hover */
-}
-
-.sidebar-link i {
-    color: #4aa3c7;
-    width: 18px;
-}
-
-/* Hover effet */
-.sidebar-link:hover {
-    color: #1E293B;
-    background: #dbeafe;
-    padding-left: 16px;
-}
-
-/* ================== CONTENT ================== */
-.content {
-    flex: 1;
-    padding: 40px;
-    overflow-y: auto; /* Permet le défilement du contenu */
-    height: calc(100vh - 80px); /* Même hauteur que la sidebar */
-}
-
-.content h1 {
-    font-size: 28px;
-    font-weight: 600;
-    color: #1E293B;
-}
 #root {
-    width: 100%;
-    height: 100vh;
+  width: 100%;
+  height: 100vh;
+}
+
+/* ================== DASHBOARD LAYOUT ================== */
+.home-dashboard {
+  display: flex;
+  gap: 24px;
+  height: 100%;
+  align-items: flex-start;
+}
+
+/* ================== PANEL SHARED ================== */
+.tasks-panel,
+.reminders-panel {
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid #E5E7EB;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.tasks-panel {
+  flex: 1.1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 130px);
+  overflow: hidden;
+}
+
+.reminders-panel {
+  flex: 1;
+  min-width: 0;
+  max-height: calc(100vh - 130px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Panel Header */
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid #F1F5F9;
+}
+
+.panel-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1E293B;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.panel-title i {
+  color: #4aa3c7;
+}
+
+/* ================== ADD TASK BUTTON ================== */
+.btn-add {
+  background: #4aa3c7;
+  color: white;
+  border: none;
+  padding: 7px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: background 0.2s;
+}
+
+.btn-add:hover {
+  background: #3a86a0;
+}
+
+/* ================== TASK FORM ================== */
+.task-form {
+  padding: 16px 24px;
+  border-bottom: 1px solid #F1F5F9;
+  background: #F8FAFC;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.form-input,
+.form-textarea {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: 'Poppins', sans-serif;
+  background: white;
+  color: #1E293B;
+  outline: none;
+  transition: border 0.2s;
+}
+
+.form-input:focus,
+.form-textarea:focus {
+  border-color: #4aa3c7;
+}
+
+.form-textarea {
+  resize: none;
+  height: 70px;
+}
+
+.form-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.urgency-toggle {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  color: #475569;
+  cursor: pointer;
+}
+
+.urgency-toggle input {
+  accent-color: #ef4444;
+  width: 15px;
+  height: 15px;
+}
+
+.form-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-cancel {
+  background: #F1F5F9;
+  color: #64748B;
+  border: none;
+  padding: 7px 14px;
+  border-radius: 7px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-cancel:hover {
+  background: #E2E8F0;
+}
+
+.btn-save {
+  background: #4aa3c7;
+  color: white;
+  border: none;
+  padding: 7px 14px;
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-save:hover {
+  background: #3a86a0;
+}
+
+/* ================== TASKS TABLE ================== */
+.tasks-table-wrap {
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.tasks-table-wrap::-webkit-scrollbar {
+  width: 6px;
+}
+
+.tasks-table-wrap::-webkit-scrollbar-track {
+  background: #F1F5F9;
+  border-radius: 3px;
+}
+
+.tasks-table-wrap::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 3px;
+}
+
+.tasks-table-wrap::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}
+
+.tasks-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.tasks-table thead tr {
+  background: #F8FAFC;
+  border-bottom: 1px solid #E5E7EB;
+}
+
+.tasks-table th {
+  padding: 11px 14px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 600;
+  color: #94A3B8;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.tasks-table tbody tr {
+  border-bottom: 1px solid #F1F5F9;
+  transition: background 0.15s;
+}
+
+.tasks-table tbody tr:hover {
+  background: #F8FAFC;
+}
+
+.task-row.done-row {
+  opacity: 0.55;
+}
+
+.task-row.done-row .task-title-cell {
+  text-decoration: line-through;
+  color: #94A3B8;
+}
+
+.tasks-table td {
+  padding: 12px 14px;
+  vertical-align: middle;
+}
+
+.task-title-cell {
+  font-weight: 600;
+  color: #1E293B;
+}
+
+.task-desc-cell {
+  color: #64748B;
+  font-size: 12px;
+  max-width: 180px;
+}
+
+/* Task Checkbox */
+.task-check {
+  width: 17px;
+  height: 17px;
+  accent-color: #4aa3c7;
+  cursor: pointer;
+}
+
+/* Badges urgence */
+.badge-urgent {
+  background: #FEF2F2;
+  color: #EF4444;
+  border: 1px solid #FECACA;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+
+.badge-normal {
+  background: #F0FDF4;
+  color: #22C55E;
+  border: 1px solid #BBF7D0;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+
+/* Delete task button */
+.btn-delete-task {
+  background: none;
+  border: none;
+  color: #CBD5E1;
+  cursor: pointer;
+  font-size: 15px;
+  padding: 4px 6px;
+  border-radius: 6px;
+  transition: color 0.2s, background 0.2s;
+}
+
+.btn-delete-task:hover {
+  color: #EF4444;
+  background: #FEF2F2;
+}
+
+.empty-row {
+  text-align: center;
+  padding: 30px !important;
+  color: #94A3B8;
+  font-size: 13px;
+}
+
+/* ================== REMINDERS PANEL ================== */
+.reminder-filters {
+  padding: 14px 20px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-bottom: 1px solid #F1F5F9;
+}
+
+.reminder-search {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: 'Poppins', sans-serif;
+  color: #1E293B;
+  outline: none;
+  transition: border 0.2s;
+}
+
+.reminder-search:focus {
+  border-color: #4aa3c7;
+}
+
+.filter-tabs {
+  display: flex;
+  gap: 6px;
+}
+
+.filter-tab {
+  flex: 1;
+  padding: 6px 0;
+  border: 1px solid #E5E7EB;
+  border-radius: 7px;
+  background: white;
+  font-size: 12px;
+  font-family: 'Poppins', sans-serif;
+  color: #64748B;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.filter-tab:hover {
+  background: #F1F5F9;
+}
+
+.filter-tab.active {
+  background: #4aa3c7;
+  color: white;
+  border-color: #4aa3c7;
+  font-weight: 600;
+}
+
+/* Legend */
+.reminder-legend {
+  display: flex;
+  gap: 12px;
+  padding: 8px 20px;
+  font-size: 11px;
+  background: #FAFBFC;
+  border-bottom: 1px solid #F1F5F9;
+  flex-wrap: wrap;
+}
+
+.leg {
+  font-weight: 500;
+}
+
+.leg.late { color: #F97316; }
+.leg.today { color: #EF4444; }
+.leg.future { color: #22C55E; }
+.leg.donec { color: #4aa3c7; }
+
+/* ================== REMINDER CARDS ================== */
+.reminders-list {
+  overflow-y: auto;
+  flex: 1;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.reminders-list::-webkit-scrollbar {
+  width: 5px;
+}
+
+.reminders-list::-webkit-scrollbar-track {
+  background: #F8FAFC;
+}
+
+.reminders-list::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 3px;
+}
+
+.reminder-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border-left: 4px solid transparent;
+  background: white;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.04);
+  transition: transform 0.15s, box-shadow 0.15s;
+  gap: 10px;
+}
+
+.reminder-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+}
+
+/* Color variants */
+.reminder-late {
+  border-left-color: #F97316;
+  background: #FFF7ED;
+}
+
+.reminder-today {
+  border-left-color: #EF4444;
+  background: #FFF5F5;
+}
+
+.reminder-future {
+  border-left-color: #22C55E;
+  background: #F0FDF4;
+}
+
+.reminder-done {
+  border-left-color: #4aa3c7;
+  background: #EFF9FD;
+  opacity: 0.7;
+}
+
+.reminder-left {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+
+.reminder-check {
+  width: 17px;
+  height: 17px;
+  accent-color: #4aa3c7;
+  cursor: pointer;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.reminder-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.reminder-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1E293B;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.reminder-phone,
+.reminder-date {
+  font-size: 11px;
+  color: #64748B;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.reminder-phone i,
+.reminder-date i {
+  color: #94A3B8;
+  font-size: 10px;
+}
+
+.reminder-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* Status Badges */
+.reminder-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+
+.badge-late {
+  background: #FFEDD5;
+  color: #EA580C;
+  border: 1px solid #FED7AA;
+}
+
+.badge-today {
+  background: #FEE2E2;
+  color: #DC2626;
+  border: 1px solid #FECACA;
+}
+
+.badge-future {
+  background: #DCFCE7;
+  color: #16A34A;
+  border: 1px solid #BBF7D0;
+}
+
+.badge-done {
+  background: #DBEAFE;
+  color: #2563EB;
+  border: 1px solid #BFDBFE;
+}
+
+/* Reminder Actions */
+.reminder-actions {
+  display: flex;
+  gap: 5px;
+}
+
+.btn-detail {
+  background: #EFF6FF;
+  color: #3B82F6;
+  border: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  cursor: pointer;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s, color 0.2s;
+}
+
+.btn-detail:hover {
+  background: #3B82F6;
+  color: white;
+}
+
+.btn-delete-reminder {
+  background: #FEF2F2;
+  color: #FCA5A5;
+  border: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  cursor: pointer;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s, color 0.2s;
+}
+
+.btn-delete-reminder:hover {
+  background: #EF4444;
+  color: white;
+}
+
+.empty-reminders {
+  text-align: center;
+  padding: 30px 0;
+  color: #94A3B8;
+  font-size: 13px;
+}
+
+/* ================== DETAIL MODAL ================== */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(2px);
+}
+
+.modal-card {
+  background: white;
+  border-radius: 18px;
+  width: 420px;
+  max-width: 95%;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+  animation: modalIn 0.2s ease;
+}
+
+@keyframes modalIn {
+  from { opacity: 0; transform: scale(0.93) translateY(10px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid #F1F5F9;
+}
+
+.modal-header h3 {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1E293B;
+}
+
+.modal-close {
+  background: #F1F5F9;
+  border: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #64748B;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+
+.modal-close:hover {
+  background: #E2E8F0;
+  color: #EF4444;
+}
+
+.modal-body {
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.modal-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 13px 0;
+  border-bottom: 1px solid #F1F5F9;
+}
+
+.modal-row:last-child {
+  border-bottom: none;
+}
+
+.modal-label {
+  font-size: 13px;
+  color: #64748B;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.modal-label i {
+  color: #4aa3c7;
+  width: 14px;
+}
+
+.modal-value {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1E293B;
+}
+
+.status-done { color: #22C55E; }
+.status-pending { color: #F97316; }
+
+.modal-footer {
+  padding: 16px 24px;
+  border-top: 1px solid #F1F5F9;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.btn-goto-prospect {
+  background: #4aa3c7;
+  color: white;
+  padding: 9px 20px;
+  border-radius: 9px;
+  font-size: 13px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  transition: background 0.2s;
+}
+
+.btn-goto-prospect:hover {
+  background: #3a86a0;
 }
