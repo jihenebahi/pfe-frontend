@@ -3,6 +3,7 @@ import Layout from '../../components/Layout';
 import '../../styles/crm/prospects.css';
 import {
   getProspects,
+  getProspect,
   createProspect,
   updateProspect,
   deleteProspect,
@@ -11,7 +12,7 @@ import api from '../../services/api';
 import { validateField, validateAll } from '../../script/crm/validation';
 
 /* ══════════════════════════════════════════════════════════
-   CONSTANTES — définies une seule fois en dehors de tout composant
+   CONSTANTES
 ══════════════════════════════════════════════════════════ */
 const STATUT_COLORS = {
   'Nouveau':   { bg: 'rgba(51,204,255,.14)',  color: '#1A7A99', border: 'rgba(51,204,255,.35)' },
@@ -21,14 +22,22 @@ const STATUT_COLORS = {
   'Perdu':     { bg: 'rgba(229,62,62,.10)',   color: '#c0392b', border: 'rgba(229,62,62,.30)'  },
 };
 
-const SOURCES      = ['Facebook', 'Instagram', 'TikTok', 'LinkedIn', 'Google', 'Site web', 'Recommandation', 'Autre'];
-const RESPONSABLES = ['Admin', 'Assistante'];
-const PAYS_LIST    = ['Tunisie', 'France', 'Algérie', 'Maroc', 'Belgique', 'Canada', 'Autre'];
+const SOURCES          = ['Facebook', 'Instagram', 'TikTok', 'LinkedIn', 'Google', 'Site web', 'Recommandation', 'Appel entrant', 'Autre'];
+const PAYS_LIST        = ['Tunisie', 'France', 'Algérie', 'Maroc', 'Belgique', 'Canada', 'Autre'];
+const GENRE_LIST       = ['Homme', 'Femme', 'Autre'];
+const NIVEAU_ETUDES_LIST = ['Lycée', 'Bac', 'Licence', 'Master', 'Doctorat', 'Autre'];
+const DIPLOME_LIST     = ['Baccalauréat', 'Licence', 'Master', 'Aucun', 'Autre'];
+
+const FORM_FIELDS = [
+  'nom', 'prenom', 'email', 'tel', 'ville', 'pays',
+  'dateNaissance', 'genre', 'niveauEtudes', 'diplomeObtenu',
+  'source', 'formation', 'niveau', 'modePreference',
+  'canalContact', 'commentaires',
+  'statut', 'responsableId',
+];
 
 /* ══════════════════════════════════════════════════════════
-   SOUS-COMPOSANTS DU FORMULAIRE — EN DEHORS de ProspectForm
-   ⚠️ Définir F/S/T à l'intérieur de ProspectForm causait un remount
-      à chaque frappe (perte du focus après chaque caractère).
+   SOUS-COMPOSANTS
 ══════════════════════════════════════════════════════════ */
 const F = ({ label, name, type = 'text', placeholder = '', autoComplete, fd, set, errors = {} }) => (
   <div className={`pf-group${errors[name] ? ' pf-group--error' : ''}`}>
@@ -49,13 +58,12 @@ const F = ({ label, name, type = 'text', placeholder = '', autoComplete, fd, set
   </div>
 );
 
-const S = ({ label, name, options, fd, set, errors = {}, disabled = false }) => (
-  <div className={`pf-group${errors[name] ? ' pf-group--error' : ''}${disabled ? ' pf-group--disabled' : ''}`}>
+const S = ({ label, name, options, fd, set, errors = {} }) => (
+  <div className={`pf-group${errors[name] ? ' pf-group--error' : ''}`}>
     <label>{label}</label>
     <select
       value={fd[name] || ''}
       onChange={e => set(name, e.target.value)}
-      disabled={disabled}
       className={errors[name] ? 'input-error' : ''}
     >
       <option value="">— Sélectionner —</option>
@@ -88,36 +96,22 @@ const T = ({ label, name, placeholder = '', fd, set, errors = {} }) => (
 );
 
 /* ══════════════════════════════════════════════════════════
-   FORMULAIRE — EN DEHORS de Prospects (évite le remount à chaque frappe)
+   FORMULAIRE
+   USERS = [{ id, username }]  — chargés depuis l'API
 ══════════════════════════════════════════════════════════ */
-const ProspectForm = ({ initial, formRef, FORMATIONS }) => {
-  // ── Valeurs par défaut : tout vide → oblige à sélectionner ──
+const ProspectForm = ({ initial, formRef, FORMATIONS, USERS }) => {
   const defaults = {
     nom: '', prenom: '', email: '', tel: '', ville: '', pays: '',
-    typeProspect: '', serviceRecherche: '', formation: '',
-    niveau: '', modePreference: '', disponibilite: '',
+    dateNaissance: '', genre: '', niveauEtudes: '', diplomeObtenu: '',
+    formation: '', niveau: '', modePreference: '',
     canalContact: '', source: '', statut: '',
-    responsable: '', commentaires: '',
+    responsableId: '',   // ← ID du user sélectionné
+    commentaires: '',
   };
 
   const [fd, setFd]         = useState({ ...defaults, ...(initial || {}) });
   const [errors, setErrors] = useState({});
 
-  // ── Logique conditionnelle ────────────────────────────────
-  const isEntreprise = fd.typeProspect === 'Entreprise';
-  const isParticulier = fd.typeProspect === 'Particulier';
-
-  // Options de serviceRecherche selon le type de prospect
-  // Particulier → Formation uniquement (champ verrouillé)
-  // Entreprise  → tous les choix (Formation, Consulting, Les deux)
-  const serviceOptions = isParticulier
-    ? ['Formation']
-    : ['Formation', 'Consulting', 'Les deux'];
-
-  // Formation désactivée uniquement si le service choisi est "Consulting"
-  const formationDisabled = fd.serviceRecherche === 'Consulting';
-
-  // ── Expose fd + triggerValidation + setApiErrors au parent ──
   formRef.current = {
     data: fd,
     triggerValidation: () => {
@@ -125,85 +119,57 @@ const ProspectForm = ({ initial, formRef, FORMATIONS }) => {
       setErrors(errs);
       return isValid;
     },
-    // Permet au parent d'injecter les erreurs renvoyées par l'API
     setApiErrors: (apiErrors) => {
       setErrors(prev => ({ ...prev, ...apiErrors }));
     },
   };
 
-  // ── Setter avec validation en temps réel ─────────────────
   const set = (field, value) => {
-    const updates = { [field]: value };
-
-    // ── Effet cascade : changement de typeProspect ──
-    if (field === 'typeProspect') {
-      if (value === 'Particulier') {
-        // Particulier → service fixé à "Formation", formation obligatoire
-        updates.serviceRecherche = 'Formation';
-        setErrors(prev => ({ ...prev, serviceRecherche: '' }));
-      } else if (value === 'Entreprise') {
-        // Entreprise → l'utilisateur choisit librement le service
-        updates.serviceRecherche = '';
-        updates.formation        = '';
-        setErrors(prev => ({ ...prev, serviceRecherche: '', formation: '' }));
-      } else {
-        updates.serviceRecherche = '';
-        updates.formation        = '';
-      }
-    }
-
-    // ── Effet cascade : changement de serviceRecherche ──
-    // Si "Consulting" est choisi → formation désactivée et vidée
-    if (field === 'serviceRecherche' && value === 'Consulting') {
-      updates.formation = '';
-      setErrors(prev => ({ ...prev, formation: '' }));
-    }
-
-    setFd(prev => ({ ...prev, ...updates }));
-
-    // Validation en temps réel du champ modifié
-    const context = { typeProspect: field === 'typeProspect' ? value : fd.typeProspect };
-    const msg = validateField(field, value, context);
+    setFd(prev => ({ ...prev, [field]: value }));
+    const msg = validateField(field, value);
     setErrors(prev => ({ ...prev, [field]: msg }));
   };
 
   return (
     <form className="pf-body" autoComplete="on" onSubmit={e => e.preventDefault()}>
+
+      {/* ── Section 1 : Informations personnelles ── */}
       <div className="pf-section-title">
         <i className="fa-solid fa-user"></i> Informations personnelles
       </div>
       <div className="pf-grid">
-        <F label="Nom *"        name="nom"    placeholder="Ben Ali"             fd={fd} set={set} errors={errors} />
-        <F label="Prénom *"     name="prenom" placeholder="Sami"                fd={fd} set={set} errors={errors} />
-        <F label="Email *"      name="email"  type="email" placeholder="email@exemple.com" autoComplete="email" fd={fd} set={set} errors={errors} />
-        <F label="Téléphone *"  name="tel"    placeholder="+216 XX XXX XXX"     autoComplete="tel" fd={fd} set={set} errors={errors} />
-        <F label="Ville *"      name="ville"  placeholder="Tunis"               fd={fd} set={set} errors={errors} />
-        <S label="Pays *"       name="pays"   options={PAYS_LIST}               fd={fd} set={set} errors={errors} />
+        <F label="Nom *"       name="nom"    placeholder="Ben Ali"                    fd={fd} set={set} errors={errors} />
+        <F label="Prénom *"    name="prenom" placeholder="Sami"                       fd={fd} set={set} errors={errors} />
+        <F label="Email *"     name="email"  type="email" placeholder="email@exemple.com" autoComplete="email" fd={fd} set={set} errors={errors} />
+        <F label="Téléphone *" name="tel"    placeholder="+216 XX XXX XXX"            autoComplete="tel" fd={fd} set={set} errors={errors} />
+        <F label="Ville *"     name="ville"  placeholder="Tunis"                      fd={fd} set={set} errors={errors} />
+        <S label="Pays *"      name="pays"   options={PAYS_LIST}                      fd={fd} set={set} errors={errors} />
       </div>
 
+      {/* ── Section 2 : Profil académique ── */}
+      <div className="pf-section-title" style={{ marginTop: '18px' }}>
+        <i className="fa-solid fa-graduation-cap"></i> Profil académique
+      </div>
+      <div className="pf-grid">
+        <F label="Date de naissance" name="dateNaissance" type="date" fd={fd} set={set} errors={errors} />
+        <S label="Genre"             name="genre"         options={GENRE_LIST}         fd={fd} set={set} errors={errors} />
+        <S label="Niveau d'études"   name="niveauEtudes"  options={NIVEAU_ETUDES_LIST} fd={fd} set={set} errors={errors} />
+        <S label="Diplôme obtenu"    name="diplomeObtenu" options={DIPLOME_LIST}        fd={fd} set={set} errors={errors} />
+      </div>
+
+      {/* ── Section 3 : Informations commerciales ── */}
       <div className="pf-section-title" style={{ marginTop: '18px' }}>
         <i className="fa-solid fa-briefcase"></i> Informations commerciales
       </div>
       <div className="pf-grid">
-        <S label="Source * — Comment avez-vous connu 4C Lab ?" name="source"          options={SOURCES}           fd={fd} set={set} errors={errors} />
-        <S label="Vous êtes *"                                  name="typeProspect"    options={['Particulier','Entreprise']} fd={fd} set={set} errors={errors} />
+        <S label="Source * — Comment avez-vous connu 4C Lab ?" name="source" options={SOURCES} fd={fd} set={set} errors={errors} />
 
-        {/* Service recherché : options filtrées selon typeProspect */}
-        <S
-          label="Service recherché *"
-          name="serviceRecherche"
-          options={serviceOptions}
-          fd={fd} set={set} errors={errors}
-          disabled={isParticulier}  /* verrouillé uniquement pour Particulier */
-        />
-
-        {/* Formation souhaitée : désactivée pour les Entreprises */}
-        <div className={`pf-group${errors['formation'] ? ' pf-group--error' : ''}${formationDisabled ? ' pf-group--disabled' : ''}`}>
-          <label>Formation souhaitée {formationDisabled ? '(non applicable)' : '*'}</label>
+        {/* Formation souhaitée */}
+        <div className={`pf-group${errors['formation'] ? ' pf-group--error' : ''}`}>
+          <label>Formation souhaitée *</label>
           <select
             value={fd.formation || ''}
             onChange={e => set('formation', e.target.value)}
-            disabled={formationDisabled}
             className={errors['formation'] ? 'input-error' : ''}
           >
             <option value="">— Sélectionner —</option>
@@ -218,31 +184,57 @@ const ProspectForm = ({ initial, formRef, FORMATIONS }) => {
           )}
         </div>
 
-        <S label="Niveau estimé *"           name="niveau"         options={['Débutant','Intermédiaire','Avancé']}  fd={fd} set={set} errors={errors} />
-        <S label="Mode préféré *"            name="modePreference" options={['Présentiel','En ligne','Hybride']}    fd={fd} set={set} errors={errors} />
-        <F label="Disponibilité"             name="disponibilite"  placeholder="Week-ends, Soirs…"                 fd={fd} set={set} errors={errors} />
-        <S label="Canal de contact préféré"  name="canalContact"   options={['Téléphone','Email','WhatsApp']}       fd={fd} set={set} errors={errors} />
-        <T label="Commentaires"              name="commentaires"   placeholder="Notes, observations..."             fd={fd} set={set} errors={errors} />
+        <S label="Niveau estimé *"          name="niveau"         options={['Débutant', 'Intermédiaire', 'Avancé']} fd={fd} set={set} errors={errors} />
+        <S label="Mode préféré *"           name="modePreference" options={['Présentiel', 'En ligne', 'Hybride']}   fd={fd} set={set} errors={errors} />
+        <S label="Canal de contact préféré" name="canalContact"   options={['Téléphone', 'Email', 'WhatsApp']}     fd={fd} set={set} errors={errors} />
+        <T label="Commentaires"             name="commentaires"   placeholder="Notes, observations..."              fd={fd} set={set} errors={errors} />
       </div>
 
+      {/* ── Section 4 : Suivi du prospect ── */}
       <div className="pf-section-title" style={{ marginTop: '18px' }}>
         <i className="fa-solid fa-chart-line"></i> Suivi du prospect
       </div>
       <div className="pf-grid">
-        <S label="Statut *"               name="statut"      options={['Nouveau','Contacté','Intéressé','Converti','Perdu']} fd={fd} set={set} errors={errors} />
-        <S label="Responsable du suivi *" name="responsable" options={RESPONSABLES}                                                    fd={fd} set={set} errors={errors} />
+        <S
+          label="Statut *"
+          name="statut"
+          options={['Nouveau', 'Contacté', 'Intéressé', 'Converti', 'Perdu']}
+          fd={fd} set={set} errors={errors}
+        />
+
+        {/* Responsable — select dynamique depuis la BDD */}
+        <div className={`pf-group${errors['responsableId'] ? ' pf-group--error' : ''}`}>
+          <label>Responsable du suivi *</label>
+          <select
+            value={fd.responsableId || ''}
+            onChange={e => set('responsableId', e.target.value)}
+            className={errors['responsableId'] ? 'input-error' : ''}
+          >
+            <option value="">— Sélectionner —</option>
+            {USERS.map(u => (
+              <option key={u.id} value={String(u.id)}>
+                {u.username}
+              </option>
+            ))}
+          </select>
+          {errors['responsableId'] && (
+            <span className="pf-error-msg">
+              <i className="fa-solid fa-circle-exclamation"></i> {errors['responsableId']}
+            </span>
+          )}
+        </div>
       </div>
     </form>
   );
 };
 
 /* ══════════════════════════════════════════════════════════
-   DRAWER PANEL — EN DEHORS de Prospects
+   DRAWER PANEL
 ══════════════════════════════════════════════════════════ */
 const DrawerPanel = ({
   drawerOpen, drawerMode, drawerTarget,
   closeDrawer, saveDrawer, saving,
-  formRef, FORMATIONS,
+  formRef, FORMATIONS, USERS,
 }) => {
   if (!drawerOpen) return null;
   const isEdit = drawerMode === 'edit';
@@ -267,6 +259,7 @@ const DrawerPanel = ({
             initial={isEdit ? drawerTarget : null}
             formRef={formRef}
             FORMATIONS={FORMATIONS}
+            USERS={USERS}
           />
         </div>
 
@@ -292,7 +285,7 @@ const DrawerPanel = ({
 };
 
 /* ══════════════════════════════════════════════════════════
-   MODALE SUPPRESSION — EN DEHORS de Prospects
+   MODALE SUPPRESSION
 ══════════════════════════════════════════════════════════ */
 const DeleteModal = ({ showDeleteModal, deleteTarget, closeDelete, confirmDelete }) => {
   if (!showDeleteModal || !deleteTarget) return null;
@@ -359,7 +352,7 @@ const DeleteModal = ({ showDeleteModal, deleteTarget, closeDelete, confirmDelete
 };
 
 /* ══════════════════════════════════════════════════════════
-   TOAST — EN DEHORS de Prospects
+   TOAST
 ══════════════════════════════════════════════════════════ */
 const Toast = ({ toast }) => {
   if (!toast.show) return null;
@@ -377,14 +370,24 @@ const Toast = ({ toast }) => {
 const Prospects = () => {
 
   const [FORMATIONS, setFORMATIONS] = useState([]);
+  // ── Liste des users chargés depuis l'API ──────────────
+  const [USERS, setUSERS] = useState([]);
 
   useEffect(() => {
+    // Charger les formations
     api.get('formations/')
-      .then(res => {
-        const mapped = res.data.map(f => ({ id: f.id, label: f.intitule, duree: `${f.duree}h` }));
-        setFORMATIONS(mapped);
-      })
+      .then(res => setFORMATIONS(res.data.map(f => ({ id: f.id, label: f.intitule, duree: `${f.duree}h` }))))
       .catch(() => setFORMATIONS([]));
+
+    // Charger les utilisateurs depuis l'API accounts
+    // L'endpoint GET /api/auth/users/ retourne la liste des comptes
+    api.get('auth/users/')
+      .then(res => {
+        // On garde id + username pour le select
+        const users = res.data.map(u => ({ id: u.id, username: u.username }));
+        setUSERS(users);
+      })
+      .catch(() => setUSERS([]));
   }, []);
 
   // ── State ──
@@ -404,7 +407,6 @@ const Prospects = () => {
   const [toast,           setToast]           = useState({ show: false, message: '', type: 'success' });
   const [saving,          setSaving]          = useState(false);
 
-  // Drawer
   const [drawerOpen,   setDrawerOpen]   = useState(false);
   const [drawerMode,   setDrawerMode]   = useState(null);
   const [drawerTarget, setDrawerTarget] = useState(null);
@@ -412,7 +414,6 @@ const Prospects = () => {
 
   const PER_PAGE = 8;
 
-  // ── Chargement initial ──
   const loadProspects = useCallback(async () => {
     setLoading(true);
     setApiError(null);
@@ -439,9 +440,9 @@ const Prospects = () => {
     if (search) {
       const q = search.toLowerCase();
       f = f.filter(p =>
-        p.nom.toLowerCase().includes(q) ||
+        p.nom.toLowerCase().includes(q)    ||
         p.prenom.toLowerCase().includes(q) ||
-        p.email.toLowerCase().includes(q) ||
+        p.email.toLowerCase().includes(q)  ||
         (p.tel || '').includes(q)
       );
     }
@@ -480,14 +481,13 @@ const Prospects = () => {
     const ref = formRef.current;
     if (!ref) return;
 
-    // Déclenche la validation globale (affiche tous les messages en rouge)
     const isValid = ref.triggerValidation();
     if (!isValid) {
-      showToast('Veuillez corriger les erreurs avant d\'enregistrer.', 'error');
+      showToast("Veuillez corriger les erreurs avant d'enregistrer.", 'error');
       return;
     }
 
-    const data = ref.data;
+    const data         = ref.data;
     const formationIds = data.formation ? [parseInt(data.formation, 10)].filter(Boolean) : [];
     setSaving(true);
     try {
@@ -505,30 +505,27 @@ const Prospects = () => {
     } catch (err) {
       const apiData = err.response?.data;
       if (apiData && typeof apiData === 'object') {
-        // Mapping champs Django → champs React
-        const FIELD_MAP = { telephone: 'tel' };
-        const fieldErrors = {};
+        const FIELD_MAP = {
+          telephone:      'tel',
+          date_naissance: 'dateNaissance',
+          niveau_etudes:  'niveauEtudes',
+          diplome_obtenu: 'diplomeObtenu',
+          responsable:    'responsableId',
+        };
+        const fieldErrors   = {};
         const otherMessages = [];
-
         Object.entries(apiData).forEach(([key, val]) => {
-          const msgs = Array.isArray(val) ? val : [val];
+          const msgs       = Array.isArray(val) ? val : [val];
           const reactField = FIELD_MAP[key] || key;
-          // Si c'est un champ du formulaire, on l'affiche dessus
-          const FORM_FIELDS = ['nom','prenom','email','tel','ville','pays','source',
-            'typeProspect','serviceRecherche','formation','niveau','modePreference',
-            'statut','responsable','disponibilite','commentaires'];
           if (FORM_FIELDS.includes(reactField)) {
             fieldErrors[reactField] = msgs.join(' ');
           } else {
             otherMessages.push(msgs.join(' '));
           }
         });
-
-        // Injecte les erreurs sur les champs du formulaire
         if (Object.keys(fieldErrors).length > 0 && formRef.current?.setApiErrors) {
           formRef.current.setApiErrors(fieldErrors);
         }
-        // Toast pour les erreurs hors-champ
         const toastMsg = otherMessages.length > 0
           ? otherMessages.join(' ')
           : Object.keys(fieldErrors).length > 0
@@ -544,13 +541,16 @@ const Prospects = () => {
   };
 
   // ── Détail ──
-  const openDetail = (id) => {
-    const p = prospects.find(x => x.id === id);
-    if (!p) return;
-    setDetailTarget(p);
-    setConvertOpen(false);
-    setSelectedForms([]);
-    setPageView('detail');
+  const openDetail = async (id) => {
+    try {
+      const p = await getProspect(id);
+      setDetailTarget(p);
+      setConvertOpen(false);
+      setSelectedForms([]);
+      setPageView('detail');
+    } catch {
+      showToast('Impossible de charger les détails du prospect.', 'error');
+    }
   };
   const closeDetail = () => { setPageView('list'); setDetailTarget(null); };
 
@@ -622,14 +622,43 @@ const Prospects = () => {
               </div>
               <div className="det-sid-divider" />
               <div className="det-sid-fields">
-                <div className="det-sid-field"><span className="det-sid-label"><i className="fa-regular fa-envelope"></i> E-mail</span><span className="det-sid-val">{p.email}</span></div>
-                <div className="det-sid-field"><span className="det-sid-label"><i className="fa-solid fa-phone"></i> Téléphone</span><span className="det-sid-val">{p.tel || '—'}</span></div>
-                <div className="det-sid-field"><span className="det-sid-label"><i className="fa-solid fa-location-dot"></i> Ville / Pays</span><span className="det-sid-val">{[p.ville, p.pays].filter(Boolean).join(', ') || '—'}</span></div>
-                <div className="det-sid-field"><span className="det-sid-label"><i className="fa-solid fa-share-nodes"></i> Source</span><span className="det-sid-val"><span className="src-tag">{p.source || '—'}</span></span></div>
-                <div className="det-sid-field"><span className="det-sid-label"><i className="fa-solid fa-users"></i> Type</span><span className="det-sid-val">{p.typeProspect || '—'}</span></div>
-                <div className="det-sid-field"><span className="det-sid-label"><i className="fa-solid fa-message"></i> Canal préféré</span><span className="det-sid-val">{p.canalContact || '—'}</span></div>
-                <div className="det-sid-field"><span className="det-sid-label"><i className="fa-regular fa-calendar"></i> Date création</span><span className="det-sid-val">{p.date}</span></div>
-                <div className="det-sid-field"><span className="det-sid-label"><i className="fa-solid fa-user-tie"></i> Responsable</span><span className="det-sid-val">{p.responsable || '—'}</span></div>
+                <div className="det-sid-field">
+                  <span className="det-sid-label"><i className="fa-regular fa-envelope"></i> E-mail</span>
+                  <span className="det-sid-val">{p.email}</span>
+                </div>
+                <div className="det-sid-field">
+                  <span className="det-sid-label"><i className="fa-solid fa-phone"></i> Téléphone</span>
+                  <span className="det-sid-val">{p.tel || '—'}</span>
+                </div>
+                <div className="det-sid-field">
+                  <span className="det-sid-label"><i className="fa-solid fa-location-dot"></i> Ville / Pays</span>
+                  <span className="det-sid-val">{[p.ville, p.pays].filter(Boolean).join(', ') || '—'}</span>
+                </div>
+                <div className="det-sid-field">
+                  <span className="det-sid-label"><i className="fa-regular fa-calendar-days"></i> Naissance</span>
+                  <span className="det-sid-val">{p.dateNaissance || '—'}</span>
+                </div>
+                <div className="det-sid-field">
+                  <span className="det-sid-label"><i className="fa-solid fa-venus-mars"></i> Genre</span>
+                  <span className="det-sid-val">{p.genre || '—'}</span>
+                </div>
+                <div className="det-sid-field">
+                  <span className="det-sid-label"><i className="fa-solid fa-share-nodes"></i> Source</span>
+                  <span className="det-sid-val"><span className="src-tag">{p.source || '—'}</span></span>
+                </div>
+                <div className="det-sid-field">
+                  <span className="det-sid-label"><i className="fa-solid fa-message"></i> Canal préféré</span>
+                  <span className="det-sid-val">{p.canalContact || '—'}</span>
+                </div>
+                <div className="det-sid-field">
+                  <span className="det-sid-label"><i className="fa-regular fa-calendar"></i> Date création</span>
+                  <span className="det-sid-val">{p.date}</span>
+                </div>
+                <div className="det-sid-field">
+                  <span className="det-sid-label"><i className="fa-solid fa-user-tie"></i> Responsable</span>
+                  {/* Affichage du username depuis responsable_nom */}
+                  <span className="det-sid-val">{p.responsable || '—'}</span>
+                </div>
               </div>
               <div className="det-sid-divider" />
               <div className="det-sid-actions">
@@ -638,9 +667,6 @@ const Prospects = () => {
                 </button>
                 <button className="det-action-btn det-action-edit" onClick={() => openEdit(p.id)}>
                   <i className="fa-solid fa-pen"></i> Modifier
-                </button>
-                <button className="det-action-btn det-action-del" onClick={() => openDelete(p.id)}>
-                  <i className="fa-solid fa-trash"></i> Supprimer
                 </button>
               </div>
             </div>
@@ -694,6 +720,7 @@ const Prospects = () => {
                 </div>
               )}
 
+              {/* ── Informations personnelles ── */}
               <div className="det-section-card">
                 <div className="det-section-header"><i className="fa-solid fa-user"></i> Informations personnelles</div>
                 <div className="det-fields-grid">
@@ -706,20 +733,30 @@ const Prospects = () => {
                 </div>
               </div>
 
+              {/* ── Profil académique ── */}
+              <div className="det-section-card">
+                <div className="det-section-header"><i className="fa-solid fa-graduation-cap"></i> Profil académique</div>
+                <div className="det-fields-grid">
+                  <div className="det-field"><span className="det-field-label">Date de naissance</span><span className="det-field-val">{p.dateNaissance || '—'}</span></div>
+                  <div className="det-field"><span className="det-field-label">Genre</span><span className="det-field-val">{p.genre || '—'}</span></div>
+                  <div className="det-field"><span className="det-field-label">Niveau d'études</span><span className="det-field-val">{p.niveauEtudes || '—'}</span></div>
+                  <div className="det-field"><span className="det-field-label">Diplôme obtenu</span><span className="det-field-val">{p.diplomeObtenu || '—'}</span></div>
+                </div>
+              </div>
+
+              {/* ── Informations commerciales ── */}
               <div className="det-section-card">
                 <div className="det-section-header"><i className="fa-solid fa-briefcase"></i> Informations commerciales</div>
                 <div className="det-fields-grid">
                   <div className="det-field"><span className="det-field-label">Source</span><span className="det-field-val"><span className="src-tag">{p.source || '—'}</span></span></div>
-                  <div className="det-field"><span className="det-field-label">Type de prospect</span><span className="det-field-val">{p.typeProspect || '—'}</span></div>
-                  <div className="det-field"><span className="det-field-label">Service recherché</span><span className="det-field-val">{p.serviceRecherche || '—'}</span></div>
                   <div className="det-field"><span className="det-field-label">Formation souhaitée</span><span className="det-field-val">{p.formation || '—'}</span></div>
                   <div className="det-field"><span className="det-field-label">Niveau estimé</span><span className="det-field-val">{p.niveau || '—'}</span></div>
                   <div className="det-field"><span className="det-field-label">Mode préféré</span><span className="det-field-val">{p.modePreference || '—'}</span></div>
-                  <div className="det-field"><span className="det-field-label">Disponibilité</span><span className="det-field-val">{p.disponibilite || '—'}</span></div>
                   <div className="det-field"><span className="det-field-label">Canal de contact</span><span className="det-field-val">{p.canalContact || '—'}</span></div>
                 </div>
               </div>
 
+              {/* ── Suivi du prospect ── */}
               <div className="det-section-card">
                 <div className="det-section-header"><i className="fa-solid fa-chart-line"></i> Suivi du prospect</div>
                 <div className="det-fields-grid">
@@ -747,7 +784,7 @@ const Prospects = () => {
         <DrawerPanel
           drawerOpen={drawerOpen} drawerMode={drawerMode} drawerTarget={drawerTarget}
           closeDrawer={closeDrawer} saveDrawer={saveDrawer} saving={saving}
-          formRef={formRef} FORMATIONS={FORMATIONS}
+          formRef={formRef} FORMATIONS={FORMATIONS} USERS={USERS}
         />
         <DeleteModal
           showDeleteModal={showDeleteModal} deleteTarget={deleteTarget}
@@ -888,7 +925,7 @@ const Prospects = () => {
       <DrawerPanel
         drawerOpen={drawerOpen} drawerMode={drawerMode} drawerTarget={drawerTarget}
         closeDrawer={closeDrawer} saveDrawer={saveDrawer} saving={saving}
-        formRef={formRef} FORMATIONS={FORMATIONS}
+        formRef={formRef} FORMATIONS={FORMATIONS} USERS={USERS}
       />
       <DeleteModal
         showDeleteModal={showDeleteModal} deleteTarget={deleteTarget}
@@ -899,4 +936,4 @@ const Prospects = () => {
   );
 };
 
-export default Prospects;
+export default Prospects; 

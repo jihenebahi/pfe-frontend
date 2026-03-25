@@ -749,6 +749,7 @@ function Formateurs() {
                   </td>
                 </tr>
               ) : (
+<<<<<<< HEAD
                 paginated.map((f, idx) => (
                   <tr key={f.id}>
                     <td className="td-num">{pad((page - 1) * PER_PAGE + idx + 1)}</td>
@@ -774,6 +775,37 @@ function Formateurs() {
                     </td>
                   </tr>
                 ))
+=======
+                paginated.map((f, idx) => {
+                  const fms = toFormations(f.formations);
+                  return (
+                    <tr key={f.id}>
+                      <td className="td-num">{pad((page - 1) * PER_PAGE + idx + 1)}</td>
+                      <td className="td-name">{f.nom}</td>
+                      <td className="td-firstname">{f.prenom}</td>
+                      <td className="td-email"><a href={`mailto:${f.email}`}>{f.email}</a></td>
+                      <td className="td-phone">{f.telephone}</td>
+                      <td>
+                        {toArray(f.specialites).map((s) => (
+                          <span key={s} className="spec-tag">{s}</span>
+                        ))}
+                      </td>
+                      
+                      <td className="td-actions">
+                        <button className="act-btn act-detail" title="Détail" onClick={() => setModalDetail(f)}>
+                          <i className="fa-solid fa-eye"></i>
+                        </button>
+                        <button className="act-btn act-modif" title="Modifier" onClick={() => openModif(f)}>
+                          <i className="fa-solid fa-pen"></i>
+                        </button>
+                        <button className="act-btn act-suppr" title="Supprimer" onClick={() => openSuppr(f)}>
+                          <i className="fa-solid fa-trash"></i>
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
+>>>>>>> 102f15fad483f6eb4a520f67b6d0611d98944300
               )}
             </tbody>
            </table>
