@@ -28,12 +28,6 @@ const STATUT_COLORS = {
   'Certifié':  { bg: 'rgba(255,204,51,.18)', color: '#8A6200', border: 'rgba(255,204,51,.40)' },
 };
 
-const PAY_STYLES = {
-  'Payé':        'pay-tag-paid',
-  'Par tranche': 'pay-tag-tranche',
-  'Non payé':    'pay-tag-unpaid',
-};
-
 /* ──────────────────────────────────────────────────────────
    HELPER
 ────────────────────────────────────────────────────────── */
@@ -54,14 +48,9 @@ const EtudiantForm = ({ initial, formRef }) => {
     modeFormation: 'Présentiel',
     dateInscription: new Date().toISOString().slice(0, 10),
     statut: 'Actif',
-    seancesTotal: '',
-    absences: '',
     attestation: 'Non',
     dateAttestation: '',
-    typeFinancement: 'Personnel',
     documents: [],
-    paiement: 'Non payé',
-    modePaiement: 'Espèce',
   };
 
   const [fd, setFd] = useState({ ...defaults, ...(initial || {}) });
@@ -86,8 +75,6 @@ const EtudiantForm = ({ initial, formRef }) => {
       return { ...prev, documents: arr };
     });
   };
-
-  const pctCalcule = calcPct(fd.seancesTotal, fd.absences);
 
   const F = ({ label, name, type = 'text', placeholder = '' }) => (
     <div className="pf-group">
@@ -157,30 +144,6 @@ const EtudiantForm = ({ initial, formRef }) => {
         <i className="fa-solid fa-chart-line"></i> Suivi pédagogique
       </div>
       <div className="pf-grid">
-        <F label="Nombre de séances total" name="seancesTotal" type="number" placeholder="20" />
-        <F label="Nombre d'absences"       name="absences"     type="number" placeholder="3" />
-
-        {/* Taux calculé automatiquement */}
-        <div className="pf-group">
-          <label>Taux de présence (calculé)</label>
-          <div style={{
-            height: '38px', padding: '0 12px', border: '1.5px solid #E2E8F0',
-            borderRadius: '9px', background: '#EBF4FF', display: 'flex',
-            alignItems: 'center', gap: '10px',
-          }}>
-            <div style={{ flex:1, height:'7px', background:'#D1E8FF', borderRadius:'4px', overflow:'hidden' }}>
-              <div style={{
-                width: `${Math.min(pctCalcule, 100)}%`, height: '100%', borderRadius: '4px',
-                background: pctCalcule >= 80 ? '#1A6B4A' : pctCalcule >= 60 ? '#FFCC33' : '#e53e3e',
-                transition: 'width .3s ease',
-              }} />
-            </div>
-            <span style={{ fontSize:'13px', fontWeight:'700', color:'#336699', minWidth:'36px' }}>
-              {parseInt(fd.seancesTotal) > 0 ? `${pctCalcule}%` : '—'}
-            </span>
-          </div>
-        </div>
-
         <S label="Attestation" name="attestation" options={['Non','Oui']} />
         {fd.attestation === 'Oui' && (
           <F label="Date de délivrance" name="dateAttestation" type="date" />
@@ -193,9 +156,6 @@ const EtudiantForm = ({ initial, formRef }) => {
         <i className="fa-solid fa-folder-open"></i> Informations administratives
       </div>
       <div className="pf-grid">
-        <S label="Type de financement" name="typeFinancement" options={['Personnel','Entreprise']} />
-        <S label="Paiement"            name="paiement"        options={['Payé','Par tranche','Non payé']} />
-        <S label="Mode de paiement"    name="modePaiement"    options={['Espèce','Chèque','Virement']} />
         <div className="pf-group pf-full">
           <label>Documents fournis</label>
           <div className="docs-checks">
@@ -215,72 +175,64 @@ const EtudiantForm = ({ initial, formRef }) => {
 };
 
 /* ──────────────────────────────────────────────────────────
-   DONNÉES INITIALES
+   DONNÉES INITIALES (sans champs supprimés)
 ────────────────────────────────────────────────────────── */
 const INIT_DATA = [
   {
     id:1, nom:'Ben Ali', prenom:'Sami', email:'sami.benali@email.com', tel:'+216 22 111 000',
     ville:'Tunis', pays:'Tunisie',
     formations:[1,2], modeFormation:'Présentiel', dateInscription:'2025-01-10', statut:'Actif',
-    seancesTotal:20, absences:3,
     notes:'Très assidu, bons résultats.', attestation:'Non', dateAttestation:'',
-    typeFinancement:'Personnel', documents:['CIN','CV','Contrat'], paiement:'Payé', modePaiement:'Virement',
+    documents:['CIN','CV','Contrat'],
   },
   {
     id:2, nom:'Trabelsi', prenom:'Ines', email:'ines.trabelsi@email.com', tel:'+216 55 222 111',
     ville:'Sfax', pays:'Tunisie',
     formations:[2], modeFormation:'En ligne', dateInscription:'2025-01-12', statut:'Actif',
-    seancesTotal:25, absences:7,
     notes:'Quelques absences en début de mois.', attestation:'Non', dateAttestation:'',
-    typeFinancement:'Entreprise', documents:['CIN','RNE','Contrat'], paiement:'Par tranche', modePaiement:'Chèque',
+    documents:['CIN','RNE','Contrat'],
   },
   {
     id:3, nom:'Meddeb', prenom:'Karim', email:'k.meddeb@email.com', tel:'+216 99 333 222',
     ville:'Sousse', pays:'Tunisie',
     formations:[3,5], modeFormation:'Hybride', dateInscription:'2024-09-15', statut:'Certifié',
-    seancesTotal:40, absences:2,
     notes:'Excellent étudiant.', attestation:'Oui', dateAttestation:'2025-03-01',
-    typeFinancement:'Personnel', documents:['CIN','CV','Reçu'], paiement:'Payé', modePaiement:'Espèce',
+    documents:['CIN','CV','Reçu'],
   },
   {
     id:4, nom:'Chaabane', prenom:'Leila', email:'leila.ch@email.com', tel:'+216 44 444 333',
     ville:'Tunis', pays:'Tunisie',
     formations:[4], modeFormation:'Présentiel', dateInscription:'2025-02-01', statut:'Abandonné',
-    seancesTotal:10, absences:6,
     notes:'A abandonné après 3 semaines.', attestation:'Non', dateAttestation:'',
-    typeFinancement:'Personnel', documents:['CIN'], paiement:'Non payé', modePaiement:'Espèce',
+    documents:['CIN'],
   },
   {
     id:5, nom:'Hamdi', prenom:'Zied', email:'zied.hamdi@email.com', tel:'+216 22 666 555',
     ville:'Tunis', pays:'Tunisie',
     formations:[5,6], modeFormation:'Présentiel', dateInscription:'2025-01-20', statut:'Actif',
-    seancesTotal:30, absences:3,
     notes:'Profil DevOps confirmé.', attestation:'Non', dateAttestation:'',
-    typeFinancement:'Entreprise', documents:['CIN','CV','RNE','Contrat'], paiement:'Payé', modePaiement:'Virement',
+    documents:['CIN','CV','RNE','Contrat'],
   },
   {
     id:6, nom:'Jebali', prenom:'Amira', email:'amira.j@email.com', tel:'+216 55 777 666',
     ville:'Nabeul', pays:'Tunisie',
     formations:[2,9], modeFormation:'En ligne', dateInscription:'2025-02-10', statut:'Actif',
-    seancesTotal:20, absences:4,
     notes:'Intéressée par le ML appliqué.', attestation:'Non', dateAttestation:'',
-    typeFinancement:'Personnel', documents:['CIN','CV'], paiement:'Par tranche', modePaiement:'Espèce',
+    documents:['CIN','CV'],
   },
   {
     id:7, nom:'Boukadida', prenom:'Yassine', email:'y.boukadida@email.com', tel:'+216 99 888 777',
     ville:'Monastir', pays:'Tunisie',
     formations:[3], modeFormation:'En ligne', dateInscription:'2024-10-05', statut:'Certifié',
-    seancesTotal:35, absences:1,
     notes:'Major de promotion.', attestation:'Oui', dateAttestation:'2025-01-15',
-    typeFinancement:'Entreprise', documents:['CIN','CV','Contrat','Reçu','RNE'], paiement:'Payé', modePaiement:'Chèque',
+    documents:['CIN','CV','Contrat','Reçu','RNE'],
   },
   {
     id:8, nom:'Gharbi', prenom:'Rim', email:'rim.gharbi@email.com', tel:'+216 44 999 888',
     ville:'Tunis', pays:'Tunisie',
     formations:[1,7], modeFormation:'Hybride', dateInscription:'2025-01-28', statut:'Actif',
-    seancesTotal:22, absences:5,
     notes:'Suit React et Flutter en parallèle.', attestation:'Non', dateAttestation:'',
-    typeFinancement:'Personnel', documents:['CIN','CV','Reçu'], paiement:'Payé', modePaiement:'Espèce',
+    documents:['CIN','CV','Reçu'],
   },
 ];
 
@@ -294,7 +246,6 @@ const Etudiants = () => {
   const [search,           setSearch]           = useState('');
   const [filterStatut,     setFilterStatut]     = useState('Tous');
   const [filterFormation,  setFilterFormation]  = useState('Toutes');
-  const [filterPaiement,   setFilterPaiement]   = useState('Tous');
   const [sortAlpha,        setSortAlpha]        = useState(false);
   const [currentPage,      setCurrentPage]      = useState(1);
   const [pageView,         setPageView]         = useState('list');
@@ -342,7 +293,6 @@ const Etudiants = () => {
       const fid = parseInt(filterFormation);
       f = f.filter(e => e.formations.includes(fid));
     }
-    if (filterPaiement !== 'Tous') f = f.filter(e => e.paiement === filterPaiement);
     if (sortAlpha) f.sort((a, b) => a.nom.localeCompare(b.nom));
     return f;
   };
@@ -400,7 +350,6 @@ const Etudiants = () => {
 
   // ── Modale Convertir en diplômé ──
   const openDiplome = () => {
-    // Pré-sélectionner la première formation si une seule, sinon laisser vide pour forcer le choix
     const formations = detailTarget?.formations || [];
     setDiplomeData({
       formationCertifiee: formations.length === 1 ? formations[0] : '',
@@ -511,8 +460,6 @@ const Etudiants = () => {
 
   // ══════════════════════════════════════════════════════════
   // MODALE CONVERTIR EN DIPLÔMÉ
-  // — L'étudiant choisit la formation qu'il a terminée
-  // — Pas de mention ni de notes (attestation simple)
   // ══════════════════════════════════════════════════════════
   const DiplomeModal = () => {
     if (!showDiplomeModal || !detailTarget) return null;
@@ -672,8 +619,6 @@ const Etudiants = () => {
     const e          = detailTarget;
     const sc         = STATUT_COLORS[e.statut] || {};
     const formLabels = getFormationLabels(e.formations);
-    const pct        = calcPct(e.seancesTotal, e.absences);
-    const presences  = Math.max(0, (parseInt(e.seancesTotal) || 0) - (parseInt(e.absences) || 0));
 
     return (
       <Layout>
@@ -723,20 +668,6 @@ const Etudiants = () => {
                   <span className="det-sid-label"><i className="fa-regular fa-calendar"></i> Date inscription</span>
                   <span className="det-sid-val">{e.dateInscription}</span>
                 </div>
-                <div className="det-sid-field">
-                  <span className="det-sid-label"><i className="fa-solid fa-wallet"></i> Paiement</span>
-                  <span className="det-sid-val">
-                    <span className={`badge ${PAY_STYLES[e.paiement] || ''}`}>{e.paiement}</span>
-                  </span>
-                </div>
-                <div className="det-sid-field">
-                  <span className="det-sid-label"><i className="fa-solid fa-coins"></i> Mode paiement</span>
-                  <span className="det-sid-val">{e.modePaiement || '—'}</span>
-                </div>
-                <div className="det-sid-field">
-                  <span className="det-sid-label"><i className="fa-solid fa-building"></i> Financement</span>
-                  <span className="det-sid-val">{e.typeFinancement || '—'}</span>
-                </div>
               </div>
 
               <div className="det-sid-divider" />
@@ -746,21 +677,9 @@ const Etudiants = () => {
                   <i className="fa-solid fa-certificate"></i>
                   Convertir en Diplômé
                 </button>
-                <button
-                  className="det-action-btn"
-                  style={{ background:'rgba(51,102,153,.10)', color:'#1E3A5F', border:'1.5px solid rgba(51,102,153,.25)' }}
-                  onClick={() => navigate('/diplomes')}
-                >
-                  <i className="fa-solid fa-list-ul"></i>
-                  Voir liste payments
-                </button>
                 <button className="det-action-btn det-action-edit" onClick={() => openEdit(e.id)}>
                   <i className="fa-solid fa-pen"></i>
                   Modifier
-                </button>
-                <button className="det-action-btn det-action-del" onClick={() => openDelete(e.id)}>
-                  <i className="fa-solid fa-trash"></i>
-                  Supprimer
                 </button>
               </div>
             </div>
@@ -809,34 +728,6 @@ const Etudiants = () => {
                 <div className="det-section-header"><i className="fa-solid fa-chart-line"></i> Suivi pédagogique</div>
                 <div className="det-fields-grid">
                   <div className="det-field">
-                    <span className="det-field-label">Séances total</span>
-                    <span className="det-field-val">{e.seancesTotal || '—'}</span>
-                  </div>
-                  <div className="det-field">
-                    <span className="det-field-label">Absences</span>
-                    <span className="det-field-val" style={{ color: parseInt(e.absences) > 0 ? '#c0392b' : '#1A6B4A', fontWeight:'700' }}>
-                      {e.absences || '0'}
-                    </span>
-                  </div>
-                  <div className="det-field">
-                    <span className="det-field-label">Présences</span>
-                    <span className="det-field-val" style={{ color:'#1A6B4A', fontWeight:'700' }}>{presences}</span>
-                  </div>
-                  <div className="det-field" style={{ gridColumn:'1 / -1' }}>
-                    <span className="det-field-label">Taux de présence</span>
-                    <div className="presence-bar-wrap" style={{ marginTop:'6px' }}>
-                      <div className="presence-bar">
-                        <div className="presence-bar-fill" style={{
-                          width: `${Math.min(pct,100)}%`,
-                          background: pct >= 80 ? 'linear-gradient(90deg,#1A6B4A,#33CCFF)' : pct >= 60 ? 'linear-gradient(90deg,#FFCC33,#e6b800)' : 'linear-gradient(90deg,#e53e3e,#c0392b)',
-                        }}></div>
-                      </div>
-                      <span className="presence-pct" style={{ color: pct >= 80 ? '#1A6B4A' : pct >= 60 ? '#8A6200' : '#c0392b' }}>
-                        {parseInt(e.seancesTotal) > 0 ? `${pct}%` : '—'}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="det-field">
                     <span className="det-field-label">Attestation</span>
                     <span className="det-field-val">
                       <span className="badge" style={{
@@ -867,12 +758,6 @@ const Etudiants = () => {
               <div className="det-section-card">
                 <div className="det-section-header"><i className="fa-solid fa-folder-open"></i> Informations administratives</div>
                 <div className="det-fields-grid">
-                  <div className="det-field"><span className="det-field-label">Type de financement</span><span className="det-field-val">{e.typeFinancement || '—'}</span></div>
-                  <div className="det-field">
-                    <span className="det-field-label">Paiement</span>
-                    <span className="det-field-val"><span className={`badge ${PAY_STYLES[e.paiement] || ''}`}>{e.paiement}</span></span>
-                  </div>
-                  <div className="det-field"><span className="det-field-label">Mode de paiement</span><span className="det-field-val">{e.modePaiement || '—'}</span></div>
                   <div className="det-field" style={{ gridColumn:'1 / -1' }}>
                     <span className="det-field-label">Documents fournis</span>
                     <div className="docs-list" style={{ marginTop:'6px' }}>
@@ -903,7 +788,7 @@ const Etudiants = () => {
     <Layout>
       <div className="prsp-header">
         <div className="prsp-title"><i className="fa-solid fa-user-graduate"></i> Gestion des Étudiants</div>
-        <div className="prsp-sub">Suivez le parcours de vos étudiants, leur paiement et leur certification</div>
+        <div className="prsp-sub">Suivez le parcours de vos étudiants et leur certification</div>
       </div>
 
       <div className="toolbar">
@@ -922,11 +807,6 @@ const Etudiants = () => {
             onChange={ev => { setFilterFormation(ev.target.value); setCurrentPage(1); }}>
             <option value="Toutes">Toutes les formations</option>
             {FORMATIONS_LIST.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
-          </select>
-          <select className="filter-sel" value={filterPaiement}
-            onChange={ev => { setFilterPaiement(ev.target.value); setCurrentPage(1); }}>
-            <option value="Tous">Tous les paiements</option>
-            <option>Payé</option><option>Par tranche</option><option>Non payé</option>
           </select>
           <button className={`btn btn-sort ${sortAlpha ? 'active' : ''}`} onClick={() => setSortAlpha(v => !v)}>
             <i className="fa-solid fa-arrow-down-a-z"></i> A → Z
@@ -952,8 +832,6 @@ const Etudiants = () => {
                 <th>Contact</th>
                 <th>Formations inscrites</th>
                 <th>Statut</th>
-                <th>Paiement</th>
-                <th>Présence</th>
                 <th>Inscription</th>
                 <th style={{ textAlign:'center' }}>Actions</th>
               </tr>
@@ -961,7 +839,6 @@ const Etudiants = () => {
             <tbody>
               {currentSlice.map((e, i) => {
                 const sc     = STATUT_COLORS[e.statut] || {};
-                const pct    = calcPct(e.seancesTotal, e.absences);
                 const labels = getFormationLabels(e.formations);
                 return (
                   <tr key={e.id}>
@@ -984,19 +861,6 @@ const Etudiants = () => {
                     </td>
                     <td>
                       <span className="badge" style={{ background:sc.bg, color:sc.color, border:`1px solid ${sc.border}` }}>{e.statut}</span>
-                    </td>
-                    <td>
-                      <span className={`badge ${PAY_STYLES[e.paiement] || ''}`}>{e.paiement}</span>
-                    </td>
-                    <td>
-                      <div style={{ display:'flex', alignItems:'center', gap:'7px' }}>
-                        <div style={{ width:'55px', height:'6px', background:'#E8EDF3', borderRadius:'3px', overflow:'hidden' }}>
-                          <div style={{ width:`${Math.min(pct,100)}%`, height:'100%', borderRadius:'3px', background: pct >= 80 ? '#1A6B4A' : pct >= 60 ? '#FFCC33' : '#e53e3e' }}></div>
-                        </div>
-                        <span style={{ fontSize:'12px', color:'#475569', fontWeight:'600' }}>
-                          {parseInt(e.seancesTotal) > 0 ? `${pct}%` : '—'}
-                        </span>
-                      </div>
                     </td>
                     <td className="td-sub">{e.dateInscription}</td>
                     <td className="td-actions">

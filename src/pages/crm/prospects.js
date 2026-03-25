@@ -1,3 +1,4 @@
+// src/pages/crm/prospects.js
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import Layout from '../../components/Layout';
 import '../../styles/crm/prospects.css';
@@ -7,6 +8,7 @@ import {
   createProspect,
   updateProspect,
   deleteProspect,
+  convertToEtudiant,          // ← AJOUT
 } from '../../services/crm/prospectsService';
 import api from '../../services/api';
 import { validateField, validateAll } from '../../script/crm/validation';
@@ -22,22 +24,22 @@ const STATUT_COLORS = {
   'Perdu':     { bg: 'rgba(229,62,62,.10)',   color: '#c0392b', border: 'rgba(229,62,62,.30)'  },
 };
 
-const SOURCES          = ['Facebook', 'Instagram', 'TikTok', 'LinkedIn', 'Google', 'Site web', 'Recommandation', 'Appel entrant', 'Autre'];
-const PAYS_LIST        = ['Tunisie', 'France', 'Algérie', 'Maroc', 'Belgique', 'Canada', 'Autre'];
-const GENRE_LIST       = ['Homme', 'Femme', 'Autre'];
+const SOURCES            = ['Facebook', 'Instagram', 'TikTok', 'LinkedIn', 'Google', 'Site web', 'Recommandation', 'Appel entrant', 'Autre'];
+const PAYS_LIST          = ['Tunisie', 'France', 'Algérie', 'Maroc', 'Belgique', 'Canada', 'Autre'];
+const GENRE_LIST         = ['Homme', 'Femme', 'Autre'];
 const NIVEAU_ETUDES_LIST = ['Lycée', 'Bac', 'Licence', 'Master', 'Doctorat', 'Autre'];
-const DIPLOME_LIST     = ['Baccalauréat', 'Licence', 'Master', 'Aucun', 'Autre'];
+const DIPLOME_LIST       = ['Baccalauréat', 'Licence', 'Master', 'Aucun', 'Autre'];
 
 const FORM_FIELDS = [
   'nom', 'prenom', 'email', 'tel', 'ville', 'pays',
   'dateNaissance', 'genre', 'niveauEtudes', 'diplomeObtenu',
   'source', 'formation', 'niveau', 'modePreference',
   'canalContact', 'commentaires',
-  'statut', // 'responsableId' supprimé
+  'statut',
 ];
 
 /* ══════════════════════════════════════════════════════════
-   SOUS-COMPOSANTS
+   SOUS-COMPOSANTS FORMULAIRE
 ══════════════════════════════════════════════════════════ */
 const F = ({ label, name, type = 'text', placeholder = '', autoComplete, fd, set, errors = {} }) => (
   <div className={`pf-group${errors[name] ? ' pf-group--error' : ''}`}>
@@ -96,8 +98,7 @@ const T = ({ label, name, placeholder = '', fd, set, errors = {} }) => (
 );
 
 /* ══════════════════════════════════════════════════════════
-   FORMULAIRE
-   Le responsable est automatiquement défini par le backend
+   FORMULAIRE PROSPECT (Drawer)
 ══════════════════════════════════════════════════════════ */
 const ProspectForm = ({ initial, formRef, FORMATIONS }) => {
   const defaults = {
@@ -137,12 +138,12 @@ const ProspectForm = ({ initial, formRef, FORMATIONS }) => {
         <i className="fa-solid fa-user"></i> Informations personnelles
       </div>
       <div className="pf-grid">
-        <F label="Nom *"       name="nom"    placeholder="Ben Ali"                    fd={fd} set={set} errors={errors} />
-        <F label="Prénom *"    name="prenom" placeholder="Sami"                       fd={fd} set={set} errors={errors} />
+        <F label="Nom *"       name="nom"    placeholder="Ben Ali"            fd={fd} set={set} errors={errors} />
+        <F label="Prénom *"    name="prenom" placeholder="Sami"               fd={fd} set={set} errors={errors} />
         <F label="Email *"     name="email"  type="email" placeholder="email@exemple.com" autoComplete="email" fd={fd} set={set} errors={errors} />
-        <F label="Téléphone *" name="tel"    placeholder="+216 XX XXX XXX"            autoComplete="tel" fd={fd} set={set} errors={errors} />
-        <F label="Ville *"     name="ville"  placeholder="Tunis"                      fd={fd} set={set} errors={errors} />
-        <S label="Pays *"      name="pays"   options={PAYS_LIST}                      fd={fd} set={set} errors={errors} />
+        <F label="Téléphone *" name="tel"    placeholder="+216 XX XXX XXX"    autoComplete="tel" fd={fd} set={set} errors={errors} />
+        <F label="Ville *"     name="ville"  placeholder="Tunis"              fd={fd} set={set} errors={errors} />
+        <S label="Pays *"      name="pays"   options={PAYS_LIST}              fd={fd} set={set} errors={errors} />
       </div>
 
       {/* ── Section 2 : Profil académique ── */}
@@ -150,7 +151,7 @@ const ProspectForm = ({ initial, formRef, FORMATIONS }) => {
         <i className="fa-solid fa-graduation-cap"></i> Profil académique
       </div>
       <div className="pf-grid">
-        <F label="Date de naissance" name="dateNaissance" type="date" fd={fd} set={set} errors={errors} />
+        <F label="Date de naissance" name="dateNaissance" type="date"          fd={fd} set={set} errors={errors} />
         <S label="Genre"             name="genre"         options={GENRE_LIST}         fd={fd} set={set} errors={errors} />
         <S label="Niveau d'études"   name="niveauEtudes"  options={NIVEAU_ETUDES_LIST} fd={fd} set={set} errors={errors} />
         <S label="Diplôme obtenu"    name="diplomeObtenu" options={DIPLOME_LIST}        fd={fd} set={set} errors={errors} />
@@ -163,7 +164,6 @@ const ProspectForm = ({ initial, formRef, FORMATIONS }) => {
       <div className="pf-grid">
         <S label="Source * — Comment avez-vous connu 4C Lab ?" name="source" options={SOURCES} fd={fd} set={set} errors={errors} />
 
-        {/* Formation souhaitée */}
         <div className={`pf-group${errors['formation'] ? ' pf-group--error' : ''}`}>
           <label>Formation souhaitée *</label>
           <select
@@ -200,7 +200,6 @@ const ProspectForm = ({ initial, formRef, FORMATIONS }) => {
           options={['Nouveau', 'Contacté', 'Intéressé', 'Converti', 'Perdu']}
           fd={fd} set={set} errors={errors}
         />
-        {/* Champ responsable supprimé - défini automatiquement par le backend */}
       </div>
     </form>
   );
@@ -293,7 +292,7 @@ const DeleteModal = ({ showDeleteModal, deleteTarget, closeDelete, confirmDelete
               background: '#336699', borderRadius: '8px',
               width: '38px', height: '38px',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: '#fff', fontWeight: '700', fontSize: '13px', flexShrink: '0',
+              color: '#fff', fontWeight: '700', fontSize: '13px', flexShrink: 0,
             }}>
               {deleteTarget.prenom[0]}{deleteTarget.nom[0]}
             </div>
@@ -311,16 +310,132 @@ const DeleteModal = ({ showDeleteModal, deleteTarget, closeDelete, confirmDelete
             </span>
           </div>
           <div className="suppr-warning">
-            <i className="fa-solid fa-triangle-exclamation" style={{ flexShrink: '0' }}></i>
+            <i className="fa-solid fa-triangle-exclamation" style={{ flexShrink: 0 }}></i>
             <span>Cette action est <strong>irréversible</strong>. Le prospect sera définitivement supprimé.</span>
           </div>
         </div>
         <div style={{ padding: '12px 24px 20px', display: 'flex', gap: '10px' }}>
-          <button className="btn btn-cancel" style={{ flex: '1' }} onClick={closeDelete}>
+          <button className="btn btn-cancel" style={{ flex: 1 }} onClick={closeDelete}>
             <i className="fa-solid fa-xmark"></i> Annuler
           </button>
-          <button className="btn btn-suppr-confirm" style={{ flex: '1' }} onClick={confirmDelete}>
+          <button className="btn btn-suppr-confirm" style={{ flex: 1 }} onClick={confirmDelete}>
             <i className="fa-solid fa-trash"></i> Confirmer
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/* ══════════════════════════════════════════════════════════
+   MODALE CONFIRMATION CONVERSION  ← NOUVEAU
+══════════════════════════════════════════════════════════ */
+const ConfirmConvertModal = ({
+  show, detailTarget, selectedForms, convertData,
+  FORMATIONS, onCancel, onConfirm, converting,
+}) => {
+  if (!show || !detailTarget) return null;
+
+  return (
+    <div
+      className="modal-overlay show"
+      onClick={e => { if (e.target === e.currentTarget && !converting) onCancel(); }}
+    >
+      <div className="modal-suppr" style={{ maxWidth: '430px' }}>
+
+        {/* ── Icône ── */}
+        <div style={{ display: 'flex', justifyContent: 'center', paddingTop: '28px' }}>
+          <div style={{
+            width: '60px', height: '60px', borderRadius: '50%',
+            background: 'rgba(26,107,74,.12)', border: '2px solid rgba(26,107,74,.30)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <i className="fa-solid fa-graduation-cap" style={{ fontSize: '24px', color: '#1A6B4A' }}></i>
+          </div>
+        </div>
+
+        <div style={{ padding: '16px 24px', textAlign: 'center' }}>
+          <h2 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '6px', color: '#1e293b' }}>
+            Confirmer la conversion
+          </h2>
+          <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '16px' }}>
+            Cette action est <strong>irréversible</strong>. Le prospect sera supprimé
+            et un compte étudiant sera créé automatiquement.
+          </p>
+
+          {/* ── Card prospect ── */}
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: '12px',
+            background: '#f8fafc', border: '1px solid #e2e8f0',
+            borderRadius: '10px', padding: '10px 14px',
+            marginBottom: '12px', textAlign: 'left',
+          }}>
+            <div style={{
+              background: '#1A6B4A', borderRadius: '8px',
+              width: '38px', height: '38px', flexShrink: 0,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: '#fff', fontWeight: '700', fontSize: '13px',
+            }}>
+              {detailTarget.prenom[0]}{detailTarget.nom[0]}
+            </div>
+            <div style={{ textAlign: 'left' }}>
+              <div style={{ fontWeight: '600', color: '#1e293b' }}>
+                {detailTarget.prenom} {detailTarget.nom}
+              </div>
+              <div style={{ fontSize: '11.5px', color: '#94a3b8' }}>{detailTarget.email}</div>
+            </div>
+            <span style={{
+              marginLeft: 'auto', fontSize: '11px', fontWeight: '600',
+              background: 'rgba(26,107,74,.12)', color: '#1A6B4A',
+              border: '1px solid rgba(26,107,74,.30)',
+              borderRadius: '6px', padding: '2px 8px', whiteSpace: 'nowrap',
+            }}>
+              → Étudiant {convertData.statutEtudiant}
+            </span>
+          </div>
+
+          {/* ── Formations sélectionnées ── */}
+          <div style={{
+            background: 'rgba(51,204,255,.06)', border: '1px solid rgba(51,204,255,.25)',
+            borderRadius: '8px', padding: '10px 14px', textAlign: 'left',
+          }}>
+            <div style={{ fontSize: '11px', color: '#1A7A99', fontWeight: '700', marginBottom: '6px' }}>
+              <i className="fa-solid fa-book-open" style={{ marginRight: '5px' }}></i>
+              {selectedForms.length} formation(s) sélectionnée(s)
+            </div>
+            {selectedForms.map(id => {
+              const f = FORMATIONS.find(x => x.id === id);
+              return f ? (
+                <div key={id} style={{ fontSize: '12.5px', color: '#1e293b', marginBottom: '2px' }}>
+                  • {f.label}
+                  <span style={{ color: '#94a3b8', fontSize: '11px', marginLeft: '4px' }}>({f.duree})</span>
+                </div>
+              ) : null;
+            })}
+          </div>
+        </div>
+
+        {/* ── Boutons ── */}
+        <div style={{ padding: '12px 24px 20px', display: 'flex', gap: '10px' }}>
+          <button
+            className="btn btn-cancel"
+            style={{ flex: 1 }}
+            onClick={onCancel}
+            disabled={converting}
+          >
+            <i className="fa-solid fa-xmark"></i> Annuler
+          </button>
+          <button
+            className="btn btn-save"
+            style={{ flex: 1, background: '#1A6B4A', borderColor: '#1A6B4A' }}
+            onClick={onConfirm}
+            disabled={converting}
+          >
+            {converting ? (
+              <><i className="fa-solid fa-spinner fa-spin"></i> Conversion…</>
+            ) : (
+              <><i className="fa-solid fa-graduation-cap"></i> Confirmer</>
+            )}
           </button>
         </div>
       </div>
@@ -349,29 +464,33 @@ const Prospects = () => {
   const [FORMATIONS, setFORMATIONS] = useState([]);
 
   useEffect(() => {
-    // Charger les formations uniquement
     api.get('formations/')
       .then(res => setFORMATIONS(res.data.map(f => ({ id: f.id, label: f.intitule, duree: `${f.duree}h` }))))
       .catch(() => setFORMATIONS([]));
-    // Le chargement des utilisateurs est supprimé car le responsable est automatique
   }, []);
 
-  // ── State ──
-  const [prospects,       setProspects]       = useState([]);
-  const [loading,         setLoading]         = useState(true);
-  const [apiError,        setApiError]        = useState(null);
-  const [search,          setSearch]          = useState('');
-  const [filterStatut,    setFilterStatut]    = useState('Tous');
-  const [sortAlpha,       setSortAlpha]       = useState(false);
-  const [currentPage,     setCurrentPage]     = useState(1);
-  const [pageView,        setPageView]        = useState('list');
-  const [detailTarget,    setDetailTarget]    = useState(null);
-  const [deleteTarget,    setDeleteTarget]    = useState(null);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [convertOpen,     setConvertOpen]     = useState(false);
-  const [selectedForms,   setSelectedForms]   = useState([]);
-  const [toast,           setToast]           = useState({ show: false, message: '', type: 'success' });
-  const [saving,          setSaving]          = useState(false);
+  // ── States ──
+  const [prospects,          setProspects]          = useState([]);
+  const [loading,            setLoading]            = useState(true);
+  const [apiError,           setApiError]           = useState(null);
+  const [search,             setSearch]             = useState('');
+  const [filterStatut,       setFilterStatut]       = useState('Tous');
+  const [sortAlpha,          setSortAlpha]          = useState(false);
+  const [currentPage,        setCurrentPage]        = useState(1);
+  const [pageView,           setPageView]           = useState('list');
+  const [detailTarget,       setDetailTarget]       = useState(null);
+  const [deleteTarget,       setDeleteTarget]       = useState(null);
+  const [showDeleteModal,    setShowDeleteModal]    = useState(false);
+
+  // ── États conversion ──
+  const [convertOpen,        setConvertOpen]        = useState(false);
+  const [selectedForms,      setSelectedForms]      = useState([]);
+  const [convertData,        setConvertData]        = useState({ statutEtudiant: 'Actif', notes: '' });
+  const [showConfirmConvert, setShowConfirmConvert] = useState(false);  // ← modale de confirmation
+  const [converting,         setConverting]         = useState(false);  // ← état chargement
+
+  const [toast,  setToast]  = useState({ show: false, message: '', type: 'success' });
+  const [saving, setSaving] = useState(false);
 
   const [drawerOpen,   setDrawerOpen]   = useState(false);
   const [drawerMode,   setDrawerMode]   = useState(null);
@@ -380,6 +499,7 @@ const Prospects = () => {
 
   const PER_PAGE = 8;
 
+  // ── Chargement prospects ──
   const loadProspects = useCallback(async () => {
     setLoading(true);
     setApiError(null);
@@ -397,7 +517,7 @@ const Prospects = () => {
 
   const showToast = (msg, type = 'success') => {
     setToast({ show: true, message: msg, type });
-    setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 3000);
+    setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 3500);
   };
 
   // ── Filtres ──
@@ -455,10 +575,8 @@ const Prospects = () => {
 
     const data = ref.data;
     const formationIds = data.formation ? [parseInt(data.formation, 10)].filter(Boolean) : [];
-    
-    // Supprimer responsableId s'il existe (n'est plus utilisé)
     const { responsableId, ...cleanData } = data;
-    
+
     setSaving(true);
     try {
       if (drawerMode === 'add') {
@@ -517,6 +635,7 @@ const Prospects = () => {
       setDetailTarget(p);
       setConvertOpen(false);
       setSelectedForms([]);
+      setConvertData({ statutEtudiant: 'Actif', notes: '' });
       setPageView('detail');
     } catch {
       showToast('Impossible de charger les détails du prospect.', 'error');
@@ -549,16 +668,51 @@ const Prospects = () => {
     }
   };
 
-  // ── Conversion ──
-  const toggleConvert = () => { setConvertOpen(v => !v); setSelectedForms([]); };
-  const toggleForm    = (id) => setSelectedForms(prev =>
+  // ══════════════════════════════════════════════════════════
+  // CONVERSION PROSPECT → ÉTUDIANT
+  // ══════════════════════════════════════════════════════════
+
+  // Ouvre / ferme le formulaire de conversion
+  const toggleConvert = () => {
+    setConvertOpen(v => !v);
+    setSelectedForms([]);
+    setConvertData({ statutEtudiant: 'Actif', notes: '' });
+  };
+
+  // Coche / décoche une formation dans le convert-box
+  const toggleForm = (id) => setSelectedForms(prev =>
     prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
   );
+
+  // Étape 1 : validation basique → ouvre la modale de confirmation
   const handleConvert = () => {
-    if (!selectedForms.length) { showToast('Sélectionnez au moins une formation.', 'error'); return; }
-    showToast(`Prospect converti ! (${selectedForms.length} formation(s))`);
-    setProspects(prev => prev.filter(p => p.id !== detailTarget.id));
-    closeDetail();
+    if (!selectedForms.length) {
+      showToast('Veuillez sélectionner au moins une formation.', 'error');
+      return;
+    }
+    setShowConfirmConvert(true);   // ← ouvre la modale
+  };
+
+  // Étape 2 : appel API → supprime le prospect → retour liste
+  const confirmConvert = async () => {
+    setConverting(true);
+    try {
+      await convertToEtudiant(detailTarget.id, {
+        formations_ids:  selectedForms,
+        statut_etudiant: convertData.statutEtudiant,
+        notes:           convertData.notes,
+      });
+      // Retire le prospect de la liste locale
+      setProspects(prev => prev.filter(p => p.id !== detailTarget.id));
+      setShowConfirmConvert(false);
+      setConvertOpen(false);
+      closeDetail();
+      showToast(`🎓 ${detailTarget.prenom} ${detailTarget.nom} a été converti(e) en étudiant(e) !`);
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Erreur lors de la conversion.', 'error');
+    } finally {
+      setConverting(false);
+    }
   };
 
   // ══════════════════════════════════════════════════════════
@@ -581,7 +735,7 @@ const Prospects = () => {
           </div>
 
           <div className="det-body">
-            {/* ── Sidebar gauche ── */}
+            {/* ════ SIDEBAR GAUCHE ════ */}
             <div className="det-sidebar">
               <div className="det-sid-hero">
                 <div className="det-sid-avatar">{p.prenom[0]}{p.nom[0]}</div>
@@ -632,7 +786,8 @@ const Prospects = () => {
               <div className="det-sid-divider" />
               <div className="det-sid-actions">
                 <button className="det-action-btn det-action-convert" onClick={toggleConvert}>
-                  <i className="fa-solid fa-graduation-cap"></i> Convertir en étudiant
+                  <i className="fa-solid fa-graduation-cap"></i>
+                  {convertOpen ? 'Fermer la conversion' : 'Convertir en étudiant'}
                 </button>
                 <button className="det-action-btn det-action-edit" onClick={() => openEdit(p.id)}>
                   <i className="fa-solid fa-pen"></i> Modifier
@@ -640,8 +795,10 @@ const Prospects = () => {
               </div>
             </div>
 
-            {/* ── Contenu droite ── */}
+            {/* ════ CONTENU DROITE ════ */}
             <div className="det-main">
+
+              {/* ════ CONVERT-BOX (formulaire contrôlé) ════ */}
               {convertOpen && (
                 <div className="convert-box det-convert-box">
                   <div className="convert-title">
@@ -650,8 +807,12 @@ const Prospects = () => {
                       <i className="fa-solid fa-xmark"></i>
                     </button>
                   </div>
-                  <div className="conv-section-label"><i className="fa-solid fa-book-open"></i> Informations académiques</div>
-                  <div className="conv-sub-label">Formation(s) suivie(s) <span style={{ color: '#e53e3e' }}>*</span></div>
+
+                  {/* ── Formations ── */}
+                  <div className="conv-section-label">
+                    <i className="fa-solid fa-book-open"></i> Formation(s) suivie(s)
+                    <span style={{ color: '#e53e3e', marginLeft: '4px' }}>*</span>
+                  </div>
                   <div className="det-form-checks">
                     {FORMATIONS.map(f => (
                       <div key={f.id} className="form-check" onClick={() => toggleForm(f.id)}>
@@ -661,29 +822,41 @@ const Prospects = () => {
                       </div>
                     ))}
                   </div>
-                  <div className="form-grid2" style={{ marginTop: '10px' }}>
-                    <div className="form-group"><label className="form-label">Mode de formation</label><select className="form-control"><option>Présentiel</option><option>En ligne</option><option>Hybride</option></select></div>
-                    <div className="form-group"><label className="form-label">Date d'inscription</label><input className="form-control" type="date" defaultValue={new Date().toISOString().slice(0, 10)} /></div>
+
+                  {/* ── Statut étudiant (contrôlé) ── */}
+                  <div className="form-group" style={{ marginTop: '12px' }}>
+                    <label className="form-label">Statut étudiant</label>
+                    <select
+                      className="form-control"
+                      value={convertData.statutEtudiant}
+                      onChange={e => setConvertData(prev => ({ ...prev, statutEtudiant: e.target.value }))}
+                    >
+                      <option>Actif</option>
+                      <option>Abandonné</option>
+                      <option>Certifié</option>
+                    </select>
                   </div>
-                  <div className="form-group"><label className="form-label">Statut étudiant</label><select className="form-control"><option>Actif</option><option>Abandonné</option><option>Certifié</option></select></div>
-                  <div className="conv-section-label" style={{ marginTop: '12px' }}><i className="fa-solid fa-folder-open"></i> Informations administratives</div>
-                  <div className="form-group"><label className="form-label">Type de financement</label><select className="form-control"><option>Personnel</option><option>Entreprise</option></select></div>
-                  <div className="form-group">
-                    <label className="form-label">Documents fournis</label>
-                    <div className="docs-checks">
-                      {['CIN', 'CV', 'Contrat', 'Reçu', 'RNE', 'Autres'].map(d => (
-                        <label key={d} className="doc-check-item"><input type="checkbox" /> {d}</label>
-                      ))}
-                    </div>
+
+                  {/* ── Notes (contrôlées) ── */}
+                  <div className="form-group" style={{ marginTop: '10px' }}>
+                    <label className="form-label">Notes / Observations</label>
+                    <textarea
+                      className="form-control"
+                      rows={2}
+                      placeholder="Observations, remarques sur l'étudiant..."
+                      value={convertData.notes}
+                      onChange={e => setConvertData(prev => ({ ...prev, notes: e.target.value }))}
+                    />
                   </div>
-                  <div className="form-grid2">
-                    <div className="form-group"><label className="form-label">Paiement</label><select className="form-control"><option>Payé</option><option>Par tranche</option><option>Non payé</option></select></div>
-                    <div className="form-group"><label className="form-label">Mode de paiement</label><select className="form-control"><option>Espèce</option><option>Chèque</option><option>Virement</option></select></div>
-                  </div>
+
+                  {/* ── Footer ── */}
                   <div className="det-convert-footer">
-                    <button className="btn btn-cancel" onClick={toggleConvert}>Annuler</button>
+                    <button className="btn btn-cancel" onClick={toggleConvert}>
+                      Annuler
+                    </button>
                     <button className="btn-confirm" style={{ flex: 1 }} onClick={handleConvert}>
-                      <i className="fa-solid fa-check" style={{ marginRight: '5px' }}></i>Confirmer la conversion
+                      <i className="fa-solid fa-check" style={{ marginRight: '5px' }}></i>
+                      Confirmer la conversion
                     </button>
                   </div>
                 </div>
@@ -746,6 +919,7 @@ const Prospects = () => {
                   <div className="notes-box">{p.commentaires}</div>
                 </div>
               ) : null}
+
             </div>
           </div>
         </div>
@@ -758,6 +932,17 @@ const Prospects = () => {
         <DeleteModal
           showDeleteModal={showDeleteModal} deleteTarget={deleteTarget}
           closeDelete={closeDelete} confirmDelete={confirmDelete}
+        />
+        {/* ← MODALE DE CONFIRMATION CONVERSION */}
+        <ConfirmConvertModal
+          show={showConfirmConvert}
+          detailTarget={detailTarget}
+          selectedForms={selectedForms}
+          convertData={convertData}
+          FORMATIONS={FORMATIONS}
+          onCancel={() => setShowConfirmConvert(false)}
+          onConfirm={confirmConvert}
+          converting={converting}
         />
         <Toast toast={toast} />
       </Layout>
@@ -785,8 +970,12 @@ const Prospects = () => {
             />
           </div>
           <select className="filter-sel" value={filterStatut} onChange={e => { setFilterStatut(e.target.value); setCurrentPage(1); }}>
-            <option>Tous</option><option>Nouveau</option><option>Contacté</option>
-            <option>Intéressé</option><option>Converti</option><option>Perdu</option>
+            <option>Tous</option>
+            <option>Nouveau</option>
+            <option>Contacté</option>
+            <option>Intéressé</option>
+            <option>Converti</option>
+            <option>Perdu</option>
           </select>
           <button className={`btn btn-sort ${sortAlpha ? 'active' : ''}`} onClick={() => setSortAlpha(v => !v)}>
             <i className="fa-solid fa-arrow-down-a-z"></i> A → Z
