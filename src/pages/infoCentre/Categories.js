@@ -8,6 +8,7 @@ import {
   modifierCategorie,
   supprimerCategorie,
 } from "../../services/infoCentre/categorieService";
+import { getFormation, getFormations } from "../../services/infoCentre/formationService";
 import "../../styles/infoCentre/categories.css";
 
 const CAT_COLORS = {
@@ -22,6 +23,9 @@ const CAT_COLORS = {
 
 const EMPTY_FORM = { nom: "", description: "", actif: true };
 const ITEMS_PER_PAGE = 7;
+
+const formatLabel          = { presentiel: "Présentiel", en_ligne: "En ligne", hybride: "Hybride" };
+const niveauFormationLabel = { debutant: "Débutant", intermediaire: "Intermédiaire", avance: "Avancé" };
 
 const styleErreurBox = {
   border: "1.5px solid #ef4444",
@@ -85,6 +89,16 @@ function Categories() {
   const [modalAjout, setModalAjout]   = useState(false);
   const [modalSuppr, setModalSuppr]   = useState(null);
 
+  // ── FORMATIONS ASSOCIÉES dans le modal detail ──
+  const [formationsCategorie, setFormationsCategorie] = useState([]);
+  const [loadingFormations, setLoadingFormations]     = useState(false);
+  const [searchFormations, setSearchFormations]       = useState("");
+
+  // ── MODAL DETAIL FORMATION (sous-modal) ──
+  const [modalFormationDetail, setModalFormationDetail] = useState(null);
+  const [loadingFD, setLoadingFD]                       = useState(false);
+  const [errorFD, setErrorFD]                           = useState("");
+
   const [formAjout, setFormAjout] = useState(EMPTY_FORM);
   const [formModif, setFormModif] = useState(EMPTY_FORM);
 
@@ -96,7 +110,6 @@ function Categories() {
   const [errToggle, setErrToggle]             = useState("");
   const [submitLoading, setSubmitLoading]     = useState(false);
 
-  // ── MESSAGES DE SUCCÈS ──
   const [succesGlobal, setSuccesGlobal] = useState("");
 
   const afficherSucces = (msg) => {
@@ -118,7 +131,43 @@ function Categories() {
     }
   };
 
-  // Recherche en temps réel par nom uniquement + tri par date décroissante (plus récente en premier)
+  // ── OUVRIR MODAL DETAIL + charger les formations de cette catégorie ──
+  const openDetail = async (cat) => {
+    setModalDetail(cat);
+    setSearchFormations("");
+    setFormationsCategorie([]);
+    if (cat.formations_count > 0) {
+      try {
+        setLoadingFormations(true);
+        // On récupère toutes les formations et on filtre par catégorie
+        const res = await getFormations();
+        const filtered = res.data.filter(f => f.categorie === cat.id || f.categorie_nom === cat.nom);
+        setFormationsCategorie(filtered);
+      } catch (err) {
+        console.error("Erreur chargement formations:", err);
+      } finally {
+        setLoadingFormations(false);
+      }
+    }
+  };
+
+  // ── OUVRIR DETAIL D'UNE FORMATION (sous-modal) ──
+  const openFormationDetail = async (fm) => {
+    setModalFormationDetail({ intitule: fm.intitule, id: fm.id });
+    setLoadingFD(true);
+    setErrorFD("");
+    try {
+      const response = await getFormation(fm.id);
+      setModalFormationDetail(response.data);
+    } catch (err) {
+      setErrorFD("Impossible de charger les détails de cette formation.");
+    } finally {
+      setLoadingFD(false);
+    }
+  };
+
+  const closeFormationDetail = () => { setModalFormationDetail(null); setErrorFD(""); };
+
   const filtered = data
     .filter((c) => c.nom.toLowerCase().includes(search.toLowerCase()))
     .sort((a, b) => new Date(b.date_creation) - new Date(a.date_creation));
@@ -126,6 +175,11 @@ function Categories() {
   const paginated  = filtered.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
     currentPage * ITEMS_PER_PAGE
+  );
+
+  // Filtrage des formations dans le modal detail
+  const formationsFiltrees = formationsCategorie.filter(f =>
+    f.intitule.toLowerCase().includes(searchFormations.toLowerCase())
   );
 
   const formatDate = (d) => d ? new Date(d).toLocaleDateString("fr-FR") : "-";
@@ -185,7 +239,6 @@ function Categories() {
     const e = valider(formModif);
     if (Object.keys(e).length) { setErreursModif(e); return; }
     
-    // Vérifier si on essaie de désactiver une catégorie qui a des formations
     if (!formModif.actif && modalModif.formations_count > 0) {
       setErrServeurModif("Impossible de désactiver : cette catégorie est liée à " + modalModif.formations_count + " formation(s).");
       return;
@@ -218,7 +271,6 @@ function Categories() {
 
   // ── TOGGLE DIRECT DEPUIS LA LISTE ──
   const handleToggleActif = async (cat) => {
-    // Si la catégorie a des formations et qu'on veut la désactiver
     if (cat.actif && cat.formations_count > 0) {
       setErrToggle("Impossible de désactiver : cette catégorie est liée à " + cat.formations_count + " formation(s).");
       setTimeout(() => setErrToggle(""), 5000);
@@ -281,12 +333,8 @@ function Categories() {
         <p className="page-sub">Gérez les catégories associées aux formations du centre</p>
       </div>
 
-      {/* ══════════ MESSAGE DE SUCCÈS GLOBAL ══════════ */}
-      {succesGlobal && (
-        <SuccesMsg msg={succesGlobal} />
-      )}
+      {succesGlobal && <SuccesMsg msg={succesGlobal} />}
 
-      {/* Message d'erreur global pour les toggles */}
       {errToggle && (
         <div style={{ ...styleErreurBox, marginBottom: "16px" }}>
           <i className="fa-solid fa-triangle-exclamation"></i> {errToggle}
@@ -380,7 +428,7 @@ function Categories() {
                         <button 
                           className="act-btn act-detail" 
                           title="Détail"   
-                          onClick={() => setModalDetail(cat)}
+                          onClick={() => openDetail(cat)}
                         >
                           <i className="fa-solid fa-eye"></i>
                         </button>
@@ -426,7 +474,7 @@ function Categories() {
       {/* ══════════ MODALE DÉTAIL ══════════ */}
       {modalDetail && (
         <div className="modal-overlay show" onClick={(e) => handleOverlay(e, () => setModalDetail(null))}>
-          <div className="modal">
+          <div className="modal modal-detail-large">
             <div className="modal-header detail-header">
               <div className="detail-header-left">
                 <div className="detail-icon-wrap"><i className="fa-solid fa-tags"></i></div>
@@ -438,6 +486,7 @@ function Categories() {
               <button className="modal-close" onClick={() => setModalDetail(null)}><i className="fa-solid fa-xmark"></i></button>
             </div>
             <div className="modal-body">
+              {/* ── Stats row ── */}
               <div className="detail-stat-row">
                 <div className="dsr-card">
                   <div className="dsr-icon"><i className="fa-solid fa-hashtag"></i></div>
@@ -470,10 +519,67 @@ function Categories() {
                   </div>
                 </div>
               </div>
+
+              {/* ── Description ── */}
               <div className="detail-sections">
                 <div className="detail-sec">
                   <div className="detail-sec-title"><i className="fa-solid fa-align-left"></i> Description</div>
                   <p className="detail-sec-text">{modalDetail.description || "Aucune description."}</p>
+                </div>
+              </div>
+
+              {/* ══ FORMATIONS ASSOCIÉES ══ */}
+              <div className="detail-formations-section">
+                <div className="detail-formations-header">
+                  <div className="detail-formations-title">
+                    <i className="fa-solid fa-graduation-cap"></i>
+                    Formations associées
+                    <span className="formations-badge">{modalDetail.formations_count || 0}</span>
+                  </div>
+                </div>
+
+                {modalDetail.formations_count > 0 && (
+                  <div className="detail-formations-search">
+                    <i className="fa-solid fa-magnifying-glass"></i>
+                    <input
+                      type="text"
+                      placeholder="Rechercher une formation..."
+                      value={searchFormations}
+                      onChange={(e) => setSearchFormations(e.target.value)}
+                    />
+                  </div>
+                )}
+
+                <div className="detail-formations-list">
+                  {loadingFormations ? (
+                    <div className="formations-loading">
+                      <i className="fa-solid fa-spinner fa-spin"></i> Chargement des formations...
+                    </div>
+                  ) : modalDetail.formations_count === 0 ? (
+                    <div className="formations-empty">
+                      <i className="fa-solid fa-inbox"></i>
+                      <span>Aucune formation liée à cette catégorie.</span>
+                    </div>
+                  ) : formationsFiltrees.length === 0 ? (
+                    <div className="formations-empty">
+                      <i className="fa-solid fa-magnifying-glass"></i>
+                      <span>Aucune formation trouvée pour "{searchFormations}".</span>
+                    </div>
+                  ) : (
+                    formationsFiltrees.map((fm) => (
+                      <button
+                        key={fm.id}
+                        className="formation-item-btn"
+                        onClick={() => openFormationDetail(fm)}
+                      >
+                        <div className="formation-item-icon">
+                          <i className="fa-solid fa-book-open"></i>
+                        </div>
+                        <span className="formation-item-name">{fm.intitule}</span>
+                        <i className="fa-solid fa-chevron-right formation-item-arrow"></i>
+                      </button>
+                    ))
+                  )}
                 </div>
               </div>
             </div>
@@ -486,6 +592,107 @@ function Categories() {
               >
                 <i className="fa-solid fa-pen"></i> Modifier
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ══════════ SOUS-MODAL DÉTAIL FORMATION ══════════ */}
+      {modalFormationDetail && (
+        <div className="modal-overlay show" style={{ zIndex: 3000 }} onClick={closeFormationDetail}>
+          <div className="modal modal-formation-detail" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header" style={{ borderBottomColor: "#33CCFF" }}>
+              <h2><i className="fa-solid fa-book-open"></i> {modalFormationDetail.intitule}</h2>
+              <button className="modal-close" onClick={closeFormationDetail}>
+                <i className="fa-solid fa-xmark"></i>
+              </button>
+            </div>
+            <div className="modal-body">
+              {loadingFD && (
+                <div className="fd-loading">
+                  <i className="fa-solid fa-spinner fa-spin"></i> Chargement des détails...
+                </div>
+              )}
+              {errorFD && !loadingFD && (
+                <div className="global-error-banner">
+                  <i className="fa-solid fa-circle-xmark"></i><span>{errorFD}</span>
+                </div>
+              )}
+              {!loadingFD && !errorFD && (
+                <div className="fd-pro-layout">
+                  <div className="fd-chips-row">
+                    {modalFormationDetail.categorie_nom && (
+                      <span className="fd-chip fd-chip-cat">
+                        <i className="fa-solid fa-tag"></i> {modalFormationDetail.categorie_nom}
+                      </span>
+                    )}
+                    {modalFormationDetail.niveau && (
+                      <span className={`formation-item-niveau niveau-${modalFormationDetail.niveau}`}>
+                        <i className="fa-solid fa-layer-group"></i> {niveauFormationLabel[modalFormationDetail.niveau] || modalFormationDetail.niveau}
+                      </span>
+                    )}
+                    {modalFormationDetail.format && (
+                      <span className="fd-chip fd-chip-format">
+                        <i className="fa-solid fa-display"></i> {formatLabel[modalFormationDetail.format] || modalFormationDetail.format}
+                      </span>
+                    )}
+                    {modalFormationDetail.duree && (
+                      <span className="fd-chip fd-chip-duree">
+                        <i className="fa-solid fa-clock"></i> {modalFormationDetail.duree}h
+                      </span>
+                    )}
+                  </div>
+                  {(modalFormationDetail.date_debut || modalFormationDetail.date_fin || modalFormationDetail.prix_ht || modalFormationDetail.prix_ttc) && (
+                    <div className="fd-meta-row">
+                      {modalFormationDetail.date_debut && (
+                        <div className="fd-meta-item">
+                          <span className="fd-meta-lbl"><i className="fa-solid fa-calendar-day"></i> Début</span>
+                          <span className="fd-meta-val">{modalFormationDetail.date_debut}</span>
+                        </div>
+                      )}
+                      {modalFormationDetail.date_fin && (
+                        <div className="fd-meta-item">
+                          <span className="fd-meta-lbl"><i className="fa-solid fa-calendar-check"></i> Fin</span>
+                          <span className="fd-meta-val">{modalFormationDetail.date_fin}</span>
+                        </div>
+                      )}
+                      {modalFormationDetail.prix_ht && (
+                        <div className="fd-meta-item">
+                          <span className="fd-meta-lbl"><i className="fa-solid fa-money-bill"></i> Prix HT</span>
+                          <span className="fd-meta-val">{modalFormationDetail.prix_ht} TND</span>
+                        </div>
+                      )}
+                      {modalFormationDetail.prix_ttc && (
+                        <div className="fd-meta-item fd-meta-item-accent">
+                          <span className="fd-meta-lbl"><i className="fa-solid fa-receipt"></i> Prix TTC</span>
+                          <span className="fd-meta-val">{modalFormationDetail.prix_ttc} TND</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {modalFormationDetail.description && (
+                    <div className="fd-text-block">
+                      <div className="fd-text-label"><i className="fa-solid fa-align-left"></i> Description</div>
+                      <p className="fd-text-content">{modalFormationDetail.description}</p>
+                    </div>
+                  )}
+                  {modalFormationDetail.objectifs_pedagogiques && (
+                    <div className="fd-text-block fd-text-block-alt">
+                      <div className="fd-text-label"><i className="fa-solid fa-bullseye"></i> Objectifs pédagogiques</div>
+                      <p className="fd-text-content">{modalFormationDetail.objectifs_pedagogiques}</p>
+                    </div>
+                  )}
+                  {modalFormationDetail.prerequis && (
+                    <div className="fd-text-block">
+                      <div className="fd-text-label"><i className="fa-solid fa-list-check"></i> Prérequis</div>
+                      <p className="fd-text-content">{modalFormationDetail.prerequis}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-cancel" onClick={closeFormationDetail}>Fermer</button>
             </div>
           </div>
         </div>
@@ -624,7 +831,6 @@ function Categories() {
               <h2 style={{ fontSize: "20px", fontWeight: "700", marginBottom: "20px", color: "#1e293b" }}>
                 Supprimer la catégorie
               </h2>
-              {/* Card nom */}
               <div style={{ display: "flex", alignItems: "center", gap: "12px", background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "12px", padding: "12px 16px", marginBottom: "16px" }}>
                 <div style={{ background: CAT_COLORS[modalSuppr.nom] || "#94A3B8", borderRadius: "8px", width: "40px", height: "40px", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: "700", fontSize: "14px", flexShrink: 0 }}>
                   {initiales(modalSuppr.nom)}
@@ -634,12 +840,10 @@ function Categories() {
                   <div style={{ fontSize: "12px", color: "#94a3b8" }}>#{String(modalSuppr.id).padStart(3, "0")}</div>
                 </div>
               </div>
-              {/* Avertissement */}
               <div style={{ background: "#fff5f5", border: "1px solid #fecaca", borderRadius: "10px", padding: "12px 16px", color: "#dc2626", fontSize: "13px", display: "flex", alignItems: "flex-start", gap: "8px", textAlign: "left", marginBottom: "8px" }}>
                 <i className="fa-solid fa-triangle-exclamation" style={{ marginTop: "2px", flexShrink: 0 }}></i>
                 <span>Cette action est <strong>irréversible</strong>. Toutes les données associées seront définitivement supprimées.</span>
               </div>
-              {/* Erreur suppression liée */}
               {errSuppr && (
                 <div style={{ background: "#fff5f5", border: "1.5px solid #ef4444", borderRadius: "10px", padding: "12px 16px", color: "#dc2626", fontSize: "13px", display: "flex", alignItems: "flex-start", gap: "8px", textAlign: "left", marginTop: "8px" }}>
                   <i className="fa-solid fa-circle-xmark" style={{ marginTop: "2px", flexShrink: 0 }}></i>

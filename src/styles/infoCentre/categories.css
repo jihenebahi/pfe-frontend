@@ -528,3 +528,325 @@ tbody td { padding: 13px 14px; vertical-align: middle; }
 }
 
 
+
+/* ══════════════════════════════════════════════
+   MODAL DETAIL LARGE (avec formations associées)
+══════════════════════════════════════════════ */
+.modal-detail-large {
+  max-width: 620px;
+  width: 96%;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-detail-large .modal-body {
+  overflow-y: auto;
+  flex: 1;
+}
+
+/* ══════════════════════════════════════════════
+   SECTION FORMATIONS ASSOCIÉES
+══════════════════════════════════════════════ */
+.detail-formations-section {
+  margin-top: 18px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.detail-formations-header {
+  background: linear-gradient(90deg, #EFF6FF 0%, #F8FAFC 100%);
+  padding: 12px 16px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.detail-formations-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1E3A5F;
+}
+
+.detail-formations-title i {
+  color: #33CCFF;
+  font-size: 14px;
+}
+
+.formations-badge {
+  margin-left: auto;
+  background: #1E3A5F;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 20px;
+  padding: 2px 9px;
+  min-width: 22px;
+  text-align: center;
+}
+
+.detail-formations-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-bottom: 1px solid #f1f5f9;
+  background: #fff;
+}
+
+.detail-formations-search i {
+  color: #94A3B8;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.detail-formations-search input {
+  border: none;
+  outline: none;
+  font-size: 13px;
+  color: #1e293b;
+  background: transparent;
+  width: 100%;
+}
+
+.detail-formations-search input::placeholder {
+  color: #CBD5E1;
+}
+
+.detail-formations-list {
+  max-height: 220px;
+  overflow-y: auto;
+  background: #fff;
+}
+
+.detail-formations-list::-webkit-scrollbar {
+  width: 5px;
+}
+.detail-formations-list::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+.detail-formations-list::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 10px;
+}
+
+.formation-item-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  background: #fff;
+  border: none;
+  border-bottom: 1px solid #f1f5f9;
+  padding: 12px 16px;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s;
+}
+
+.formation-item-btn:last-child {
+  border-bottom: none;
+}
+
+.formation-item-btn:hover {
+  background: #F0F9FF;
+}
+
+.formation-item-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: #EFF6FF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.formation-item-icon i {
+  color: #1E3A5F;
+  font-size: 14px;
+}
+
+.formation-item-name {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 500;
+  color: #1e293b;
+}
+
+.formation-item-arrow {
+  color: #CBD5E1;
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+.formations-loading,
+.formations-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 20px;
+  color: #94A3B8;
+  font-size: 13px;
+}
+
+/* ══════════════════════════════════════════════
+   MODAL FORMATION DETAIL (sous-modal)
+   (réutilise les classes fd-* de Formateurs.css)
+══════════════════════════════════════════════ */
+.modal-formation-detail {
+  max-width: 540px;
+  width: 96%;
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-formation-detail .modal-body {
+  overflow-y: auto;
+  flex: 1;
+}
+
+.fd-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 30px;
+  color: #64748B;
+  font-size: 14px;
+}
+
+.fd-pro-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.fd-chips-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.fd-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.fd-chip-cat {
+  background: #EFF6FF;
+  color: #1D4ED8;
+  border: 1px solid #BFDBFE;
+}
+
+.fd-chip-format {
+  background: #F0FDF4;
+  color: #15803D;
+  border: 1px solid #BBF7D0;
+}
+
+.fd-chip-duree {
+  background: #FFF7ED;
+  color: #C2410C;
+  border: 1px solid #FED7AA;
+}
+
+.formation-item-niveau {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.niveau-debutant      { background: #F0FDF4; color: #15803D; border: 1px solid #BBF7D0; }
+.niveau-intermediaire { background: #FFF7ED; color: #C2410C; border: 1px solid #FED7AA; }
+.niveau-avance        { background: #FFF1F2; color: #BE123C; border: 1px solid #FECDD3; }
+
+.fd-meta-row {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.fd-meta-item {
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 10px;
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.fd-meta-item-accent {
+  background: #EFF6FF;
+  border-color: #BFDBFE;
+}
+
+.fd-meta-lbl {
+  font-size: 11px;
+  color: #94A3B8;
+  font-weight: 500;
+}
+
+.fd-meta-val {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1E3A5F;
+}
+
+.fd-text-block {
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 10px;
+  padding: 12px 16px;
+}
+
+.fd-text-block-alt {
+  background: #F0F9FF;
+  border-color: #BAE6FD;
+}
+
+.fd-text-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #1E3A5F;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.fd-text-content {
+  font-size: 13px;
+  color: #475569;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.global-error-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: #fff5f5;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  color: #dc2626;
+  font-size: 13px;
+}
