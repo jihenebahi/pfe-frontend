@@ -749,7 +749,6 @@ function Formateurs() {
                   </td>
                 </tr>
               ) : (
-                
                 paginated.map((f, idx) => {
                   const fms = toFormations(f.formations);
                   return (
@@ -781,7 +780,7 @@ function Formateurs() {
                 })
               )}
             </tbody>
-           </table>
+          </table>
         </div>
 
         {totalPages > 1 && (

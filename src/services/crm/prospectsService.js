@@ -1,4 +1,4 @@
-// src/services/prospectsService.js
+// src/services/crm/prospectsService.js
 import api from '../api';
 
 const BASE = 'prospects/';
@@ -101,7 +101,8 @@ const DIPLOME_MAP_INV       = invertMap(DIPLOME_MAP);
 
 /**
  * Convertit un objet du formulaire React → payload Django
- * fd.responsableId contient l'ID (number) de l'utilisateur sélectionné
+ * Le champ responsable est automatiquement défini par le backend
+ * (l'utilisateur connecté est assigné comme responsable)
  */
 export const toApiPayload = (fd, formationIds = []) => ({
   nom:       fd.nom?.trim()    || '',
@@ -123,9 +124,8 @@ export const toApiPayload = (fd, formationIds = []) => ({
   canal_contact_prefere: CANAL_MAP[fd.canalContact]  || '',
   commentaires:          fd.commentaires             || '',
 
-  statut:      STATUT_MAP[fd.statut] || 'nouveau',
-  // On envoie l'ID numérique du user sélectionné
-  responsable: fd.responsableId ? parseInt(fd.responsableId, 10) : null,
+  statut: STATUT_MAP[fd.statut] || 'nouveau',
+  // ✅ Le champ responsable n'est plus envoyé - le backend l'ajoute automatiquement
 });
 
 /**
@@ -156,8 +156,10 @@ export const fromApiResponse = (p) => ({
   commentaires:   p.commentaires                         || '',
 
   statut:        STATUT_MAP_INV[p.statut] || p.statut,
-  responsableId: p.responsable     ? String(p.responsable) : '',  // ID → select
-  responsable:   p.responsable_nom || '',                          // nom → affichage
+  // Responsable : on garde l'ID et le nom pour affichage
+  // Note: le champ n'est plus utilisé dans le formulaire, mais conservé pour l'affichage
+  responsableId: p.responsable     ? String(p.responsable) : '',  // ID → pour compatibilité
+  responsable:   p.responsable_nom || '',                          // nom → affichage dans le détail
 
   date:        p.date_creation ? p.date_creation.slice(0, 10) : '',
   historique:  '',
@@ -180,12 +182,15 @@ export const getProspect = async (id) => {
 
 export const createProspect = async (fd, formationIds = []) => {
   const payload = toApiPayload(fd, formationIds);
+  // Le backend ajoutera automatiquement request.user comme responsable
   const res     = await api.post(BASE, payload);
   return fromApiResponse(res.data);
 };
 
 export const updateProspect = async (id, fd, formationIds = []) => {
   const payload = toApiPayload(fd, formationIds);
+  // Pour la modification, on n'envoie pas le responsable pour ne pas l'écraser
+  // Le responsable reste celui qui a été défini à la création
   const res     = await api.patch(`${BASE}${id}/`, payload);
   return fromApiResponse(res.data);
 };
