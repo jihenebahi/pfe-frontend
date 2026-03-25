@@ -33,7 +33,7 @@ const FORM_FIELDS = [
   'dateNaissance', 'genre', 'niveauEtudes', 'diplomeObtenu',
   'source', 'formation', 'niveau', 'modePreference',
   'canalContact', 'commentaires',
-  'statut', 'responsableId',
+  'statut', // 'responsableId' supprimé
 ];
 
 /* ══════════════════════════════════════════════════════════
@@ -97,15 +97,14 @@ const T = ({ label, name, placeholder = '', fd, set, errors = {} }) => (
 
 /* ══════════════════════════════════════════════════════════
    FORMULAIRE
-   USERS = [{ id, username }]  — chargés depuis l'API
+   Le responsable est automatiquement défini par le backend
 ══════════════════════════════════════════════════════════ */
-const ProspectForm = ({ initial, formRef, FORMATIONS, USERS }) => {
+const ProspectForm = ({ initial, formRef, FORMATIONS }) => {
   const defaults = {
     nom: '', prenom: '', email: '', tel: '', ville: '', pays: '',
     dateNaissance: '', genre: '', niveauEtudes: '', diplomeObtenu: '',
     formation: '', niveau: '', modePreference: '',
     canalContact: '', source: '', statut: '',
-    responsableId: '',   // ← ID du user sélectionné
     commentaires: '',
   };
 
@@ -201,28 +200,7 @@ const ProspectForm = ({ initial, formRef, FORMATIONS, USERS }) => {
           options={['Nouveau', 'Contacté', 'Intéressé', 'Converti', 'Perdu']}
           fd={fd} set={set} errors={errors}
         />
-
-        {/* Responsable — select dynamique depuis la BDD */}
-        <div className={`pf-group${errors['responsableId'] ? ' pf-group--error' : ''}`}>
-          <label>Responsable du suivi *</label>
-          <select
-            value={fd.responsableId || ''}
-            onChange={e => set('responsableId', e.target.value)}
-            className={errors['responsableId'] ? 'input-error' : ''}
-          >
-            <option value="">— Sélectionner —</option>
-            {USERS.map(u => (
-              <option key={u.id} value={String(u.id)}>
-                {u.username}
-              </option>
-            ))}
-          </select>
-          {errors['responsableId'] && (
-            <span className="pf-error-msg">
-              <i className="fa-solid fa-circle-exclamation"></i> {errors['responsableId']}
-            </span>
-          )}
-        </div>
+        {/* Champ responsable supprimé - défini automatiquement par le backend */}
       </div>
     </form>
   );
@@ -234,7 +212,7 @@ const ProspectForm = ({ initial, formRef, FORMATIONS, USERS }) => {
 const DrawerPanel = ({
   drawerOpen, drawerMode, drawerTarget,
   closeDrawer, saveDrawer, saving,
-  formRef, FORMATIONS, USERS,
+  formRef, FORMATIONS,
 }) => {
   if (!drawerOpen) return null;
   const isEdit = drawerMode === 'edit';
@@ -259,7 +237,6 @@ const DrawerPanel = ({
             initial={isEdit ? drawerTarget : null}
             formRef={formRef}
             FORMATIONS={FORMATIONS}
-            USERS={USERS}
           />
         </div>
 
@@ -370,24 +347,13 @@ const Toast = ({ toast }) => {
 const Prospects = () => {
 
   const [FORMATIONS, setFORMATIONS] = useState([]);
-  // ── Liste des users chargés depuis l'API ──────────────
-  const [USERS, setUSERS] = useState([]);
 
   useEffect(() => {
-    // Charger les formations
+    // Charger les formations uniquement
     api.get('formations/')
       .then(res => setFORMATIONS(res.data.map(f => ({ id: f.id, label: f.intitule, duree: `${f.duree}h` }))))
       .catch(() => setFORMATIONS([]));
-
-    // Charger les utilisateurs depuis l'API accounts
-    // L'endpoint GET /api/auth/users/ retourne la liste des comptes
-    api.get('auth/users/')
-      .then(res => {
-        // On garde id + username pour le select
-        const users = res.data.map(u => ({ id: u.id, username: u.username }));
-        setUSERS(users);
-      })
-      .catch(() => setUSERS([]));
+    // Le chargement des utilisateurs est supprimé car le responsable est automatique
   }, []);
 
   // ── State ──
@@ -487,16 +453,20 @@ const Prospects = () => {
       return;
     }
 
-    const data         = ref.data;
+    const data = ref.data;
     const formationIds = data.formation ? [parseInt(data.formation, 10)].filter(Boolean) : [];
+    
+    // Supprimer responsableId s'il existe (n'est plus utilisé)
+    const { responsableId, ...cleanData } = data;
+    
     setSaving(true);
     try {
       if (drawerMode === 'add') {
-        const newP = await createProspect(data, formationIds);
+        const newP = await createProspect(cleanData, formationIds);
         setProspects(prev => [newP, ...prev]);
         showToast('Prospect ajouté avec succès !');
       } else {
-        const updated = await updateProspect(drawerTarget.id, data, formationIds);
+        const updated = await updateProspect(drawerTarget.id, cleanData, formationIds);
         setProspects(prev => prev.map(p => p.id === drawerTarget.id ? updated : p));
         if (detailTarget && detailTarget.id === drawerTarget.id) setDetailTarget(updated);
         showToast('Prospect modifié avec succès !');
@@ -656,7 +626,6 @@ const Prospects = () => {
                 </div>
                 <div className="det-sid-field">
                   <span className="det-sid-label"><i className="fa-solid fa-user-tie"></i> Responsable</span>
-                  {/* Affichage du username depuis responsable_nom */}
                   <span className="det-sid-val">{p.responsable || '—'}</span>
                 </div>
               </div>
@@ -784,7 +753,7 @@ const Prospects = () => {
         <DrawerPanel
           drawerOpen={drawerOpen} drawerMode={drawerMode} drawerTarget={drawerTarget}
           closeDrawer={closeDrawer} saveDrawer={saveDrawer} saving={saving}
-          formRef={formRef} FORMATIONS={FORMATIONS} USERS={USERS}
+          formRef={formRef} FORMATIONS={FORMATIONS}
         />
         <DeleteModal
           showDeleteModal={showDeleteModal} deleteTarget={deleteTarget}
@@ -925,7 +894,7 @@ const Prospects = () => {
       <DrawerPanel
         drawerOpen={drawerOpen} drawerMode={drawerMode} drawerTarget={drawerTarget}
         closeDrawer={closeDrawer} saveDrawer={saveDrawer} saving={saving}
-        formRef={formRef} FORMATIONS={FORMATIONS} USERS={USERS}
+        formRef={formRef} FORMATIONS={FORMATIONS}
       />
       <DeleteModal
         showDeleteModal={showDeleteModal} deleteTarget={deleteTarget}
@@ -936,4 +905,4 @@ const Prospects = () => {
   );
 };
 
-export default Prospects; 
+export default Prospects;

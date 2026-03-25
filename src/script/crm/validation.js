@@ -98,11 +98,6 @@ export const validateField = (field, value) => {
       if (!v || !VALID_STATUT.includes(v)) return 'Veuillez sélectionner un statut.';
       return '';
 
-    // ── Responsable : maintenant un ID numérique dynamique ──
-    case 'responsableId':
-      if (!v) return 'Veuillez sélectionner un responsable.';
-      return '';
-
     case 'canalContact':
       return '';
 
@@ -120,7 +115,8 @@ export const validateAll = (fd) => {
     'nom', 'prenom', 'email', 'tel', 'ville', 'pays',
     'dateNaissance', 'genre', 'niveauEtudes', 'diplomeObtenu',
     'source', 'formation', 'niveau', 'modePreference',
-    'statut', 'responsableId',   // ← ID dynamique, plus de liste statique
+    'statut',
+    // ✅ 'responsableId' supprimé — assigné automatiquement par le backend (request.user)
     'commentaires',
   ];
 
