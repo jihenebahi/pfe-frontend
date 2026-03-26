@@ -208,3 +208,15 @@ export const addHistorique = async (prospectId, data) => {
   const res = await api.post(`${BASE}${prospectId}/historiques/`, data);
   return res.data;
 };
+
+
+/**
+ * Convertit un prospect en étudiant.
+ * Le prospect est supprimé côté backend après création de l'étudiant.
+ * @param {number} prospectId
+ * @param {object} data  { formations_ids, statut_etudiant, notes }
+ */
+export const convertToEtudiant = async (prospectId, data) => {
+  const res = await api.post(`${BASE}${prospectId}/convert/`, data);
+  return res.data;  // { message, etudiant_id }
+};
