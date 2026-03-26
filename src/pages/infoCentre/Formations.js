@@ -1,5 +1,5 @@
 // src/pages/infoCentre/Formations.js
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import Layout from "../../components/Layout";
 import {
@@ -7,7 +7,7 @@ import {
   ajouterFormation,
   modifierFormation,
   supprimerFormation,
-  getFormateursDisponibles,   // ✅ NOUVEAU
+  getFormateursDisponibles,
 } from "../../services/infoCentre/formationService";
 import { getCategories } from "../../services/infoCentre/categorieService";
 import {
@@ -42,7 +42,7 @@ const FORMAT_MAPPING = {
 const EMPTY_FORM = {
   intitule: "",
   categorie: "",
-  formateurs: [],          // ✅ NOUVEAU — liste d'IDs
+  formateurs: [],
   description: "",
   objectifs_pedagogiques: "",
   prerequis: "",
@@ -58,78 +58,241 @@ const EMPTY_FORM = {
 };
 
 /* ─────────────────────────────────────────
-   Composant multi-select formateurs
+   MODIFICATION 2 : Dropdown filtre Niveau (style Formateurs)
+───────────────────────────────────────── */
+function NiveauFilterDropdown({ selectedValue, onSelect }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const close = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, []);
+
+  const niveaux = ["Débutant", "Intermédiaire", "Avancé"];
+  const niveauIcons = { "Débutant": "fa-seedling", "Intermédiaire": "fa-chart-line", "Avancé": "fa-star" };
+  const displayText = selectedValue || "Tous les niveaux";
+
+  return (
+    <div className="formation-filter-dropdown" ref={ref}>
+      <button type="button" className="filter-dropdown-btn" onClick={() => setOpen(!open)}>
+        <i className="fa-solid fa-layer-group"></i>
+        <span className="filter-dropdown-text">{displayText}</span>
+        <i className={`fa-solid fa-chevron-${open ? "up" : "down"} filter-dropdown-chevron`}></i>
+      </button>
+      {open && (
+        <div className="filter-dropdown-panel">
+          <div className="filter-dropdown-list">
+            <div
+              className={`filter-dropdown-item ${selectedValue === "" ? "active" : ""}`}
+              onClick={() => { onSelect(""); setOpen(false); }}
+            >
+              <i className="fa-solid fa-arrow-rotate-left"></i>
+              <span>Tous les niveaux</span>
+            </div>
+            {niveaux.map((n) => (
+              <div
+                key={n}
+                className={`filter-dropdown-item ${selectedValue === n ? "active" : ""}`}
+                onClick={() => { onSelect(n); setOpen(false); }}
+              >
+                <i className={`fa-solid ${niveauIcons[n]}`}></i>
+                <span>{n}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────
+   MODIFICATION 2 : Dropdown filtre Catégorie (style Formateurs)
+───────────────────────────────────────── */
+function CategorieFilterDropdown({ categories, selectedValue, onSelect }) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const close = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, []);
+
+  const filtered = categories.filter(c =>
+    c.nom.toLowerCase().includes(search.toLowerCase())
+  );
+  const displayText = selectedValue || "Toutes les catégories";
+
+  return (
+    <div className="formation-filter-dropdown" ref={ref}>
+      <button type="button" className="filter-dropdown-btn" onClick={() => setOpen(!open)}>
+        <i className="fa-solid fa-tags"></i>
+        <span className="filter-dropdown-text">{displayText}</span>
+        <i className={`fa-solid fa-chevron-${open ? "up" : "down"} filter-dropdown-chevron`}></i>
+      </button>
+      {open && (
+        <div className="filter-dropdown-panel">
+          <div className="filter-dropdown-search">
+            <i className="fa-solid fa-magnifying-glass"></i>
+            <input
+              type="text"
+              placeholder="Rechercher une catégorie..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              autoFocus
+            />
+          </div>
+          <div className="filter-dropdown-list">
+            <div
+              className={`filter-dropdown-item ${selectedValue === "" ? "active" : ""}`}
+              onClick={() => { onSelect(""); setOpen(false); setSearch(""); }}
+            >
+              <i className="fa-solid fa-arrow-rotate-left"></i>
+              <span>Toutes les catégories</span>
+            </div>
+            {filtered.length === 0 ? (
+              <div className="filter-dropdown-empty">Aucune catégorie trouvée</div>
+            ) : (
+              filtered.map((cat) => (
+                <div
+                  key={cat.id}
+                  className={`filter-dropdown-item ${selectedValue === cat.nom ? "active" : ""}`}
+                  onClick={() => { onSelect(cat.nom); setOpen(false); setSearch(""); }}
+                >
+                  <i className="fa-solid fa-tag"></i>
+                  <span>{cat.nom}</span>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────
+   MODIFICATION 4 : FormateurMultiSelect amélioré
+   — 3 lignes visibles + scrollbar + recherche intégrée
 ───────────────────────────────────────── */
 function FormateurMultiSelect({ formateurs, selected, onChange }) {
+  const [search, setSearch] = useState("");
+
+  const filtered = formateurs.filter(f =>
+    `${f.prenom} ${f.nom}`.toLowerCase().includes(search.toLowerCase())
+  );
+
   return (
-    <div style={{
-      border: "1px solid #e2e8f0",
-      borderRadius: "8px",
-      maxHeight: "180px",
-      overflowY: "auto",
-      background: "#fff",
-      display: "grid",
-      gridTemplateColumns: "1fr 1fr",
-    }}>
-      {formateurs.length === 0 ? (
-        <div style={{ gridColumn: "1/-1", padding: "12px 16px", color: "#94a3b8", fontSize: "13px" }}>
-          Aucun formateur disponible
+    <div className="fmt-multiselect-wrap">
+      {/* Barre de recherche */}
+      <div className="fmt-multiselect-search">
+        <i className="fa-solid fa-magnifying-glass"></i>
+        <input
+          type="text"
+          placeholder="Rechercher un formateur..."
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+        />
+        {search && (
+          <button type="button" className="fmt-search-clear" onClick={() => setSearch("")}>
+            <i className="fa-solid fa-xmark"></i>
+          </button>
+        )}
+      </div>
+      {/* Liste avec scrollbar — 3 lignes max (3 × 44px) */}
+      <div className="fmt-multiselect-list">
+        {formateurs.length === 0 ? (
+          <div className="fmt-multiselect-empty">Aucun formateur disponible</div>
+        ) : filtered.length === 0 ? (
+          <div className="fmt-multiselect-empty">Aucun résultat pour « {search} »</div>
+        ) : (
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr" }}>
+            {filtered.map((f) => {
+              const isChecked = selected.includes(f.id);
+              return (
+                <label
+                  key={f.id}
+                  className={`fmt-multiselect-item${isChecked ? " checked" : ""}`}
+                  onClick={() => {
+                    if (isChecked) onChange(selected.filter((id) => id !== f.id));
+                    else onChange([...selected, f.id]);
+                  }}
+                >
+                  <span className={`fmt-checkbox${isChecked ? " checked" : ""}`}>
+                    {isChecked && (
+                      <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+                        <path d="M1 4L3.5 6.5L9 1" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    )}
+                  </span>
+                  <input type="checkbox" checked={isChecked} onChange={() => {}} style={{ display: "none" }} />
+                  <span className="fmt-name">{f.prenom} {f.nom}</span>
+                </label>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────
+   MODIFICATION 5 : Section formateurs dans le détail
+   — toujours visible, 4 lignes + scrollbar + recherche
+───────────────────────────────────────── */
+function FormateurDetailSection({ formateurs }) {
+  const [search, setSearch] = useState("");
+
+  const filtered = formateurs.filter(f =>
+    f.nom_complet.toLowerCase().includes(search.toLowerCase())
+  );
+
+  return (
+    <div className="detail-sec" style={{ marginTop: "16px" }}>
+      <div className="detail-sec-title">
+        <i className="fa-solid fa-chalkboard-user"></i>
+        Formateurs
+        <span style={{ marginLeft: "auto", background: "#e8f0fe", color: "#336699", borderRadius: "12px", padding: "2px 10px", fontSize: "12px", fontWeight: "700" }}>
+          {formateurs.length}
+        </span>
+      </div>
+      {/* Barre de recherche toujours visible si au moins 1 formateur */}
+      {formateurs.length > 0 && (
+        <div className="fmt-detail-search">
+          <i className="fa-solid fa-magnifying-glass"></i>
+          <input
+            type="text"
+            placeholder="Rechercher un formateur..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
+          {search && (
+            <button type="button" className="fmt-search-clear" onClick={() => setSearch("")}>
+              <i className="fa-solid fa-xmark"></i>
+            </button>
+          )}
         </div>
-      ) : (
-        formateurs.map((f) => {
-          const isChecked = selected.includes(f.id);
-          return (
-            <label
-              key={f.id}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "10px",
-                padding: "10px 14px",
-                cursor: "pointer",
-                borderBottom: "1px solid #f1f5f9",
-                transition: "background 0.15s",
-                fontSize: "13px",
-                fontWeight: isChecked ? "600" : "400",
-                color: isChecked ? "#336699" : "#334155",
-                background: isChecked ? "#f0f7ff" : "#fff",
-                userSelect: "none",
-              }}
-            >
-              <span style={{
-                width: "18px",
-                height: "18px",
-                borderRadius: "4px",
-                border: isChecked ? "2px solid #336699" : "2px solid #cbd5e1",
-                background: isChecked ? "#336699" : "#fff",
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                flexShrink: 0,
-                transition: "all 0.15s",
-              }}>
-                {isChecked && (
-                  <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
-                    <path d="M1 4L3.5 6.5L9 1" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                )}
-              </span>
-              <input
-                type="checkbox"
-                checked={isChecked}
-                onChange={() => {
-                  if (isChecked) onChange(selected.filter((id) => id !== f.id));
-                  else onChange([...selected, f.id]);
-                }}
-                style={{ display: "none" }}
-              />
-              <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                {f.prenom} {f.nom}
-              </span>
-            </label>
-          );
-        })
       )}
+      {/* Liste — 4 lignes visibles max, scrollbar si plus */}
+      <div className="fmt-detail-list">
+        {filtered.length === 0 ? (
+          <div className="fmt-detail-empty">Aucun résultat</div>
+        ) : (
+          filtered.map((f, i) => (
+            <div key={f.id || i} className="fmt-detail-item">
+              <div className="fmt-detail-avatar">
+                {f.nom_complet.split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase()}
+              </div>
+              <span className="fmt-detail-name">{f.nom_complet}</span>
+            </div>
+          ))
+        )}
+      </div>
     </div>
   );
 }
@@ -170,7 +333,7 @@ function FormateurBadges({ noms }) {
 function Formations() {
   const [formations, setFormations] = useState([]);
   const [categories, setCategories] = useState([]);
-  const [formateurs, setFormateurs] = useState([]);   // ✅ NOUVEAU
+  const [formateurs, setFormateurs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -183,6 +346,11 @@ function Formations() {
   const [modalModif, setModalModif] = useState(null);
   const [modalAjout, setModalAjout] = useState(false);
   const [modalSuppr, setModalSuppr] = useState(null);
+
+  // MODIFICATION 3 : sélection groupée (checkboxes) + archivage en lot
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [archiving, setArchiving] = useState(false);
+
   const [formAjout, setFormAjout] = useState(EMPTY_FORM);
   const [formModif, setFormModif] = useState(EMPTY_FORM);
 
@@ -195,7 +363,7 @@ function Formations() {
   const [submitLoading, setSubmitLoading] = useState(false);
 
   const navigate = useNavigate();
-  const itemsPerPage = 7;
+  const itemsPerPage = 7; // MODIFICATION 1 : déjà 7
 
   const afficherSucces = (msg) => {
     setSuccesGlobal(msg);
@@ -205,7 +373,7 @@ function Formations() {
   useEffect(() => {
     fetchFormations();
     fetchCategories();
-    fetchFormateurs();   // ✅ NOUVEAU
+    fetchFormateurs();
   }, []);
 
   const fetchFormations = async () => {
@@ -231,7 +399,6 @@ function Formations() {
     }
   };
 
-  // ✅ NOUVEAU
   const fetchFormateurs = async () => {
     try {
       const response = await getFormateursDisponibles();
@@ -278,13 +445,11 @@ function Formations() {
         year: "numeric",
       }),
       status: getFormationStatus(f),
-      // ✅ NOUVEAU — formateurs_noms vient du serializer
       formateurs_noms: f.formateurs_noms || [],
       formateurs_ids: f.formateurs || [],
     };
   };
 
-  // ---- Filtrage ----
   const filtered = formations
     .map(formatFormationPourAffichage)
     .filter((f) => {
@@ -340,7 +505,7 @@ function Formations() {
         ...formAjout,
         niveau: NIVEAU_MAPPING[formAjout.niveau] || formAjout.niveau,
         format: FORMAT_MAPPING[formAjout.format] || formAjout.format,
-        formateurs: formAjout.formateurs,   // ✅ tableau d'IDs
+        formateurs: formAjout.formateurs,
       };
 
       const cleanedData = cleanFormData(formationData);
@@ -400,7 +565,7 @@ function Formations() {
         ...formModif,
         niveau: NIVEAU_MAPPING[formModif.niveau] || formModif.niveau,
         format: FORMAT_MAPPING[formModif.format] || formModif.format,
-        formateurs: formModif.formateurs,   // ✅ tableau d'IDs
+        formateurs: formModif.formateurs,
       };
 
       const cleanedData = cleanFormData(formationData);
@@ -444,7 +609,60 @@ function Formations() {
     }
   };
 
-  // ✅ MODIFIÉ — récupère aussi les IDs des formateurs
+  // MODIFICATION 3 : archivage en lot via checkboxes
+  const toggleSelect = (id) => {
+    setSelectedIds(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.length === paginated.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(paginated.map(f => f.id));
+    }
+  };
+
+  const handleArchiverSelection = async () => {
+    if (selectedIds.length === 0) return;
+    try {
+      setArchiving(true);
+      // Pour chaque formation sélectionnée, on toggle est_active
+      for (const id of selectedIds) {
+        const formation = filtered.find(f => f.id === id);
+        if (!formation) continue;
+        await modifierFormation(id, {
+          ...cleanFormData({
+            intitule: formation.intitule,
+            categorie: formation.categorie_id,
+            formateurs: formation.formateurs_ids || [],
+            description: formation.description || "",
+            objectifs_pedagogiques: formation.objectifs_pedagogiques || "",
+            prerequis: formation.prerequis || "",
+            duree: formation.duree?.split("h")[0]?.trim() || "",
+            niveau: NIVEAU_MAPPING[formation.niveau] || formation.niveau,
+            format: FORMAT_MAPPING[formation.format] || formation.format,
+            date_debut: formation.date_debut,
+            date_fin: formation.date_fin,
+            prix_ht: formation.prix_ht,
+            prix_ttc: formation.prix_ttc,
+            nb_tranches_paiement: formation.nb_tranches_paiement || 1,
+            est_active: !formation.est_active,
+          }),
+        });
+      }
+      await fetchFormations();
+      const nb = selectedIds.length;
+      setSelectedIds([]);
+      afficherSucces(`${nb} formation${nb > 1 ? "s" : ""} archivée${nb > 1 ? "s" : ""} / réactivée${nb > 1 ? "s" : ""} avec succès !`);
+    } catch (err) {
+      console.error("Erreur lors de l'archivage:", err);
+    } finally {
+      setArchiving(false);
+    }
+  };
+
   const openModif = (f) => {
     const categorieId =
       categories.find((cat) => cat.nom === f.categorie)?.id ||
@@ -454,7 +672,7 @@ function Formations() {
     setFormModif({
       intitule: f.intitule,
       categorie: categorieId,
-      formateurs: f.formateurs_ids || [],   // ✅ IDs des formateurs existants
+      formateurs: f.formateurs_ids || [],
       description: f.description || "",
       objectifs_pedagogiques: f.objectifs_pedagogiques || "",
       prerequis: f.prerequis || "",
@@ -524,7 +742,7 @@ function Formations() {
 
       {succesGlobal && <SuccesMsg msg={succesGlobal} />}
 
-      {/* ── Toolbar ── */}
+      {/* ── Toolbar — MODIFICATION 2 : filtres dropdown style Formateurs ── */}
       <div className="toolbar">
         <div className="toolbar-left">
           <div className="search-box">
@@ -536,20 +754,19 @@ function Formations() {
               onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
             />
           </div>
-          <select className="filter-sel" value={filterNiveau}
-            onChange={(e) => { setFilterNiveau(e.target.value); setCurrentPage(1); }}>
-            <option value="">Tous les niveaux</option>
-            <option>Débutant</option>
-            <option>Intermédiaire</option>
-            <option>Avancé</option>
-          </select>
-          <select className="filter-sel" value={filterCat}
-            onChange={(e) => { setFilterCat(e.target.value); setCurrentPage(1); }}>
-            <option value="">Toutes les catégories</option>
-            {categories.map((cat) => (
-              <option key={cat.id} value={cat.nom}>{cat.nom}</option>
-            ))}
-          </select>
+
+          {/* Filtre Niveau — dropdown personnalisé */}
+          <NiveauFilterDropdown
+            selectedValue={filterNiveau}
+            onSelect={(v) => { setFilterNiveau(v); setCurrentPage(1); }}
+          />
+
+          {/* Filtre Catégorie — dropdown personnalisé */}
+          <CategorieFilterDropdown
+            categories={categoriesActives}
+            selectedValue={filterCat}
+            onSelect={(v) => { setFilterCat(v); setCurrentPage(1); }}
+          />
         </div>
         <div className="toolbar-right">
           <button className="btn btn-cat" onClick={() => navigate("/categories")}>
@@ -566,6 +783,26 @@ function Formations() {
         </div>
       </div>
 
+      {/* ── Barre d'actions groupées (apparaît quand des lignes sont cochées) ── */}
+      {selectedIds.length > 0 && (
+        <div className="bulk-action-bar">
+          <div className="bulk-action-info">
+            <i className="fa-solid fa-check-square"></i>
+            <span><strong>{selectedIds.length}</strong> formation{selectedIds.length > 1 ? "s" : ""} sélectionnée{selectedIds.length > 1 ? "s" : ""}</span>
+          </div>
+          <div className="bulk-action-btns">
+            <button className="bulk-btn bulk-btn-archive" onClick={handleArchiverSelection} disabled={archiving}>
+              {archiving
+                ? <><i className="fa-solid fa-spinner fa-spin"></i> En cours…</>
+                : <><i className="fa-solid fa-box-archive"></i> Archiver / Réactiver</>}
+            </button>
+            <button className="bulk-btn bulk-btn-cancel" onClick={() => setSelectedIds([])}>
+              <i className="fa-solid fa-xmark"></i> Annuler
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* ── Tableau ── */}
       <div className="table-card">
         <div className="table-top">
@@ -576,10 +813,19 @@ function Formations() {
           <table>
             <thead>
               <tr>
+                <th style={{ width: "40px" }}>
+                  <input
+                    type="checkbox"
+                    className="row-checkbox"
+                    checked={paginated.length > 0 && selectedIds.length === paginated.length}
+                    onChange={toggleSelectAll}
+                    title="Tout sélectionner"
+                  />
+                </th>
                 <th>#</th>
                 <th>Intitulé de la formation</th>
                 <th>Catégorie</th>
-                <th>Formateurs</th>          {/* ✅ NOUVEAU */}
+                <th>Formateurs</th>
                 <th>Niveau</th>
                 <th>Durée</th>
                 <th>Prix TTC</th>
@@ -591,11 +837,18 @@ function Formations() {
             </thead>
             <tbody>
               {paginated.map((f, index) => (
-                <tr key={f.id} className={getRowClassName(f)}>
+                <tr key={f.id} className={`${getRowClassName(f)}${selectedIds.includes(f.id) ? " row-selected" : ""}`}>
+                  <td>
+                    <input
+                      type="checkbox"
+                      className="row-checkbox"
+                      checked={selectedIds.includes(f.id)}
+                      onChange={() => toggleSelect(f.id)}
+                    />
+                  </td>
                   <td className="td-num">{(currentPage - 1) * itemsPerPage + index + 1}</td>
                   <td className="td-title">{f.intitule}</td>
                   <td><span className="cat-tag">{f.categorie}</span></td>
-                  {/* ✅ NOUVEAU — colonne formateurs */}
                   <td><FormateurBadges noms={f.formateurs_noms} /></td>
                   <td><span className={`badge ${NIVEAU_CLASS[f.niveau]}`}>{f.niveau}</span></td>
                   <td className="td-dur">{f.duree}</td>
@@ -608,8 +861,8 @@ function Formations() {
                   </td>
                   <td className="td-status">
                     <span className={`status-badge ${f.est_active ? "active" : "inactive"}`}>
-                      <i className={`fa-solid ${f.est_active ? "fa-check-circle" : "fa-ban"}`}></i>
-                      {f.est_active ? "Active" : "Inactive"}
+                      <i className={`fa-solid ${f.est_active ? "fa-check-circle" : "fa-box-archive"}`}></i>
+                      {f.est_active ? "Active" : "Archivée"}
                     </span>
                   </td>
                   <td className="td-actions">
@@ -721,28 +974,9 @@ function Formations() {
                 </div>
               </div>
 
-              {/* ✅ NOUVEAU — Section formateurs dans le détail */}
+              {/* MODIFICATION 5 : Formateurs dans détail — liste verticale, 4 visibles + scrollbar + recherche */}
               {modalDetail.formateurs_noms?.length > 0 && (
-                <div className="detail-sec" style={{ marginTop: "16px" }}>
-                  <div className="detail-sec-title">
-                    <i className="fa-solid fa-chalkboard-user"></i> Formateurs
-                  </div>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginTop: "8px" }}>
-                    {modalDetail.formateurs_noms.map((f) => (
-                      <span key={f.id} style={{
-                        background: "#e8f0fe",
-                        color: "#336699",
-                        borderRadius: "20px",
-                        padding: "4px 12px",
-                        fontSize: "13px",
-                        fontWeight: "600",
-                      }}>
-                        <i className="fa-solid fa-user" style={{ marginRight: "6px", fontSize: "11px" }}></i>
-                        {f.nom_complet}
-                      </span>
-                    ))}
-                  </div>
-                </div>
+                <FormateurDetailSection formateurs={modalDetail.formateurs_noms} />
               )}
 
               <div className="detail-sections">
@@ -821,7 +1055,7 @@ function Formations() {
                   <ErrMsg msg={erreursAjout.niveau} />
                 </div>
 
-                {/* ✅ NOUVEAU — Formateurs multi-select */}
+                {/* MODIFICATION 4 : FormateurMultiSelect amélioré — ajout */}
                 <div className="form-group full">
                   <label>
                     <i className="fa-solid fa-chalkboard-user" style={{ marginRight: "6px", color: "#336699" }}></i>
@@ -1024,7 +1258,7 @@ function Formations() {
                   <ErrMsg msg={erreursModif.niveau} />
                 </div>
 
-                {/* ✅ NOUVEAU — Formateurs multi-select (modif) */}
+                {/* MODIFICATION 4 : FormateurMultiSelect amélioré — modif */}
                 <div className="form-group full">
                   <label>
                     <i className="fa-solid fa-chalkboard-user" style={{ marginRight: "6px", color: "#336699" }}></i>
@@ -1220,6 +1454,7 @@ function Formations() {
           </div>
         </div>
       )}
+
     </Layout>
   );
 }
