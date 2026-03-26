@@ -148,7 +148,10 @@ export const fromApiResponse = (p) => ({
   diplomeObtenu: DIPLOME_MAP_INV[p.diplome_obtenu]             || p.diplome_obtenu || '',
 
   source:         SOURCE_MAP_INV[p.source]               || p.source,
-  formation:      p.formations_noms                      || '',
+  formation:      p.formations_souhaitees && p.formations_souhaitees.length > 0
+                    ? String(p.formations_souhaitees[0])
+                    : '',
+  formationLabel: p.formations_noms                      || '',
   formations_ids: p.formations_souhaitees                || [],
   niveau:         NIVEAU_MAP_INV[p.niveau_estime]        || p.niveau_estime,
   modePreference: MODE_MAP_INV[p.mode_prefere]           || p.mode_prefere,

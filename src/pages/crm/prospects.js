@@ -335,6 +335,7 @@ const ConfirmConvertModal = ({
   FORMATIONS, onCancel, onConfirm, converting,
 }) => {
   if (!show || !detailTarget) return null;
+  const { documentsFournis = [] } = convertData;
 
   return (
     <div
@@ -413,6 +414,31 @@ const ConfirmConvertModal = ({
               ) : null;
             })}
           </div>
+
+          {/* ── Documents fournis ── */}
+          {documentsFournis.length > 0 && (
+            <div style={{
+              background: 'rgba(120,80,200,.06)', border: '1px solid rgba(120,80,200,.22)',
+              borderRadius: '8px', padding: '10px 14px', textAlign: 'left', marginTop: '8px',
+            }}>
+              <div style={{ fontSize: '11px', color: '#5B2D8E', fontWeight: '700', marginBottom: '6px' }}>
+                <i className="fa-solid fa-file-lines" style={{ marginRight: '5px' }}></i>
+                {documentsFournis.length} document(s) fourni(s)
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
+                {documentsFournis.map(doc => (
+                  <span key={doc} style={{
+                    background: 'rgba(120,80,200,.12)', color: '#5B2D8E',
+                    border: '1px solid rgba(120,80,200,.30)',
+                    borderRadius: '5px', padding: '2px 8px',
+                    fontSize: '11.5px', fontWeight: '600',
+                  }}>
+                    {doc}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* ── Boutons ── */}
@@ -485,7 +511,7 @@ const Prospects = () => {
   // ── États conversion ──
   const [convertOpen,        setConvertOpen]        = useState(false);
   const [selectedForms,      setSelectedForms]      = useState([]);
-  const [convertData,        setConvertData]        = useState({ statutEtudiant: 'Actif', notes: '' });
+  const [convertData,        setConvertData]        = useState({ statutEtudiant: 'Actif', notes: '', documentsFournis: [] });
   const [showConfirmConvert, setShowConfirmConvert] = useState(false);  // ← modale de confirmation
   const [converting,         setConverting]         = useState(false);  // ← état chargement
 
@@ -635,7 +661,7 @@ const Prospects = () => {
       setDetailTarget(p);
       setConvertOpen(false);
       setSelectedForms([]);
-      setConvertData({ statutEtudiant: 'Actif', notes: '' });
+      setConvertData({ statutEtudiant: 'Actif', notes: '', documentsFournis: [] });
       setPageView('detail');
     } catch {
       showToast('Impossible de charger les détails du prospect.', 'error');
@@ -676,7 +702,7 @@ const Prospects = () => {
   const toggleConvert = () => {
     setConvertOpen(v => !v);
     setSelectedForms([]);
-    setConvertData({ statutEtudiant: 'Actif', notes: '' });
+    setConvertData({ statutEtudiant: 'Actif', notes: '', documentsFournis: [] });
   };
 
   // Coche / décoche une formation dans le convert-box
@@ -698,9 +724,10 @@ const Prospects = () => {
     setConverting(true);
     try {
       await convertToEtudiant(detailTarget.id, {
-        formations_ids:  selectedForms,
-        statut_etudiant: convertData.statutEtudiant,
-        notes:           convertData.notes,
+        formations_ids:   selectedForms,
+        statut_etudiant:  convertData.statutEtudiant,
+        notes:            convertData.notes,
+        documents_fournis: convertData.documentsFournis,
       });
       // Retire le prospect de la liste locale
       setProspects(prev => prev.filter(p => p.id !== detailTarget.id));
@@ -823,6 +850,31 @@ const Prospects = () => {
                     ))}
                   </div>
 
+                  {/* ── Documents fournis ── */}
+                  <div className="form-group" style={{ marginTop: '12px' }}>
+                    <label className="form-label">Documents fournis</label>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px 20px', marginTop: '6px' }}>
+                      {['CIN', 'CV', 'Contrat', 'Reçu', 'RNE', 'Autres'].map(doc => (
+                        <label key={doc} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: '#374151', cursor: 'pointer', userSelect: 'none' }}>
+                          <input
+                            type="checkbox"
+                            checked={convertData.documentsFournis.includes(doc)}
+                            onChange={() =>
+                              setConvertData(prev => ({
+                                ...prev,
+                                documentsFournis: prev.documentsFournis.includes(doc)
+                                  ? prev.documentsFournis.filter(d => d !== doc)
+                                  : [...prev.documentsFournis, doc],
+                              }))
+                            }
+                            style={{ width: '15px', height: '15px', cursor: 'pointer' }}
+                          />
+                          {doc}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
                   {/* ── Statut étudiant (contrôlé) ── */}
                   <div className="form-group" style={{ marginTop: '12px' }}>
                     <label className="form-label">Statut étudiant</label>
@@ -891,7 +943,7 @@ const Prospects = () => {
                 <div className="det-section-header"><i className="fa-solid fa-briefcase"></i> Informations commerciales</div>
                 <div className="det-fields-grid">
                   <div className="det-field"><span className="det-field-label">Source</span><span className="det-field-val"><span className="src-tag">{p.source || '—'}</span></span></div>
-                  <div className="det-field"><span className="det-field-label">Formation souhaitée</span><span className="det-field-val">{p.formation || '—'}</span></div>
+                  <div className="det-field"><span className="det-field-label">Formation souhaitée</span><span className="det-field-val">{p.formationLabel || '—'}</span></div>
                   <div className="det-field"><span className="det-field-label">Niveau estimé</span><span className="det-field-val">{p.niveau || '—'}</span></div>
                   <div className="det-field"><span className="det-field-label">Mode préféré</span><span className="det-field-val">{p.modePreference || '—'}</span></div>
                   <div className="det-field"><span className="det-field-label">Canal de contact</span><span className="det-field-val">{p.canalContact || '—'}</span></div>
@@ -1039,7 +1091,7 @@ const Prospects = () => {
                           <div className="td-sub">{p.email}</div>
                           <div className="td-sub">{p.tel}</div>
                         </td>
-                        <td className="td-sub">{p.formation || '—'}</td>
+                        <td className="td-sub">{p.formationLabel || '—'}</td>
                         <td>
                           <span className="badge" style={{ background: sc.bg, color: sc.color, border: `1px solid ${sc.border}` }}>
                             {p.statut}
