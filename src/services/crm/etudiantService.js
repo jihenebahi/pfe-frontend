@@ -46,6 +46,16 @@ const DIPLOME_MAP = {
   'Autre':        'autre',
 };
 
+// Ajouter le mapping inverse pour les documents
+const DOCUMENT_TYPE_MAP_INV = {
+  'cin':      'CIN',
+  'cv':       'CV',
+  'contrat':  'Contrat',
+  'recu':     'Reçu',
+  'rne':      'RNE',
+  'autre':    'Autres',
+};
+
 // ── Maps inverses (Django → React) ──
 const invertMap = (map) =>
   Object.fromEntries(Object.entries(map).map(([k, v]) => [v, k]));
@@ -99,7 +109,6 @@ export const fromApiResponse = (e) => {
     niveauEtudes:  NIVEAU_ETUDES_MAP_INV[e.niveau_etudes]        || e.niveau_etudes  || '',
     diplomeObtenu: DIPLOME_MAP_INV[e.diplome_obtenu]             || e.diplome_obtenu || '',
 
-    // Formations : IDs pour le formulaire, objets pour l'affichage
     formations:       e.formations_suivies || [],
     formationsDetail: (e.formations_suivies_detail || []).map(f => ({
       id:    f.id,
@@ -111,13 +120,13 @@ export const fromApiResponse = (e) => {
     dateInscription: e.date_inscription || '',
     statut:          statutFr,
 
-    // attestation dérivée du statut Django
     attestation:     e.statut === 'certifie' ? 'Oui' : 'Non',
-    dateAttestation: '',       // non stocké en base → UI only
-    modeFormation:   'Présentiel', // non stocké en base → UI only
+    dateAttestation: '',
+    modeFormation:   'Présentiel',
 
     notes:     e.notes || '',
-    documents: (e.documents || []).map(d => d.type_document), // ex: ['cin','cv']
+    // ✅ MODIFICATION: mapper les documents correctement
+    documents: (e.documents || []).map(d => DOCUMENT_TYPE_MAP_INV[d.type_document] || d.type_document),
 
     responsableId: e.responsable ? String(e.responsable) : '',
     responsable:   e.responsable_nom || '',
