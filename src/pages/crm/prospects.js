@@ -11,7 +11,7 @@ import {
   convertToEtudiant,          // ← AJOUT
 } from '../../services/crm/prospectsService';
 import api from '../../services/api';
-import { validateField, validateAll } from '../../script/crm/validation';
+import { validateField, validateAll, validateNiveauEtudesDiplome } from '../../script/crm/validation';
 
 /* ══════════════════════════════════════════════════════════
    CONSTANTES
@@ -27,8 +27,8 @@ const STATUT_COLORS = {
 const SOURCES            = ['Facebook', 'Instagram', 'TikTok', 'LinkedIn', 'Google', 'Site web', 'Recommandation', 'Appel entrant', 'Autre'];
 const PAYS_LIST          = ['Tunisie', 'France', 'Algérie', 'Maroc', 'Belgique', 'Canada', 'Autre'];
 const GENRE_LIST         = ['Homme', 'Femme', 'Autre'];
-const NIVEAU_ETUDES_LIST = ['Lycée', 'Bac', 'Licence', 'Master', 'Doctorat', 'Autre'];
-const DIPLOME_LIST       = ['Baccalauréat', 'Licence', 'Master', 'Aucun', 'Autre'];
+const NIVEAU_ETUDES_LIST = ['Primaire', 'Préparatoire', 'Secondaire', 'Universitaire'];
+const DIPLOME_LIST       = ['Bac', 'Licence', 'Master', 'Autre'];
 
 const FORM_FIELDS = [
   'nom', 'prenom', 'email', 'tel', 'ville', 'pays',
@@ -126,8 +126,35 @@ const ProspectForm = ({ initial, formRef, FORMATIONS }) => {
 
   const set = (field, value) => {
     setFd(prev => ({ ...prev, [field]: value }));
-    const msg = validateField(field, value);
+    
+    // Validation simple du champ
+    let msg = validateField(field, value, { ...fd, [field]: value });
+    
     setErrors(prev => ({ ...prev, [field]: msg }));
+    
+    // Si on modifie niveauEtudes ou diplomeObtenu, on valide l'autre champ aussi
+    if (field === 'niveauEtudes' || field === 'diplomeObtenu') {
+      const otherField = field === 'niveauEtudes' ? 'diplomeObtenu' : 'niveauEtudes';
+      const otherValue = field === 'niveauEtudes' ? fd.diplomeObtenu : value;
+      const currentValue = value;
+      
+      // Valider l'autre champ
+      const otherMsg = validateField(otherField, otherValue, { 
+        ...fd, 
+        [field]: currentValue,
+        [otherField]: otherValue 
+      });
+      
+      setErrors(prev => ({ ...prev, [otherField]: otherMsg }));
+      
+      // Valider à nouveau le champ actuel avec les nouvelles valeurs
+      const currentMsg = validateField(field, currentValue, { 
+        ...fd, 
+        [field]: currentValue,
+        [otherField]: otherValue 
+      });
+      setErrors(prev => ({ ...prev, [field]: currentMsg }));
+    }
   };
 
   return (
@@ -153,8 +180,75 @@ const ProspectForm = ({ initial, formRef, FORMATIONS }) => {
       <div className="pf-grid">
         <F label="Date de naissance" name="dateNaissance" type="date"          fd={fd} set={set} errors={errors} />
         <S label="Genre"             name="genre"         options={GENRE_LIST}         fd={fd} set={set} errors={errors} />
-        <S label="Niveau d'études"   name="niveauEtudes"  options={NIVEAU_ETUDES_LIST} fd={fd} set={set} errors={errors} />
-        <S label="Diplôme obtenu"    name="diplomeObtenu" options={DIPLOME_LIST}        fd={fd} set={set} errors={errors} />
+        
+        {/* Niveau d'études avec gestion des erreurs améliorée */}
+        <div className={`pf-group${errors['niveauEtudes'] ? ' pf-group--error' : ''}`}>
+          <label>Niveau d'études</label>
+          <select
+            value={fd.niveauEtudes || ''}
+            onChange={e => {
+              const newValue = e.target.value;
+              set('niveauEtudes', newValue);
+              // Si on change le niveau d'études, on vérifie aussi le diplôme
+              if (fd.diplomeObtenu) {
+                const crossError = validateNiveauEtudesDiplome(newValue, fd.diplomeObtenu);
+                if (crossError) {
+                  setErrors(prev => ({ ...prev, diplomeObtenu: crossError }));
+                } else {
+                  setErrors(prev => {
+                    const newErrors = { ...prev };
+                    delete newErrors.diplomeObtenu;
+                    return newErrors;
+                  });
+                }
+              }
+            }}
+            className={errors['niveauEtudes'] ? 'input-error' : ''}
+          >
+            <option value="">— Sélectionner —</option>
+            {NIVEAU_ETUDES_LIST.map(o => <option key={o} value={o}>{o}</option>)}
+          </select>
+          {errors['niveauEtudes'] && (
+            <span className="pf-error-msg">
+              <i className="fa-solid fa-circle-exclamation"></i> {errors['niveauEtudes']}
+            </span>
+          )}
+        </div>
+
+        {/* Diplôme obtenu avec gestion des erreurs améliorée */}
+        <div className={`pf-group${errors['diplomeObtenu'] ? ' pf-group--error' : ''}`}>
+          <label>Diplôme obtenu</label>
+          <select
+            value={fd.diplomeObtenu || ''}
+            onChange={e => {
+              const newValue = e.target.value;
+              set('diplomeObtenu', newValue);
+              // Si on change le diplôme, on vérifie aussi le niveau d'études
+              if (fd.niveauEtudes) {
+                const crossError = validateNiveauEtudesDiplome(fd.niveauEtudes, newValue);
+                if (crossError) {
+                  setErrors(prev => ({ ...prev, diplomeObtenu: crossError, niveauEtudes: crossError }));
+                } else {
+                  setErrors(prev => {
+                    const newErrors = { ...prev };
+                    delete newErrors.diplomeObtenu;
+                    delete newErrors.niveauEtudes;
+                    return newErrors;
+                  });
+                }
+              }
+            }}
+            className={errors['diplomeObtenu'] ? 'input-error' : ''}
+          >
+            <option value="">— Sélectionner —</option>
+            {DIPLOME_LIST.map(o => <option key={o} value={o}>{o}</option>)}
+          </select>
+          {errors['diplomeObtenu'] && (
+            <span className="pf-error-msg">
+              <i className="fa-solid fa-circle-exclamation"></i> {errors['diplomeObtenu']}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* ── Section 3 : Informations commerciales ── */}
@@ -328,7 +422,7 @@ const DeleteModal = ({ showDeleteModal, deleteTarget, closeDelete, confirmDelete
 };
 
 /* ══════════════════════════════════════════════════════════
-   MODALE CONFIRMATION CONVERSION  ← NOUVEAU
+   MODALE CONFIRMATION CONVERSION
 ══════════════════════════════════════════════════════════ */
 const ConfirmConvertModal = ({
   show, detailTarget, selectedForms, convertData,
@@ -501,6 +595,7 @@ const Prospects = () => {
   const [apiError,           setApiError]           = useState(null);
   const [search,             setSearch]             = useState('');
   const [filterStatut,       setFilterStatut]       = useState('Tous');
+  const [filterSource,       setFilterSource]       = useState('Toutes');
   const [sortAlpha,          setSortAlpha]          = useState(false);
   const [currentPage,        setCurrentPage]        = useState(1);
   const [pageView,           setPageView]           = useState('list');
@@ -512,8 +607,8 @@ const Prospects = () => {
   const [convertOpen,        setConvertOpen]        = useState(false);
   const [selectedForms,      setSelectedForms]      = useState([]);
   const [convertData,        setConvertData]        = useState({ statutEtudiant: 'Actif', notes: '', documentsFournis: [] });
-  const [showConfirmConvert, setShowConfirmConvert] = useState(false);  // ← modale de confirmation
-  const [converting,         setConverting]         = useState(false);  // ← état chargement
+  const [showConfirmConvert, setShowConfirmConvert] = useState(false);
+  const [converting,         setConverting]         = useState(false);
 
   const [toast,  setToast]  = useState({ show: false, message: '', type: 'success' });
   const [saving, setSaving] = useState(false);
@@ -559,6 +654,7 @@ const Prospects = () => {
       );
     }
     if (filterStatut !== 'Tous') f = f.filter(p => p.statut === filterStatut);
+    if (filterSource !== 'Toutes') f = f.filter(p => p.source === filterSource);
     if (sortAlpha) f.sort((a, b) => a.nom.localeCompare(b.nom));
     return f;
   };
@@ -716,7 +812,7 @@ const Prospects = () => {
       showToast('Veuillez sélectionner au moins une formation.', 'error');
       return;
     }
-    setShowConfirmConvert(true);   // ← ouvre la modale
+    setShowConfirmConvert(true);
   };
 
   // Étape 2 : appel API → supprime le prospect → retour liste
@@ -985,7 +1081,6 @@ const Prospects = () => {
           showDeleteModal={showDeleteModal} deleteTarget={deleteTarget}
           closeDelete={closeDelete} confirmDelete={confirmDelete}
         />
-        {/* ← MODALE DE CONFIRMATION CONVERSION */}
         <ConfirmConvertModal
           show={showConfirmConvert}
           detailTarget={detailTarget}
@@ -1029,6 +1124,18 @@ const Prospects = () => {
             <option>Converti</option>
             <option>Perdu</option>
           </select>
+          <select className="filter-sel" value={filterSource} onChange={e => { setFilterSource(e.target.value); setCurrentPage(1); }}>
+            <option>Toutes</option>
+            <option>Facebook</option>
+            <option>Instagram</option>
+            <option>TikTok</option>
+            <option>LinkedIn</option>
+            <option>Google</option>
+            <option>Site web</option>
+            <option>Recommandation</option>
+            <option>Appel entrant</option>
+            <option>Autre</option>
+          </select>
           <button className={`btn btn-sort ${sortAlpha ? 'active' : ''}`} onClick={() => setSortAlpha(v => !v)}>
             <i className="fa-solid fa-arrow-down-a-z"></i> A → Z
           </button>
@@ -1046,6 +1153,15 @@ const Prospects = () => {
       <div className="table-card">
         <div className="table-top">
           <strong>{filtered.length}</strong> prospect{filtered.length !== 1 ? 's' : ''} trouvé{filtered.length !== 1 ? 's' : ''}
+          {(filterStatut !== 'Tous' || filterSource !== 'Toutes') && (
+            <div className="active-filters">
+              {filterStatut !== 'Tous' && <span className="filter-badge">Statut: {filterStatut}</span>}
+              {filterSource !== 'Toutes' && <span className="filter-badge">Source: {filterSource}</span>}
+              <button className="clear-filters" onClick={() => { setFilterStatut('Tous'); setFilterSource('Toutes'); setCurrentPage(1); }}>
+                <i className="fa-solid fa-xmark"></i> Effacer
+              </button>
+            </div>
+          )}
         </div>
 
         {loading ? (

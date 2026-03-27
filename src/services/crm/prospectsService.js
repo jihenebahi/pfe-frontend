@@ -62,20 +62,17 @@ const GENRE_MAP = {
 };
 
 const NIVEAU_ETUDES_MAP = {
-  'Lycée':    'lycee',
-  'Bac':      'bac',
-  'Licence':  'licence',
-  'Master':   'master',
-  'Doctorat': 'doctorat',
-  'Autre':    'autre',
+  'Primaire':      'primaire',
+  'Préparatoire':  'preparatoire',
+  'Secondaire':    'secondaire',
+  'Universitaire': 'universitaire',
 };
 
 const DIPLOME_MAP = {
-  'Baccalauréat': 'baccalaureat',
-  'Licence':      'licence',
-  'Master':       'master',
-  'Aucun':        'aucun',
-  'Autre':        'autre',
+  'Bac':     'bac',
+  'Licence': 'licence',
+  'Master':  'master',
+  'Autre':   'autre',
 };
 
 // ══════════════════════════════════════════════════════════
@@ -112,10 +109,10 @@ export const toApiPayload = (fd, formationIds = []) => ({
   ville:     fd.ville?.trim()  || '',
   pays:      PAYS_MAP[fd.pays] || 'tunisie',
 
-  date_naissance: fd.dateNaissance              || null,
-  genre:          GENRE_MAP[fd.genre]           || '',
-  niveau_etudes:  NIVEAU_ETUDES_MAP[fd.niveauEtudes] || '',
-  diplome_obtenu: DIPLOME_MAP[fd.diplomeObtenu] || '',
+  date_naissance: fd.dateNaissance                    || null,
+  genre:          GENRE_MAP[fd.genre]                 || '',
+  niveau_etudes:  NIVEAU_ETUDES_MAP[fd.niveauEtudes]  || '',
+  diplome_obtenu: DIPLOME_MAP[fd.diplomeObtenu]        || '',
 
   source:                SOURCE_MAP[fd.source]       || 'site_web',
   formations_souhaitees: formationIds,
@@ -159,10 +156,8 @@ export const fromApiResponse = (p) => ({
   commentaires:   p.commentaires                         || '',
 
   statut:        STATUT_MAP_INV[p.statut] || p.statut,
-  // Responsable : on garde l'ID et le nom pour affichage
-  // Note: le champ n'est plus utilisé dans le formulaire, mais conservé pour l'affichage
-  responsableId: p.responsable     ? String(p.responsable) : '',  // ID → pour compatibilité
-  responsable:   p.responsable_nom || '',                          // nom → affichage dans le détail
+  responsableId: p.responsable     ? String(p.responsable) : '',
+  responsable:   p.responsable_nom || '',
 
   date:        p.date_creation ? p.date_creation.slice(0, 10) : '',
   historique:  '',
@@ -185,15 +180,12 @@ export const getProspect = async (id) => {
 
 export const createProspect = async (fd, formationIds = []) => {
   const payload = toApiPayload(fd, formationIds);
-  // Le backend ajoutera automatiquement request.user comme responsable
   const res     = await api.post(BASE, payload);
   return fromApiResponse(res.data);
 };
 
 export const updateProspect = async (id, fd, formationIds = []) => {
   const payload = toApiPayload(fd, formationIds);
-  // Pour la modification, on n'envoie pas le responsable pour ne pas l'écraser
-  // Le responsable reste celui qui a été défini à la création
   const res     = await api.patch(`${BASE}${id}/`, payload);
   return fromApiResponse(res.data);
 };
@@ -211,7 +203,6 @@ export const addHistorique = async (prospectId, data) => {
   const res = await api.post(`${BASE}${prospectId}/historiques/`, data);
   return res.data;
 };
-
 
 /**
  * Convertit un prospect en étudiant.

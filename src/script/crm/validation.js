@@ -14,10 +14,41 @@ const VALID_MODE   = ['Présentiel', 'En ligne', 'Hybride'];
 const VALID_STATUT = ['Nouveau', 'Contacté', 'Intéressé', 'Converti', 'Perdu'];
 
 const VALID_GENRE         = ['Homme', 'Femme', 'Autre'];
-const VALID_NIVEAU_ETUDES = ['Lycée', 'Bac', 'Licence', 'Master', 'Doctorat', 'Autre'];
-const VALID_DIPLOME       = ['Baccalauréat', 'Licence', 'Master', 'Aucun', 'Autre'];
+const VALID_NIVEAU_ETUDES = ['Primaire', 'Préparatoire', 'Secondaire', 'Universitaire'];
+const VALID_DIPLOME       = ['Bac', 'Licence', 'Master', 'Autre'];
 
-export const validateField = (field, value) => {
+// ══════════════════════════════════════════════════════════
+//  NOUVELLE FONCTION : Validation combinée niveau d'études / diplôme
+// ══════════════════════════════════════════════════════════
+export const validateNiveauEtudesDiplome = (niveauEtudes, diplomeObtenu) => {
+  // Si niveau d'études n'est pas renseigné, on ne valide pas le diplôme
+  if (!niveauEtudes) return '';
+  
+  // Cas 1 : Primaire - ne doit pas avoir de diplôme
+  if (niveauEtudes === 'Primaire' && diplomeObtenu && diplomeObtenu !== '') {
+    return 'Pour le niveau Primaire, aucun diplôme ne peut être sélectionné.';
+  }
+  
+  // Cas 2 : Préparatoire - ne doit pas avoir de diplôme
+  if (niveauEtudes === 'Préparatoire' && diplomeObtenu && diplomeObtenu !== '') {
+    return 'Pour le niveau Préparatoire, aucun diplôme ne peut être sélectionné.';
+  }
+  
+  // Cas 3 : Secondaire - doit avoir Bac (ou peut être vide)
+  if (niveauEtudes === 'Secondaire' && diplomeObtenu && diplomeObtenu !== 'Bac') {
+    return 'Pour le niveau Secondaire, seul le diplôme "Bac" est accepté.';
+  }
+  
+  // Cas 4 : Universitaire - diplôme obligatoire (sauf si vide)
+  if (niveauEtudes === 'Universitaire' && (!diplomeObtenu || diplomeObtenu === '')) {
+    return 'Pour le niveau Universitaire, un diplôme doit être sélectionné.';
+  }
+  
+  
+  return '';
+};
+
+export const validateField = (field, value, allValues = {}) => {
   const v = (value || '').trim();
 
   switch (field) {
@@ -61,7 +92,7 @@ export const validateField = (field, value) => {
       const d = new Date(v);
       if (isNaN(d.getTime())) return 'Date de naissance invalide.';
       const ageAns = (Date.now() - d.getTime()) / (1000 * 60 * 60 * 24 * 365.25);
-      if (ageAns < 14)  return "L'âge minimum est 14 ans.";
+      if (ageAns < 6)   return "L'âge minimum est 6 ans.";
       if (ageAns > 100) return 'Date de naissance invalide.';
       return '';
     }
@@ -72,10 +103,24 @@ export const validateField = (field, value) => {
 
     case 'niveauEtudes':
       if (v && !VALID_NIVEAU_ETUDES.includes(v)) return "Veuillez sélectionner un niveau d'études valide.";
+      // Validation croisée avec diplomeObtenu
+      if (v && allValues.diplomeObtenu !== undefined) {
+        const crossError = validateNiveauEtudesDiplome(v, allValues.diplomeObtenu);
+        if (crossError) return crossError;
+      }
       return '';
 
     case 'diplomeObtenu':
       if (v && !VALID_DIPLOME.includes(v)) return 'Veuillez sélectionner un diplôme valide.';
+      // Validation croisée avec niveauEtudes
+      if (v && allValues.niveauEtudes) {
+        const crossError = validateNiveauEtudesDiplome(allValues.niveauEtudes, v);
+        if (crossError) return crossError;
+      }
+      // Si niveauEtudes est Universitaire et diplomeObtenu vide
+      if (allValues.niveauEtudes === 'Universitaire' && (!v || v === '')) {
+        return 'Pour le niveau Universitaire, un diplôme doit être sélectionné.';
+      }
       return '';
 
     case 'source':
@@ -116,15 +161,29 @@ export const validateAll = (fd) => {
     'dateNaissance', 'genre', 'niveauEtudes', 'diplomeObtenu',
     'source', 'formation', 'niveau', 'modePreference',
     'statut',
-    // ✅ 'responsableId' supprimé — assigné automatiquement par le backend (request.user)
     'commentaires',
   ];
 
   const errors = {};
+  
+  // Valider chaque champ en passant toutes les valeurs pour les validations croisées
   allFields.forEach((field) => {
-    const msg = validateField(field, fd[field]);
+    const msg = validateField(field, fd[field], fd);
     if (msg) errors[field] = msg;
   });
+
+  // Validation supplémentaire pour s'assurer que les erreurs croisées sont bien capturées
+  const crossError = validateNiveauEtudesDiplome(fd.niveauEtudes, fd.diplomeObtenu);
+  if (crossError) {
+    // Si l'erreur concerne le niveau d'études
+    if (crossError.includes('Primaire') || crossError.includes('Préparatoire') || crossError.includes('Secondaire')) {
+      errors.niveauEtudes = crossError;
+    }
+    // Si l'erreur concerne le diplôme
+    if (crossError.includes('diplôme') || crossError.includes('Bac')) {
+      errors.diplomeObtenu = crossError;
+    }
+  }
 
   return { errors, isValid: Object.keys(errors).length === 0 };
 };

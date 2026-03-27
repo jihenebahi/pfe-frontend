@@ -662,3 +662,90 @@ textarea.form-control { height: 72px; padding: 8px 11px; resize: vertical; }
 
 
 
+/* Styles pour les filtres actifs */
+.active-filters {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.filter-badge {
+  background: rgba(51, 102, 153, 0.1);
+  border: 1px solid rgba(51, 102, 153, 0.3);
+  border-radius: 20px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #336699;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.clear-filters {
+  background: transparent;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  padding: 4px 10px;
+  font-size: 12px;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.clear-filters:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #1e293b;
+}
+
+/* Ajustement pour le toolbar avec deux selects */
+.tb-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.filter-sel {
+  padding: 8px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: white;
+  font-size: 13px;
+  color: #1e293b;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.filter-sel:hover {
+  border-color: #336699;
+}
+
+.filter-sel:focus {
+  outline: none;
+  border-color: #336699;
+  box-shadow: 0 0 0 3px rgba(51, 102, 153, 0.1);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .tb-left {
+    flex-wrap: wrap;
+  }
+  
+  .filter-sel {
+    flex: 1;
+    min-width: 120px;
+  }
+  
+  .active-filters {
+    margin-top: 8px;
+    width: 100%;
+    justify-content: flex-start;
+  }
+}
