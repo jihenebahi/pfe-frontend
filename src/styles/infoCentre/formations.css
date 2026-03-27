@@ -960,6 +960,73 @@ tr.row-selected td {
    MODIFICATION 5 : Section formateurs dans le détail
    — 4 lignes visibles + scrollbar + recherche
 ═══════════════════════════════════════════ */
+
+/* ── Wrapper principal : même look que .detail-sec MAIS sans overflow:hidden ── */
+.fmt-detail-sec-wrap {
+  border: 1px solid #E2E8F0;
+  border-radius: 10px;
+  /* PAS de overflow:hidden → la scrollbar reste visible */
+  margin-bottom: 14px;
+}
+
+/* ── Titre : copie exacte de .detail-sec-title ── */
+.fmt-detail-sec-header {
+  background: #F1F5F9;
+  border-bottom: 1px solid #E2E8F0;
+  border-radius: 10px 10px 0 0;
+  padding: 10px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #336699;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.fmt-detail-sec-header i {
+  color: #33CCFF;
+  font-size: 14px;
+}
+
+.fmt-detail-count-badge {
+  margin-left: auto;
+  background: #e8f0fe;
+  color: #336699;
+  border-radius: 12px;
+  padding: 2px 10px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* ── Zone scrollable : 4 items × ~49px = ~196px ── */
+.fmt-detail-list-scrollable {
+  max-height: 196px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  border-radius: 0 0 10px 10px;
+  padding: 4px 0;
+}
+
+/* Scrollbar webkit */
+.fmt-detail-list-scrollable::-webkit-scrollbar { width: 6px; }
+.fmt-detail-list-scrollable::-webkit-scrollbar-track {
+  background: #F8FAFC;
+  border-radius: 0 0 10px 10px;
+}
+.fmt-detail-list-scrollable::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 6px;
+}
+.fmt-detail-list-scrollable::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}
+
+/* Scrollbar Firefox */
+.fmt-detail-list-scrollable {
+  scrollbar-width: thin;
+  scrollbar-color: #CBD5E1 #F8FAFC;
+}
+
 .fmt-detail-search {
   display: flex;
   align-items: center;
@@ -1137,4 +1204,529 @@ tr.row-selected td {
 @keyframes fadeInDown {
   from { opacity: 0; transform: translateY(-10px); }
   to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ═══════════════════════════════════════════
+   CHECKBOX CUSTOM — style Gmail
+═══════════════════════════════════════════ */
+.cb-wrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  position: relative;
+  user-select: none;
+  width: 20px;
+  height: 20px;
+}
+
+.cb-input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  margin: 0;
+}
+
+.cb-box {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  border: 2px solid #CBD5E1;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all .15s ease;
+  flex-shrink: 0;
+}
+
+.cb-wrap:hover .cb-box {
+  border-color: #336699;
+  background: #f0f7ff;
+}
+
+.cb-input:checked + .cb-box {
+  background: #336699;
+  border-color: #336699;
+}
+
+.cb-input:indeterminate + .cb-box {
+  background: #336699;
+  border-color: #336699;
+}
+
+.cb-input:checked + .cb-box::after {
+  content: "";
+  display: block;
+  width: 5px;
+  height: 9px;
+  border: 2px solid #fff;
+  border-top: none;
+  border-left: none;
+  transform: rotate(45deg) translateY(-1px);
+}
+
+.cb-input:indeterminate + .cb-box::after {
+  content: "";
+  display: block;
+  width: 8px;
+  height: 2px;
+  background: #fff;
+  border-radius: 2px;
+}
+
+/* Variante verte — archivées */
+.cb-box-arch { border-color: #CBD5E1; }
+.cb-wrap:hover .cb-box-arch { border-color: #16a34a; background: #f0fdf4; }
+.cb-input:checked + .cb-box-arch { background: #16a34a; border-color: #16a34a; }
+.cb-input:indeterminate + .cb-box-arch { background: #16a34a; border-color: #16a34a; }
+
+/* Ligne sélectionnée actives */
+tr.row-selected td {
+  background: rgba(51, 102, 153, 0.06) !important;
+  border-bottom-color: rgba(51, 102, 153, 0.12) !important;
+}
+
+/* Ligne sélectionnée archivées */
+tr.row-selected-arch td {
+  background: rgba(22, 163, 74, 0.06) !important;
+  border-bottom-color: rgba(22, 163, 74, 0.12) !important;
+}
+
+/* ═══════════════════════════════════════════
+   BARRE D'ACTIONS GROUPÉES
+═══════════════════════════════════════════ */
+.bulk-action-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-radius: 10px;
+  padding: 11px 18px;
+  margin-bottom: 12px;
+  gap: 12px;
+  animation: fadeInDown .2s ease;
+}
+
+.bulk-bar-archive {
+  background: #eef4ff;
+  border: 1.5px solid #336699;
+}
+
+.bulk-bar-reactiver {
+  background: #f0fdf4;
+  border: 1.5px solid #16a34a;
+}
+
+.bulk-action-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.bulk-count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  background: #336699;
+  color: #fff;
+  border-radius: 20px;
+  padding: 3px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  min-width: 36px;
+}
+
+.bulk-count-badge i { font-size: 10px; }
+.bulk-count-green { background: #16a34a; }
+
+.bulk-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #334155;
+}
+
+.bulk-action-btns {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.bulk-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  font-family: 'Poppins', sans-serif;
+  transition: .2s;
+  white-space: nowrap;
+}
+
+.bulk-btn-archive {
+  background: #f59e0b;
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(245,158,11,.28);
+}
+.bulk-btn-archive:hover { background: #d97706; transform: translateY(-1px); }
+.bulk-btn-archive:disabled { opacity: .65; cursor: not-allowed; transform: none; }
+
+.bulk-btn-reactiver {
+  background: #16a34a;
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(22,163,74,.28);
+}
+.bulk-btn-reactiver:hover { background: #15803d; transform: translateY(-1px); }
+.bulk-btn-reactiver:disabled { opacity: .65; cursor: not-allowed; transform: none; }
+
+.bulk-btn-cancel {
+  background: #F1F5F9;
+  color: #475569;
+  border: 1px solid #E2E8F0;
+}
+.bulk-btn-cancel:hover { background: #E2E8F0; }
+
+/* ═══════════════════════════════════════════
+   ONGLETS FORMATIONS
+═══════════════════════════════════════════ */
+.formations-tabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 20px;
+  background: #F1F5F9;
+  border-radius: 10px;
+  padding: 4px;
+  width: fit-content;
+}
+
+.tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 18px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  font-family: 'Poppins', sans-serif;
+  transition: all .2s;
+  color: #64748B;
+  background: transparent;
+  white-space: nowrap;
+}
+
+.tab-btn i { font-size: 13px; }
+.tab-btn:hover { color: #336699; background: rgba(255,255,255,.7); }
+
+.tab-btn.tab-active {
+  background: #fff;
+  color: #336699;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(0,0,0,.08);
+}
+
+.tab-btn.tab-archive-active {
+  background: #fff;
+  color: #b45309;
+}
+
+.tab-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 0 6px;
+}
+
+.tab-count-active { background: rgba(51,102,153,.12); color: #336699; }
+.tab-count-archive { background: rgba(245,158,11,.15); color: #b45309; }
+
+/* ═══════════════════════════════════════════
+   BANNIÈRE INFO ARCHIVÉES
+═══════════════════════════════════════════ */
+.archive-info-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #fffbeb;
+  border: 1px solid #fcd34d;
+  border-radius: 10px;
+  padding: 12px 16px;
+  font-size: 13px;
+  color: #92400e;
+  margin-bottom: 16px;
+}
+.archive-info-banner i { color: #f59e0b; font-size: 15px; flex-shrink: 0; }
+
+/* ═══════════════════════════════════════════
+   TABLE ARCHIVÉES
+═══════════════════════════════════════════ */
+.table-card-archive thead tr { background: #78716c; }
+tr.row-archived td { background: #fafaf9; color: #78716c; }
+tr.row-archived:hover td { background: #f5f5f4 !important; }
+
+/* Lignes état */
+tr.row-past td { background: rgba(241,245,249,.5); color: #94A3B8; }
+tr.row-ongoing td { background: rgba(232,248,245,.4); }
+tr.row-upcoming td { background: rgba(232,240,252,.4); }
+/* Ajoutez ces styles à la fin de votre fichier formations.css */
+
+/* ═══════════════════════════════════════════
+   CATÉGORIE FORM SELECT (pour modales)
+═══════════════════════════════════════════ */
+
+/* Style pour le conteneur du sélecteur de catégorie dans les formulaires */
+.categorie-form-select {
+  position: relative;
+  width: 100%;
+}
+
+.categorie-select-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 12px;
+  height: 38px;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #334155;
+  font-family: 'Poppins', sans-serif;
+  cursor: pointer;
+  transition: .2s;
+  width: 100%;
+}
+
+.categorie-select-btn:hover {
+  border-color: #33CCFF;
+  background: #fff;
+}
+
+.categorie-select-text {
+  flex: 1;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.categorie-select-placeholder {
+  color: #94A3B8;
+}
+
+.categorie-select-chevron {
+  font-size: 10px;
+  color: #94A3B8;
+  flex-shrink: 0;
+}
+
+.categorie-dropdown-panel {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: #fff;
+  border: 1.5px solid #E2E8F0;
+  border-radius: 10px;
+  box-shadow: 0 8px 28px rgba(0,0,0,.13);
+  z-index: 700;
+  overflow: hidden;
+  animation: fadeUp .15s ease;
+}
+
+.categorie-dropdown-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid #F1F5F9;
+  background: #F8FAFC;
+}
+
+.categorie-dropdown-search i {
+  color: #94A3B8;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.categorie-dropdown-search input {
+  border: none;
+  outline: none;
+  font-size: 12px;
+  color: #334155;
+  background: transparent;
+  width: 100%;
+  font-family: 'Poppins', sans-serif;
+}
+
+.categorie-dropdown-search input::placeholder {
+  color: #B0BEC5;
+}
+
+.categorie-dropdown-list {
+  max-height: 240px;
+  overflow-y: auto;
+  padding: 4px 0;
+}
+
+.categorie-dropdown-list::-webkit-scrollbar {
+  width: 5px;
+}
+
+.categorie-dropdown-list::-webkit-scrollbar-track {
+  background: #F1F5F9;
+}
+
+.categorie-dropdown-list::-webkit-scrollbar-thumb {
+  background: #B0BEC5;
+  border-radius: 4px;
+}
+
+.categorie-dropdown-list::-webkit-scrollbar-thumb:hover {
+  background: #78909C;
+}
+
+.categorie-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: background .15s;
+  border-bottom: 1px solid #F8FAFC;
+  font-size: 12.5px;
+  color: #334155;
+}
+
+.categorie-dropdown-item:last-child {
+  border-bottom: none;
+}
+
+.categorie-dropdown-item:hover {
+  background: #F1F5F9;
+}
+
+.categorie-dropdown-item.active {
+  background: rgba(51,204,255,.12);
+  border-left: 3px solid #33CCFF;
+}
+
+.categorie-dropdown-item i {
+  font-size: 12px;
+  color: #94A3B8;
+  flex-shrink: 0;
+}
+
+.categorie-dropdown-item.active i {
+  color: #33CCFF;
+}
+
+.categorie-dropdown-item.active span {
+  font-weight: 600;
+  color: #336699;
+}
+
+.categorie-dropdown-empty {
+  padding: 16px;
+  text-align: center;
+  color: #94A3B8;
+  font-size: 12px;
+  font-style: italic;
+}
+
+/* ═══════════════════════════════════════════
+   AMÉLIORATIONS DES LISTES FORMATEURS
+═══════════════════════════════════════════ */
+
+/* Style pour la liste des formateurs (3 lignes visibles) */
+.fmt-multiselect-list {
+  max-height: 132px;
+  overflow-y: auto;
+}
+
+/* Style pour la liste des formateurs dans le détail (4 lignes visibles) */
+.fmt-detail-list {
+  max-height: 192px;
+  overflow-y: auto;
+  padding: 6px 0;
+}
+
+/* Uniformisation des scrollbars */
+.fmt-multiselect-list::-webkit-scrollbar,
+.fmt-detail-list::-webkit-scrollbar,
+.categorie-dropdown-list::-webkit-scrollbar {
+  width: 5px;
+}
+
+.fmt-multiselect-list::-webkit-scrollbar-track,
+.fmt-detail-list::-webkit-scrollbar-track,
+.categorie-dropdown-list::-webkit-scrollbar-track {
+  background: #F8FAFC;
+}
+
+.fmt-multiselect-list::-webkit-scrollbar-thumb,
+.fmt-detail-list::-webkit-scrollbar-thumb,
+.categorie-dropdown-list::-webkit-scrollbar-thumb {
+  background: #B0BEC5;
+  border-radius: 4px;
+}
+
+.fmt-multiselect-list::-webkit-scrollbar-thumb:hover,
+.fmt-detail-list::-webkit-scrollbar-thumb:hover,
+.categorie-dropdown-list::-webkit-scrollbar-thumb:hover {
+  background: #78909C;
+}
+
+/* Style pour les items de la liste des catégories dans les modales */
+.categorie-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  cursor: pointer;
+  transition: background .15s;
+  border-bottom: 1px solid #F1F5F9;
+  font-size: 13px;
+  color: #334155;
+}
+
+.categorie-dropdown-item:last-child {
+  border-bottom: none;
+}
+
+.categorie-dropdown-item:hover {
+  background: #F8FAFC;
+}
+
+.categorie-dropdown-item.active {
+  background: rgba(51,204,255,.12);
+  border-left: 3px solid #33CCFF;
+}
+
+.categorie-dropdown-item.active span {
+  font-weight: 600;
+  color: #336699;
+}
+
+.categorie-dropdown-item i {
+  font-size: 12px;
+  color: #94A3B8;
+  flex-shrink: 0;
+}
+
+.categorie-dropdown-item.active i {
+  color: #33CCFF;
 }
