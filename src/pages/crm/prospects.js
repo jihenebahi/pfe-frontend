@@ -8,10 +8,11 @@ import {
   createProspect,
   updateProspect,
   deleteProspect,
-  convertToEtudiant,          // ← AJOUT
+  convertToEtudiant,
 } from '../../services/crm/prospectsService';
 import api from '../../services/api';
 import { validateField, validateAll, validateNiveauEtudesDiplome } from '../../script/crm/validation';
+import ImportProspectsModal from './ImportProspectsModal';
 
 /* ══════════════════════════════════════════════════════════
    CONSTANTES
@@ -126,32 +127,23 @@ const ProspectForm = ({ initial, formRef, FORMATIONS }) => {
 
   const set = (field, value) => {
     setFd(prev => ({ ...prev, [field]: value }));
-    
-    // Validation simple du champ
     let msg = validateField(field, value, { ...fd, [field]: value });
-    
     setErrors(prev => ({ ...prev, [field]: msg }));
-    
-    // Si on modifie niveauEtudes ou diplomeObtenu, on valide l'autre champ aussi
+
     if (field === 'niveauEtudes' || field === 'diplomeObtenu') {
       const otherField = field === 'niveauEtudes' ? 'diplomeObtenu' : 'niveauEtudes';
       const otherValue = field === 'niveauEtudes' ? fd.diplomeObtenu : value;
       const currentValue = value;
-      
-      // Valider l'autre champ
-      const otherMsg = validateField(otherField, otherValue, { 
-        ...fd, 
+      const otherMsg = validateField(otherField, otherValue, {
+        ...fd,
         [field]: currentValue,
-        [otherField]: otherValue 
+        [otherField]: otherValue
       });
-      
       setErrors(prev => ({ ...prev, [otherField]: otherMsg }));
-      
-      // Valider à nouveau le champ actuel avec les nouvelles valeurs
-      const currentMsg = validateField(field, currentValue, { 
-        ...fd, 
+      const currentMsg = validateField(field, currentValue, {
+        ...fd,
         [field]: currentValue,
-        [otherField]: otherValue 
+        [otherField]: otherValue
       });
       setErrors(prev => ({ ...prev, [field]: currentMsg }));
     }
@@ -178,9 +170,9 @@ const ProspectForm = ({ initial, formRef, FORMATIONS }) => {
         <i className="fa-solid fa-graduation-cap"></i> Profil académique
       </div>
       <div className="pf-grid">
-        <F label="Date de naissance" name="dateNaissance" type="date"          fd={fd} set={set} errors={errors} />
-        <S label="Genre"             name="genre"         options={GENRE_LIST}         fd={fd} set={set} errors={errors} />
-        
+        <F label="Date de naissance" name="dateNaissance" type="date"         fd={fd} set={set} errors={errors} />
+        <S label="Genre"             name="genre"         options={GENRE_LIST} fd={fd} set={set} errors={errors} />
+
         {/* Niveau d'études avec gestion des erreurs améliorée */}
         <div className={`pf-group${errors['niveauEtudes'] ? ' pf-group--error' : ''}`}>
           <label>Niveau d'études</label>
@@ -189,7 +181,6 @@ const ProspectForm = ({ initial, formRef, FORMATIONS }) => {
             onChange={e => {
               const newValue = e.target.value;
               set('niveauEtudes', newValue);
-              // Si on change le niveau d'études, on vérifie aussi le diplôme
               if (fd.diplomeObtenu) {
                 const crossError = validateNiveauEtudesDiplome(newValue, fd.diplomeObtenu);
                 if (crossError) {
@@ -223,7 +214,6 @@ const ProspectForm = ({ initial, formRef, FORMATIONS }) => {
             onChange={e => {
               const newValue = e.target.value;
               set('diplomeObtenu', newValue);
-              // Si on change le diplôme, on vérifie aussi le niveau d'études
               if (fd.niveauEtudes) {
                 const crossError = validateNiveauEtudesDiplome(fd.niveauEtudes, newValue);
                 if (crossError) {
@@ -438,7 +428,6 @@ const ConfirmConvertModal = ({
     >
       <div className="modal-suppr" style={{ maxWidth: '430px' }}>
 
-        {/* ── Icône ── */}
         <div style={{ display: 'flex', justifyContent: 'center', paddingTop: '28px' }}>
           <div style={{
             width: '60px', height: '60px', borderRadius: '50%',
@@ -458,7 +447,6 @@ const ConfirmConvertModal = ({
             et un compte étudiant sera créé automatiquement.
           </p>
 
-          {/* ── Card prospect ── */}
           <div style={{
             display: 'flex', alignItems: 'center', gap: '12px',
             background: '#f8fafc', border: '1px solid #e2e8f0',
@@ -489,7 +477,6 @@ const ConfirmConvertModal = ({
             </span>
           </div>
 
-          {/* ── Formations sélectionnées ── */}
           <div style={{
             background: 'rgba(51,204,255,.06)', border: '1px solid rgba(51,204,255,.25)',
             borderRadius: '8px', padding: '10px 14px', textAlign: 'left',
@@ -509,7 +496,6 @@ const ConfirmConvertModal = ({
             })}
           </div>
 
-          {/* ── Documents fournis ── */}
           {documentsFournis.length > 0 && (
             <div style={{
               background: 'rgba(120,80,200,.06)', border: '1px solid rgba(120,80,200,.22)',
@@ -535,7 +521,6 @@ const ConfirmConvertModal = ({
           )}
         </div>
 
-        {/* ── Boutons ── */}
         <div style={{ padding: '12px 24px 20px', display: 'flex', gap: '10px' }}>
           <button
             className="btn btn-cancel"
@@ -596,12 +581,15 @@ const Prospects = () => {
   const [search,             setSearch]             = useState('');
   const [filterStatut,       setFilterStatut]       = useState('Tous');
   const [filterSource,       setFilterSource]       = useState('Toutes');
+  // ✅ NOUVEAU — filtre formation
+  const [filterFormation,    setFilterFormation]    = useState('Toutes');
   const [sortAlpha,          setSortAlpha]          = useState(false);
   const [currentPage,        setCurrentPage]        = useState(1);
   const [pageView,           setPageView]           = useState('list');
   const [detailTarget,       setDetailTarget]       = useState(null);
   const [deleteTarget,       setDeleteTarget]       = useState(null);
   const [showDeleteModal,    setShowDeleteModal]    = useState(false);
+  const [showImport,         setShowImport]         = useState(false);
 
   // ── États conversion ──
   const [convertOpen,        setConvertOpen]        = useState(false);
@@ -653,8 +641,10 @@ const Prospects = () => {
         (p.tel || '').includes(q)
       );
     }
-    if (filterStatut !== 'Tous') f = f.filter(p => p.statut === filterStatut);
-    if (filterSource !== 'Toutes') f = f.filter(p => p.source === filterSource);
+    if (filterStatut !== 'Tous')      f = f.filter(p => p.statut === filterStatut);
+    if (filterSource !== 'Toutes')    f = f.filter(p => p.source === filterSource);
+    // ✅ NOUVEAU — filtrage par formation
+    if (filterFormation !== 'Toutes') f = f.filter(p => String(p.formation) === filterFormation || p.formationLabel === filterFormation);
     if (sortAlpha) f.sort((a, b) => a.nom.localeCompare(b.nom));
     return f;
   };
@@ -793,20 +783,16 @@ const Prospects = () => {
   // ══════════════════════════════════════════════════════════
   // CONVERSION PROSPECT → ÉTUDIANT
   // ══════════════════════════════════════════════════════════
-
-  // Ouvre / ferme le formulaire de conversion
   const toggleConvert = () => {
     setConvertOpen(v => !v);
     setSelectedForms([]);
     setConvertData({ statutEtudiant: 'Actif', notes: '', documentsFournis: [] });
   };
 
-  // Coche / décoche une formation dans le convert-box
   const toggleForm = (id) => setSelectedForms(prev =>
     prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
   );
 
-  // Étape 1 : validation basique → ouvre la modale de confirmation
   const handleConvert = () => {
     if (!selectedForms.length) {
       showToast('Veuillez sélectionner au moins une formation.', 'error');
@@ -815,17 +801,15 @@ const Prospects = () => {
     setShowConfirmConvert(true);
   };
 
-  // Étape 2 : appel API → supprime le prospect → retour liste
   const confirmConvert = async () => {
     setConverting(true);
     try {
       await convertToEtudiant(detailTarget.id, {
-        formations_ids:   selectedForms,
-        statut_etudiant:  convertData.statutEtudiant,
-        notes:            convertData.notes,
+        formations_ids:    selectedForms,
+        statut_etudiant:   convertData.statutEtudiant,
+        notes:             convertData.notes,
         documents_fournis: convertData.documentsFournis,
       });
-      // Retire le prospect de la liste locale
       setProspects(prev => prev.filter(p => p.id !== detailTarget.id));
       setShowConfirmConvert(false);
       setConvertOpen(false);
@@ -971,7 +955,7 @@ const Prospects = () => {
                     </div>
                   </div>
 
-                  {/* ── Statut étudiant (contrôlé) ── */}
+                  {/* ── Statut étudiant ── */}
                   <div className="form-group" style={{ marginTop: '12px' }}>
                     <label className="form-label">Statut étudiant</label>
                     <select
@@ -985,7 +969,7 @@ const Prospects = () => {
                     </select>
                   </div>
 
-                  {/* ── Notes (contrôlées) ── */}
+                  {/* ── Notes ── */}
                   <div className="form-group" style={{ marginTop: '10px' }}>
                     <label className="form-label">Notes / Observations</label>
                     <textarea
@@ -1099,6 +1083,16 @@ const Prospects = () => {
   // ══════════════════════════════════════════════════════════
   // PAGE LISTE
   // ══════════════════════════════════════════════════════════
+
+  // ✅ Badges filtres actifs — inclut maintenant la formation
+  const hasActiveFilters = filterStatut !== 'Tous' || filterSource !== 'Toutes' || filterFormation !== 'Toutes';
+  const clearAllFilters  = () => {
+    setFilterStatut('Tous');
+    setFilterSource('Toutes');
+    setFilterFormation('Toutes');
+    setCurrentPage(1);
+  };
+
   return (
     <Layout>
       <div className="prsp-header">
@@ -1108,6 +1102,7 @@ const Prospects = () => {
 
       <div className="toolbar">
         <div className="tb-left">
+          {/* Barre de recherche */}
           <div className="search-box">
             <i className="fa-solid fa-magnifying-glass"></i>
             <input
@@ -1116,16 +1111,28 @@ const Prospects = () => {
               onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
             />
           </div>
-          <select className="filter-sel" value={filterStatut} onChange={e => { setFilterStatut(e.target.value); setCurrentPage(1); }}>
-            <option>Tous</option>
+
+          {/* Filtre Statut */}
+          <select
+            className="filter-sel"
+            value={filterStatut}
+            onChange={e => { setFilterStatut(e.target.value); setCurrentPage(1); }}
+          >
+            <option value="Tous">Tous les statuts</option>
             <option>Nouveau</option>
             <option>Contacté</option>
             <option>Intéressé</option>
             <option>Converti</option>
             <option>Perdu</option>
           </select>
-          <select className="filter-sel" value={filterSource} onChange={e => { setFilterSource(e.target.value); setCurrentPage(1); }}>
-            <option>Toutes</option>
+
+          {/* Filtre Source */}
+          <select
+            className="filter-sel"
+            value={filterSource}
+            onChange={e => { setFilterSource(e.target.value); setCurrentPage(1); }}
+          >
+            <option value="Toutes">Toutes les sources</option>
             <option>Facebook</option>
             <option>Instagram</option>
             <option>TikTok</option>
@@ -1136,13 +1143,31 @@ const Prospects = () => {
             <option>Appel entrant</option>
             <option>Autre</option>
           </select>
+
+          {/* ✅ NOUVEAU — Filtre Formation */}
+          <select
+            className="filter-sel"
+            value={filterFormation}
+            onChange={e => { setFilterFormation(e.target.value); setCurrentPage(1); }}
+          >
+            <option value="Toutes">Toutes les formations</option>
+            {FORMATIONS.map(f => (
+              <option key={f.id} value={String(f.id)}>{f.label}</option>
+            ))}
+          </select>
+
+          {/* Bouton tri A→Z */}
           <button className={`btn btn-sort ${sortAlpha ? 'active' : ''}`} onClick={() => setSortAlpha(v => !v)}>
             <i className="fa-solid fa-arrow-down-a-z"></i> A → Z
           </button>
         </div>
+
         <div className="tb-right">
-          <button className="btn btn-imp" onClick={() => showToast('Import CSV bientôt disponible.', 'error')}>
-            <i className="fa-solid fa-file-import"></i> Importer
+          <button
+            className="btn btn-imp"
+            onClick={() => setShowImport(true)}
+          >
+            <i className="fa-solid fa-file-import"></i> Importer Excel
           </button>
           <button className="btn btn-add" onClick={openAdd}>
             <i className="fa-solid fa-plus"></i> Ajouter un prospect
@@ -1153,11 +1178,27 @@ const Prospects = () => {
       <div className="table-card">
         <div className="table-top">
           <strong>{filtered.length}</strong> prospect{filtered.length !== 1 ? 's' : ''} trouvé{filtered.length !== 1 ? 's' : ''}
-          {(filterStatut !== 'Tous' || filterSource !== 'Toutes') && (
+          {hasActiveFilters && (
             <div className="active-filters">
-              {filterStatut !== 'Tous' && <span className="filter-badge">Statut: {filterStatut}</span>}
-              {filterSource !== 'Toutes' && <span className="filter-badge">Source: {filterSource}</span>}
-              <button className="clear-filters" onClick={() => { setFilterStatut('Tous'); setFilterSource('Toutes'); setCurrentPage(1); }}>
+              {filterStatut !== 'Tous' && (
+                <span className="filter-badge">
+                  <i className="fa-solid fa-circle-dot" style={{ fontSize: '9px' }}></i>
+                  Statut : {filterStatut}
+                </span>
+              )}
+              {filterSource !== 'Toutes' && (
+                <span className="filter-badge">
+                  <i className="fa-solid fa-circle-dot" style={{ fontSize: '9px' }}></i>
+                  Source : {filterSource}
+                </span>
+              )}
+              {filterFormation !== 'Toutes' && (
+                <span className="filter-badge">
+                  <i className="fa-solid fa-circle-dot" style={{ fontSize: '9px' }}></i>
+                  Formation : {FORMATIONS.find(f => String(f.id) === filterFormation)?.label || filterFormation}
+                </span>
+              )}
+              <button className="clear-filters" onClick={clearAllFilters}>
                 <i className="fa-solid fa-xmark"></i> Effacer
               </button>
             </div>
@@ -1258,6 +1299,15 @@ const Prospects = () => {
         closeDelete={closeDelete} confirmDelete={confirmDelete}
       />
       <Toast toast={toast} />
+
+      <ImportProspectsModal
+        isOpen={showImport}
+        onClose={() => setShowImport(false)}
+        onSuccess={() => {
+          loadProspects();
+          showToast('Import réussi !', 'success');
+        }}
+      />
     </Layout>
   );
 };

@@ -214,3 +214,27 @@ export const convertToEtudiant = async (prospectId, data) => {
   const res = await api.post(`${BASE}${prospectId}/convert/`, data);
   return res.data;  // { message, etudiant_id }
 };
+
+// src/services/crm/prospectsService.js
+
+/**
+ * Importe des prospects depuis un fichier Excel.
+ * On utilise FormData car on envoie un fichier binaire (pas du JSON).
+ * @param {File} file  L'objet File sélectionné par l'utilisateur
+ * @returns {{ created, errors, total }}
+ */
+export const importProspectsExcel = async (file) => {
+  // FormData permet d'envoyer des fichiers dans une requête HTTP
+  const formData = new FormData();
+  formData.append('file', file);  // 'file' = nom du champ attendu par Django
+
+  const res = await api.post('prospects/import/', formData, {
+    headers: {
+      // On override le Content-Type pour que axios gère
+      // automatiquement le boundary du multipart/form-data
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+
+  return res.data; // { created, errors, total }
+};

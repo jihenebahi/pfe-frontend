@@ -18,33 +18,27 @@ const VALID_NIVEAU_ETUDES = ['Primaire', 'Préparatoire', 'Secondaire', 'Univers
 const VALID_DIPLOME       = ['Bac', 'Licence', 'Master', 'Autre'];
 
 // ══════════════════════════════════════════════════════════
-//  NOUVELLE FONCTION : Validation combinée niveau d'études / diplôme
+//  Validation combinée niveau d'études / diplôme
 // ══════════════════════════════════════════════════════════
 export const validateNiveauEtudesDiplome = (niveauEtudes, diplomeObtenu) => {
-  // Si niveau d'études n'est pas renseigné, on ne valide pas le diplôme
   if (!niveauEtudes) return '';
-  
-  // Cas 1 : Primaire - ne doit pas avoir de diplôme
+
   if (niveauEtudes === 'Primaire' && diplomeObtenu && diplomeObtenu !== '') {
     return 'Pour le niveau Primaire, aucun diplôme ne peut être sélectionné.';
   }
-  
-  // Cas 2 : Préparatoire - ne doit pas avoir de diplôme
+
   if (niveauEtudes === 'Préparatoire' && diplomeObtenu && diplomeObtenu !== '') {
     return 'Pour le niveau Préparatoire, aucun diplôme ne peut être sélectionné.';
   }
-  
-  // Cas 3 : Secondaire - doit avoir Bac (ou peut être vide)
+
   if (niveauEtudes === 'Secondaire' && diplomeObtenu && diplomeObtenu !== 'Bac') {
     return 'Pour le niveau Secondaire, seul le diplôme "Bac" est accepté.';
   }
-  
-  // Cas 4 : Universitaire - diplôme obligatoire (sauf si vide)
+
   if (niveauEtudes === 'Universitaire' && (!diplomeObtenu || diplomeObtenu === '')) {
     return 'Pour le niveau Universitaire, un diplôme doit être sélectionné.';
   }
-  
-  
+
   return '';
 };
 
@@ -68,7 +62,10 @@ export const validateField = (field, value, allValues = {}) => {
       return '';
 
     case 'email':
-      if (!v)                   return "L'email est obligatoire.";
+      // ✅ MODIFIÉ : l'email est maintenant optionnel.
+      // S'il est vide → pas d'erreur.
+      // S'il est renseigné → on vérifie le format et la longueur.
+      if (!v) return '';
       if (!EMAIL_REGEX.test(v)) return "Format d'email invalide (ex : nom@domaine.com).";
       if (v.length > 150)       return "L'email ne peut pas dépasser 150 caractères.";
       return '';
@@ -103,7 +100,6 @@ export const validateField = (field, value, allValues = {}) => {
 
     case 'niveauEtudes':
       if (v && !VALID_NIVEAU_ETUDES.includes(v)) return "Veuillez sélectionner un niveau d'études valide.";
-      // Validation croisée avec diplomeObtenu
       if (v && allValues.diplomeObtenu !== undefined) {
         const crossError = validateNiveauEtudesDiplome(v, allValues.diplomeObtenu);
         if (crossError) return crossError;
@@ -112,12 +108,10 @@ export const validateField = (field, value, allValues = {}) => {
 
     case 'diplomeObtenu':
       if (v && !VALID_DIPLOME.includes(v)) return 'Veuillez sélectionner un diplôme valide.';
-      // Validation croisée avec niveauEtudes
       if (v && allValues.niveauEtudes) {
         const crossError = validateNiveauEtudesDiplome(allValues.niveauEtudes, v);
         if (crossError) return crossError;
       }
-      // Si niveauEtudes est Universitaire et diplomeObtenu vide
       if (allValues.niveauEtudes === 'Universitaire' && (!v || v === '')) {
         return 'Pour le niveau Universitaire, un diplôme doit être sélectionné.';
       }
@@ -165,21 +159,17 @@ export const validateAll = (fd) => {
   ];
 
   const errors = {};
-  
-  // Valider chaque champ en passant toutes les valeurs pour les validations croisées
+
   allFields.forEach((field) => {
     const msg = validateField(field, fd[field], fd);
     if (msg) errors[field] = msg;
   });
 
-  // Validation supplémentaire pour s'assurer que les erreurs croisées sont bien capturées
   const crossError = validateNiveauEtudesDiplome(fd.niveauEtudes, fd.diplomeObtenu);
   if (crossError) {
-    // Si l'erreur concerne le niveau d'études
     if (crossError.includes('Primaire') || crossError.includes('Préparatoire') || crossError.includes('Secondaire')) {
       errors.niveauEtudes = crossError;
     }
-    // Si l'erreur concerne le diplôme
     if (crossError.includes('diplôme') || crossError.includes('Bac')) {
       errors.diplomeObtenu = crossError;
     }

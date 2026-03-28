@@ -1,0 +1,590 @@
+/* ═══════════════════════════════════════════════════════════
+   src/styles/crm/importProspects.css
+
+   PALETTE (identique à prospects.css)
+   #33CCFF  → bleu ciel    (accents, focus, drag-hover, icônes)
+   #336699  → bleu marine  (bouton principal, badges, titres)
+   #1E3A5F  → bleu nuit    (textes forts)
+   #FFCC33  → or/jaune     (non utilisé ici, réservé à l'édition)
+   #F8FAFC  → gris perle   (fond de page / fond info-box)
+   #E2E8F0  → gris clair   (bordures)
+   #F1F5F9  → gris très cl (fonds secondaires, hover)
+   #94A3B8  → gris moyen   (sous-titres, méta)
+   #64748B  → gris foncé   (textes secondaires)
+═══════════════════════════════════════════════════════════ */
+
+/* ── Variables locales ── */
+.imp-overlay {
+  --imp-primary:      #336699;
+  --imp-primary-dark: #2a5580;
+  --imp-accent:       #33CCFF;
+  --imp-accent-bg:    rgba(51, 204, 255, .10);
+  --imp-accent-ring:  rgba(51, 204, 255, .18);
+  --imp-navy:         #1E3A5F;
+  --imp-border:       #E2E8F0;
+  --imp-bg-soft:      #F8FAFC;
+  --imp-bg-hover:     #F1F5F9;
+  --imp-text-muted:   #64748B;
+  --imp-text-light:   #94A3B8;
+  --imp-success:      #1A6B4A;
+  --imp-success-bg:   #E6F7F0;
+  --imp-success-bd:   rgba(26, 107, 74, .25);
+  --imp-danger:       #c0392b;
+  --imp-danger-bg:    #FEF2F2;
+  --imp-danger-bd:    rgba(192, 57, 43, .22);
+}
+
+/* ══════════════════════════════════════════════════════════
+   OVERLAY
+══════════════════════════════════════════════════════════ */
+.imp-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 30, 55, .38);
+  backdrop-filter: blur(3px);
+  animation: imp-fadeIn .2s ease;
+  font-family: 'Poppins', sans-serif;
+}
+@keyframes imp-fadeIn { from { opacity: 0 } to { opacity: 1 } }
+
+/* ══════════════════════════════════════════════════════════
+   MODAL
+══════════════════════════════════════════════════════════ */
+.imp-modal {
+  background: #fff;
+  border-radius: 14px;
+  width: 100%;
+  max-width: 500px;
+  margin: 16px;
+  box-shadow: 0 12px 48px rgba(30, 58, 95, .18), 0 0 0 1px rgba(30,58,95,.06);
+  animation: imp-slideUp .26s cubic-bezier(.16, .84, .44, 1);
+  overflow: hidden;
+}
+@keyframes imp-slideUp {
+  from { opacity: 0; transform: translateY(20px) scale(.97) }
+  to   { opacity: 1; transform: translateY(0)    scale(1)   }
+}
+
+/* ══════════════════════════════════════════════════════════
+   HEADER
+══════════════════════════════════════════════════════════ */
+.imp-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 22px;
+  border-bottom: 3px solid var(--imp-accent);   /* même style que drawer-header */
+  background: #fff;
+}
+
+.imp-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Icône ronde couleur marine */
+.imp-icon-wrap {
+  width: 38px;
+  height: 38px;
+  border-radius: 9px;
+  background: var(--imp-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 15px;
+  flex-shrink: 0;
+  box-shadow: 0 3px 10px rgba(51, 102, 153, .28);
+}
+
+.imp-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--imp-navy);
+  margin: 0;
+  letter-spacing: -0.2px;
+}
+
+.imp-subtitle {
+  font-size: 12px;
+  color: var(--imp-text-light);
+  margin: 2px 0 0;
+  font-weight: 400;
+}
+
+/* Bouton fermer — identique à .drawer-close */
+.imp-close {
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: var(--imp-bg-hover);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--imp-text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background .18s, color .18s;
+}
+.imp-close:hover { background: #fee2e2; color: #e53e3e; }
+
+/* ══════════════════════════════════════════════════════════
+   BODY
+══════════════════════════════════════════════════════════ */
+.imp-body {
+  padding: 22px 24px 26px;
+}
+
+/* ── Info box ── */
+.imp-info-box {
+  background: var(--imp-bg-soft);
+  border: 1.5px solid var(--imp-border);
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 18px;
+}
+
+.imp-info-title {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--imp-primary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 6px;
+}
+.imp-info-title i { font-size: 12px; color: var(--imp-accent); }
+
+.imp-info-note {
+  font-size: 12px;
+  color: var(--imp-text-muted);
+  margin: 0 0 10px;
+}
+.imp-info-note strong { color: var(--imp-navy); }
+
+.imp-info-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.imp-info-item {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+/* Badges obligatoire / optionnel */
+.imp-badge {
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 2px 9px;
+  border-radius: 20px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.imp-badge-req {
+  background: rgba(192, 57, 43, .10);
+  color: var(--imp-danger);
+  border: 1px solid rgba(192, 57, 43, .22);
+}
+.imp-badge-opt {
+  background: rgba(26, 107, 74, .10);
+  color: var(--imp-success);
+  border: 1px solid rgba(26, 107, 74, .22);
+}
+
+/* Colonnes en monospace */
+.imp-info-cols {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 11.5px;
+  color: var(--imp-text-muted);
+  line-height: 1.7;
+}
+
+/* ══════════════════════════════════════════════════════════
+   ZONE DRAG & DROP
+══════════════════════════════════════════════════════════ */
+.imp-dropzone {
+  border: 2px dashed var(--imp-border);
+  border-radius: 10px;
+  padding: 28px 20px;
+  text-align: center;
+  cursor: pointer;
+  background: var(--imp-bg-soft);
+  transition: border-color .2s, background .2s;
+  margin-bottom: 18px;
+  position: relative;
+}
+
+/* Hover classique */
+.imp-dropzone:hover {
+  border-color: var(--imp-primary);
+  background: #EBF4FF;
+}
+
+/* Drag actif → accent bleu ciel */
+.imp-dropzone.dragging {
+  border-color: var(--imp-accent);
+  background: var(--imp-accent-bg);
+  box-shadow: 0 0 0 3px var(--imp-accent-ring);
+}
+
+/* Fichier sélectionné → bordure continue verte */
+.imp-dropzone.has-file {
+  border-style: solid;
+  border-color: var(--imp-success);
+  background: var(--imp-success-bg);
+  cursor: default;
+}
+
+/* Icône centrale */
+.imp-drop-icon {
+  font-size: 30px;
+  color: var(--imp-text-light);
+  margin-bottom: 10px;
+  display: block;
+  transition: color .2s;
+}
+.imp-dropzone:hover .imp-drop-icon   { color: var(--imp-primary); }
+.imp-dropzone.dragging .imp-drop-icon { color: var(--imp-accent); }
+.imp-drop-icon--ok { color: var(--imp-success) !important; }
+
+.imp-drop-text {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--imp-navy);
+  margin: 0 0 4px;
+}
+
+.imp-drop-sub {
+  font-size: 12px;
+  color: var(--imp-text-light);
+  margin: 0;
+}
+
+.imp-browse-link {
+  color: var(--imp-primary);
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* Fichier sélectionné */
+.imp-file-name {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--imp-success);
+  margin: 0 0 5px;
+  word-break: break-all;
+}
+
+.imp-file-meta {
+  font-size: 12px;
+  color: var(--imp-text-muted);
+  margin: 0;
+}
+
+.imp-change-link {
+  color: var(--imp-primary);
+  font-weight: 500;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.imp-change-link:hover { color: var(--imp-accent); }
+
+/* ══════════════════════════════════════════════════════════
+   BANNIÈRE D'ERREUR
+══════════════════════════════════════════════════════════ */
+.imp-error-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--imp-danger-bg);
+  border: 1.5px solid var(--imp-danger-bd);
+  border-radius: 9px;
+  padding: 10px 14px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--imp-danger);
+  margin-bottom: 16px;
+  animation: imp-fadeIn .2s ease;
+}
+.imp-error-banner i { font-size: 12px; }
+
+/* ══════════════════════════════════════════════════════════
+   BOUTONS  (reprend le style .btn de prospects.css)
+══════════════════════════════════════════════════════════ */
+.imp-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.imp-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex: 1;
+  height: 38px;
+  padding: 0 18px;
+  border-radius: 9px;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: 'Poppins', sans-serif;
+  cursor: pointer;
+  border: none;
+  transition: background .2s, transform .15s, box-shadow .2s;
+  white-space: nowrap;
+}
+
+/* Annuler — identique à btn neutre */
+.imp-btn-cancel {
+  background: #fff;
+  color: var(--imp-text-muted);
+  border: 1.5px solid var(--imp-border);
+}
+.imp-btn-cancel:hover {
+  background: var(--imp-bg-hover);
+  color: var(--imp-navy);
+  border-color: #CBD5E1;
+}
+
+/* Lancer / Fermer — identique à .btn-add */
+.imp-btn-primary {
+  background: var(--imp-primary);
+  color: #fff;
+  box-shadow: 0 3px 12px rgba(51, 102, 153, .28);
+}
+.imp-btn-primary:hover:not(:disabled) {
+  background: var(--imp-primary-dark);
+  transform: translateY(-1px);
+  box-shadow: 0 5px 16px rgba(51, 102, 153, .32);
+}
+.imp-btn-primary:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Bouton pleine largeur (étape résultat) */
+.imp-btn--full { flex: none; width: 100%; margin-top: 4px; }
+
+/* ══════════════════════════════════════════════════════════
+   CHARGEMENT
+══════════════════════════════════════════════════════════ */
+.imp-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40px 0;
+  gap: 14px;
+}
+
+.imp-spinner-wrap {
+  position: relative;
+  width: 52px;
+  height: 52px;
+}
+
+/* Anneau extérieur — couleur marine */
+.imp-spinner-outer {
+  width: 52px;
+  height: 52px;
+  border: 3px solid rgba(51, 102, 153, .18);
+  border-top-color: var(--imp-primary);
+  border-radius: 50%;
+  animation: imp-spin .8s linear infinite;
+}
+
+/* Anneau intérieur — bleu ciel */
+.imp-spinner-inner {
+  position: absolute;
+  inset: 9px;
+  border: 2px solid rgba(51, 204, 255, .18);
+  border-bottom-color: var(--imp-accent);
+  border-radius: 50%;
+  animation: imp-spin 1.2s linear infinite reverse;
+}
+
+@keyframes imp-spin { to { transform: rotate(360deg) } }
+
+.imp-loading-title {
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--imp-navy);
+  margin: 0;
+}
+
+.imp-loading-sub {
+  font-size: 12.5px;
+  color: var(--imp-text-light);
+  margin: 0;
+}
+
+/* ══════════════════════════════════════════════════════════
+   RÉSULTATS
+══════════════════════════════════════════════════════════ */
+
+/* Cartes chiffrées */
+.imp-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.imp-stat {
+  border-radius: 10px;
+  padding: 14px 10px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.imp-stat--total {
+  background: var(--imp-bg-soft);
+  border: 1.5px solid var(--imp-border);
+}
+.imp-stat--success {
+  background: var(--imp-success-bg);
+  border: 1.5px solid var(--imp-success-bd);
+}
+.imp-stat--error {
+  background: var(--imp-danger-bg);
+  border: 1.5px solid var(--imp-danger-bd);
+}
+
+.imp-stat-num {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -1.5px;
+  line-height: 1;
+}
+.imp-stat--total   .imp-stat-num { color: var(--imp-navy); }
+.imp-stat--success .imp-stat-num { color: var(--imp-success); }
+.imp-stat--error   .imp-stat-num { color: var(--imp-danger); }
+
+.imp-stat-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .4px;
+  color: var(--imp-text-light);
+}
+
+/* Bannière succès */
+.imp-success-banner {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  background: var(--imp-success-bg);
+  border: 1.5px solid var(--imp-success-bd);
+  border-radius: 9px;
+  padding: 11px 15px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--imp-success);
+  margin-bottom: 16px;
+  animation: imp-fadeIn .2s ease;
+}
+.imp-success-banner i { font-size: 13px; }
+
+/* Titre erreurs */
+.imp-errors-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--imp-danger);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 10px;
+  text-transform: uppercase;
+  letter-spacing: .4px;
+}
+.imp-errors-title i { font-size: 11px; }
+
+/* Liste scrollable */
+.imp-errors-list {
+  max-height: 210px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 18px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--imp-border) transparent;
+}
+
+/* Carte d'erreur individuelle */
+.imp-err-item {
+  background: var(--imp-danger-bg);
+  border: 1.5px solid var(--imp-danger-bd);
+  border-radius: 9px;
+  padding: 10px 13px;
+}
+
+.imp-err-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 5px;
+}
+
+/* Badge numéro de ligne */
+.imp-err-badge {
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 1px 8px;
+  border-radius: 20px;
+  background: rgba(192, 57, 43, .12);
+  color: var(--imp-danger);
+  border: 1px solid var(--imp-danger-bd);
+  white-space: nowrap;
+}
+
+.imp-err-name {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--imp-navy);
+}
+
+.imp-err-msgs {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.imp-err-msgs li {
+  font-size: 12px;
+  color: var(--imp-danger);
+  padding: 2px 0;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.imp-err-msgs li i {
+  font-size: 8px;
+  flex-shrink: 0;
+  position: relative;
+  top: -1px;
+}
+
+/* ══════════════════════════════════════════════════════════
+   RESPONSIVE
+══════════════════════════════════════════════════════════ */
+@media (max-width: 540px) {
+  .imp-modal  { margin: 0; border-radius: 14px 14px 0 0; max-width: 100%; margin-top: auto; }
+  .imp-overlay { align-items: flex-end; }
+  .imp-stats-grid { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .imp-stat-num   { font-size: 22px; }
+}
