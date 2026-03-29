@@ -731,3 +731,42 @@ a {
 .btn-goto-prospect:hover {
   background: #3a86a0;
 }
+
+/* Assurez-vous que le bouton OK est cliquable */
+.reminder-ok-btn {
+  background: transparent;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 8px;
+  margin-right: 12px;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  color: #6b7280;
+}
+
+.reminder-ok-btn:hover:not(:disabled) {
+  background: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
+  transform: scale(1.05);
+}
+
+.reminder-ok-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.reminder-ok-btn.ok-done {
+  color: #10b981;
+  cursor: default;
+}
+
+.reminder-ok-btn.ok-done:hover {
+  background: transparent;
+  transform: none;
+}

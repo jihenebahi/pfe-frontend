@@ -1,94 +1,154 @@
-import React, { useState } from "react";
-import Layout from "../../components/Layout";
-import "../../styles/home/home.css";
+// src/pages/home/Home.js
+import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+import Layout           from '../../components/Layout';
+import RelanceModal     from '../../components/crm/RelanceModal';
+import {
+  getAllRelances,
+  createRelance,
+  deleteRelance,
+  actionOk,
+  STATUT_CONFIG,
+} from '../../services/crm/relancesService';
+import '../../styles/home/home.css';
 
-const initialTasks = [
-  { id: 1, title: "Appeler client X", description: "Vérifier son contrat de formation", urgent: true, done: false },
-  { id: 2, title: "Envoyer email", description: "Proposition commerciale pour formation Java", urgent: false, done: false },
-  { id: 3, title: "Préparer réunion", description: "Réunion bilan Q2 avec l'équipe commerciale", urgent: true, done: true },
+const INITIAL_TASKS = [
+  { id: 1, title: 'Appeler client X',   description: 'Vérifier son contrat de formation',           urgent: true,  done: false },
+  { id: 2, title: 'Envoyer email',      description: 'Proposition commerciale pour formation Java',  urgent: false, done: false },
+  { id: 3, title: 'Préparer réunion',   description: "Réunion bilan Q2 avec l'équipe commerciale",  urgent: true,  done: true  },
 ];
-
-const initialReminders = [
-  { id: 1, name: "Ahmed Ben Ali", phone: "0612345678", date: "2025-07-10", done: false },
-  { id: 2, name: "Sara Mansouri", phone: "0698765432", date: "2025-07-08", done: false },
-  { id: 3, name: "Karim Trabelsi", phone: "0654321987", date: "2025-07-09", done: true },
-  { id: 4, name: "Nour El Hedi", phone: "0623456789", date: "2025-07-11", done: false },
-  { id: 5, name: "Ines Gharbi", phone: "0645678901", date: "2025-07-07", done: false },
-];
-
-// Get today's date as YYYY-MM-DD
-function today() {
-  return new Date().toISOString().split("T")[0];
-}
-
-function getReminderColor(date, done) {
-  if (done) return "reminder-done";
-  const t = today();
-  if (date < t) return "reminder-late";
-  if (date === t) return "reminder-today";
-  return "reminder-future";
-}
-
-function getReminderLabel(date, done) {
-  if (done) return { label: "Fait", cls: "badge-done" };
-  const t = today();
-  if (date < t) return { label: "En retard", cls: "badge-late" };
-  if (date === t) return { label: "Aujourd'hui", cls: "badge-today" };
-  return { label: "À venir", cls: "badge-future" };
-}
 
 export default function Home() {
-  // ── TASKS ──
-  const [tasks, setTasks] = useState(initialTasks);
-  const [showTaskForm, setShowTaskForm] = useState(false);
-  const [newTask, setNewTask] = useState({ title: "", description: "", urgent: false });
+  const navigate = useNavigate();
 
-  const addTask = () => {
+  // ── Tasks ─────────────────────────────────────────────────────────────────
+  const [tasks,        setTasks]        = useState(INITIAL_TASKS);
+  const [showTaskForm, setShowTaskForm] = useState(false);
+  const [newTask,      setNewTask]      = useState({ title: '', description: '', urgent: false });
+
+  const addTask    = () => {
     if (!newTask.title.trim()) return;
     setTasks([...tasks, { ...newTask, id: Date.now(), done: false }]);
-    setNewTask({ title: "", description: "", urgent: false });
+    setNewTask({ title: '', description: '', urgent: false });
     setShowTaskForm(false);
   };
-
-  const toggleTask = (id) =>
-    setTasks(tasks.map((t) => (t.id === id ? { ...t, done: !t.done } : t)));
-
+  const toggleTask = (id) => setTasks(tasks.map((t) => (t.id === id ? { ...t, done: !t.done } : t)));
   const deleteTask = (id) => setTasks(tasks.filter((t) => t.id !== id));
 
-  // ── REMINDERS ──
-  const [reminders, setReminders] = useState(initialReminders);
-  const [reminderFilter, setReminderFilter] = useState("all"); // all | done | pending
-  const [reminderSearch, setReminderSearch] = useState("");
-  const [detailModal, setDetailModal] = useState(null);
+  // ── Relances (API) ────────────────────────────────────────────────────────
+  const [relances,       setRelances]       = useState([]);
+  const [relLoading,     setRelLoading]     = useState(true);
+  const [relError,       setRelError]       = useState('');
+  const [reminderFilter, setReminderFilter] = useState('all');
+  const [reminderSearch, setReminderSearch] = useState('');
+  const [savingId,       setSavingId]       = useState(null);
 
-  const toggleReminder = (id) =>
-    setReminders(reminders.map((r) => (r.id === id ? { ...r, done: !r.done } : r)));
+  // ── Modals ────────────────────────────────────────────────────────────────
+  const [detailModal,    setDetailModal]    = useState(null);
+  const [showOkPrompt,   setShowOkPrompt]   = useState(false);
+  const [pendingOkId,    setPendingOkId]    = useState(null);
+  const [pendingRelance, setPendingRelance] = useState(null);
+  const [okNotes,        setOkNotes]        = useState('');
+  const [reprogModal,    setReprogModal]    = useState(false);
+  const [reprogProspId,  setReprogProspId]  = useState(null);
+  const [modalLoading,   setModalLoading]   = useState(false);
 
-  const deleteReminder = (id) => setReminders(reminders.filter((r) => r.id !== id));
+  // ── Charger les relances ──────────────────────────────────────────────────
+  const loadRelances = useCallback(async () => {
+    try {
+      setRelLoading(true);
+      setRelError('');
+      const data = await getAllRelances();
+      setRelances(data);
+    } catch (err) {
+      setRelError('Impossible de charger les relances.');
+      console.error(err);
+    } finally {
+      setRelLoading(false);
+    }
+  }, []);
 
-  const filteredReminders = reminders
+  useEffect(() => { loadRelances(); }, [loadRelances]);
+
+  // ── Filtrage + tri ────────────────────────────────────────────────────────
+  const filteredRelances = relances
     .filter((r) => {
-      const t = today();
-      if (reminderFilter === "done") return r.done;
-      if (reminderFilter === "pending") return !r.done && r.date <= t;
-      if (reminderFilter === "upcoming") return !r.done && r.date > t;
+      if (reminderFilter === 'done')     return r.statutCalc === 'fait';
+      if (reminderFilter === 'pending')  return ['en_retard', 'aujourd_hui'].includes(r.statutCalc);
+      if (reminderFilter === 'upcoming') return r.statutCalc === 'a_venir';
       return true;
     })
-    .filter(
-      (r) =>
-        r.name.toLowerCase().includes(reminderSearch.toLowerCase()) ||
-        r.phone.includes(reminderSearch)
+    .filter((r) =>
+      `${r.prospectNom} ${r.prospectPrenom}`.toLowerCase().includes(reminderSearch.toLowerCase()) ||
+      r.prospectTelephone.includes(reminderSearch)
     )
     .sort((a, b) => {
-      // Sort: late first, then today, then future, done last
-      if (a.done !== b.done) return a.done ? 1 : -1;
-      return a.date.localeCompare(b.date);
+      const ORDER = { en_retard: 0, aujourd_hui: 1, a_venir: 2, fait: 3 };
+      const diff  = (ORDER[a.statutCalc] ?? 4) - (ORDER[b.statutCalc] ?? 4);
+      if (diff !== 0) return diff;
+      return a.dateRelance.localeCompare(b.dateRelance);
     });
 
+  // ── Suppression ───────────────────────────────────────────────────────────
+  const handleDelete = async (id) => {
+    if (!window.confirm('Supprimer cette relance ?')) return;
+    try {
+      await deleteRelance(id);
+      setRelances((prev) => prev.filter((r) => r.id !== id));
+    } catch (err) { console.error(err); }
+  };
+
+  // ── Ouvrir le prompt OK ───────────────────────────────────────────────────
+  const openOkPrompt = (relance) => {
+    setPendingOkId(relance.id);
+    setPendingRelance(relance);
+    setOkNotes('');
+    setShowOkPrompt(true);
+  };
+
+  // ── Confirmer l'appel ─────────────────────────────────────────────────────
+  const confirmOk = async () => {
+    if (!pendingOkId) return;
+    try {
+      setSavingId(pendingOkId);
+      setShowOkPrompt(false);
+      const { relance: updated } = await actionOk(pendingOkId, okNotes);
+      setRelances((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
+      setReprogProspId(updated.prospectId);
+      setReprogModal(true);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSavingId(null);
+      setPendingOkId(null);
+      setPendingRelance(null);
+    }
+  };
+
+  // ── Reprogrammer ──────────────────────────────────────────────────────────
+  const handleReprog = async ({ dateRelance, commentaire }) => {
+    if (!reprogProspId) return;
+    try {
+      setModalLoading(true);
+      const newR = await createRelance(reprogProspId, { dateRelance, commentaire });
+      setRelances((prev) => [newR, ...prev]);
+      setReprogModal(false);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setModalLoading(false);
+    }
+  };
+
+  const fmtDate = (d) =>
+    d ? new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+
+  // ─────────────────────────────────────────────────────────────────────────
   return (
     <Layout>
       <div className="home-dashboard">
-        {/* ══════════════════ LEFT : TASKS ══════════════════ */}
+
+        {/* ══════ LEFT : TASKS ══════ */}
         <section className="tasks-panel">
           <div className="panel-header">
             <h2 className="panel-title">
@@ -99,7 +159,6 @@ export default function Home() {
             </button>
           </div>
 
-          {/* Add Task Form */}
           {showTaskForm && (
             <div className="task-form">
               <input
@@ -125,13 +184,12 @@ export default function Home() {
                 </label>
                 <div className="form-actions">
                   <button className="btn-cancel" onClick={() => setShowTaskForm(false)}>Annuler</button>
-                  <button className="btn-save" onClick={addTask}>Enregistrer</button>
+                  <button className="btn-save"   onClick={addTask}>Enregistrer</button>
                 </div>
               </div>
             </div>
           )}
 
-          {/* Task Table */}
           <div className="tasks-table-wrap">
             <table className="tasks-table">
               <thead>
@@ -145,25 +203,19 @@ export default function Home() {
               </thead>
               <tbody>
                 {tasks.length === 0 && (
-                  <tr>
-                    <td colSpan={5} className="empty-row">Aucune tâche pour l'instant</td>
-                  </tr>
+                  <tr><td colSpan={5} className="empty-row">Aucune tâche pour l'instant</td></tr>
                 )}
                 {tasks.map((task) => (
-                  <tr key={task.id} className={task.done ? "task-row done-row" : "task-row"}>
+                  <tr key={task.id} className={task.done ? 'task-row done-row' : 'task-row'}>
                     <td>
-                      <input
-                        type="checkbox"
-                        className="task-check"
-                        checked={task.done}
-                        onChange={() => toggleTask(task.id)}
-                      />
+                      <input type="checkbox" className="task-check"
+                        checked={task.done} onChange={() => toggleTask(task.id)} />
                     </td>
                     <td className="task-title-cell">{task.title}</td>
                     <td className="task-desc-cell">{task.description}</td>
                     <td>
-                      <span className={task.urgent ? "badge-urgent" : "badge-normal"}>
-                        {task.urgent ? "Urgent" : "Normal"}
+                      <span className={task.urgent ? 'badge-urgent' : 'badge-normal'}>
+                        {task.urgent ? 'Urgent' : 'Normal'}
                       </span>
                     </td>
                     <td>
@@ -178,15 +230,19 @@ export default function Home() {
           </div>
         </section>
 
-        {/* ══════════════════ RIGHT : REMINDERS ══════════════════ */}
+        {/* ══════ RIGHT : RELANCES ══════ */}
         <section className="reminders-panel">
           <div className="panel-header">
             <h2 className="panel-title">
               <i className="fa-solid fa-bell"></i> Rappels & Relances
             </h2>
+            {!relLoading && (
+              <span className="relances-total-badge">
+                {filteredRelances.filter((r) => r.statutCalc !== 'fait').length} actives
+              </span>
+            )}
           </div>
 
-          {/* Filters */}
           <div className="reminder-filters">
             <input
               className="reminder-search"
@@ -196,14 +252,14 @@ export default function Home() {
             />
             <div className="filter-tabs">
               {[
-                { key: "all", label: "Tous" },
-                { key: "pending", label: "En attente" },
-                { key: "upcoming", label: "À venir" },
-                { key: "done", label: "Fait" },
+                { key: 'all',      label: 'Tous' },
+                { key: 'pending',  label: 'En attente' },
+                { key: 'upcoming', label: 'À venir' },
+                { key: 'done',     label: 'Fait' },
               ].map((f) => (
                 <button
                   key={f.key}
-                  className={`filter-tab ${reminderFilter === f.key ? "active" : ""}`}
+                  className={`filter-tab ${reminderFilter === f.key ? 'active' : ''}`}
                   onClick={() => setReminderFilter(f.key)}
                 >
                   {f.label}
@@ -212,7 +268,6 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Legend */}
           <div className="reminder-legend">
             <span className="leg late">● En retard</span>
             <span className="leg today">● Aujourd'hui</span>
@@ -220,105 +275,254 @@ export default function Home() {
             <span className="leg donec">● Fait</span>
           </div>
 
-          {/* Tickets */}
-          <div className="reminders-list">
-            {filteredReminders.length === 0 && (
-              <div className="empty-reminders">Aucun rappel trouvé</div>
-            )}
-            {filteredReminders.map((r) => {
-              const colorCls = getReminderColor(r.date, r.done);
-              const { label, cls } = getReminderLabel(r.date, r.done);
-              return (
-                <div key={r.id} className={`reminder-card ${colorCls}`}>
-                  <div className="reminder-left">
-                    <input
-                      type="checkbox"
-                      className="reminder-check"
-                      checked={r.done}
-                      onChange={() => toggleReminder(r.id)}
-                      title="Marquer comme fait"
-                    />
-                    <div className="reminder-info">
-                      <div className="reminder-name">{r.name}</div>
-                      <div className="reminder-phone">
-                        <i className="fa-solid fa-phone"></i> {r.phone}
+          {relLoading && (
+            <div className="relances-loading-home">
+              <i className="fa-solid fa-spinner fa-spin"></i> Chargement des relances…
+            </div>
+          )}
+          {relError && (
+            <div className="relances-error-home">
+              <i className="fa-solid fa-triangle-exclamation"></i> {relError}
+              <button onClick={loadRelances} className="btn-retry">Réessayer</button>
+            </div>
+          )}
+
+          {!relLoading && !relError && (
+            <div className="reminders-list">
+              {filteredRelances.length === 0 && (
+                <div className="empty-reminders">Aucun rappel trouvé</div>
+              )}
+
+              {filteredRelances.map((r) => {
+                const cfg    = STATUT_CONFIG[r.statutCalc] || STATUT_CONFIG.a_venir;
+                const isDone = r.statutCalc === 'fait';
+                const isBusy = savingId === r.id;
+
+                return (
+                  <div key={r.id} className={`reminder-card ${cfg.cardCls}`}>
+                    <div className="reminder-left">
+
+                      {/*
+                        ✅ FIX : <button type="button"> au lieu de <div>
+                        — les <div> peuvent être bloqués par pointer-events:none
+                          sur les enfants de .reminder-card dans home.css.
+                        — type="button" empêche tout submit accidentel.
+                        — L'icône est changée en fa-phone-volume (plus claire).
+                        — Le CSS .reminder-ok-btn a été mis à jour en conséquence.
+                      */}
+                      {isDone ? (
+                        <button
+                          type="button"
+                          className="reminder-ok-btn ok-done"
+                          title="Appel déjà effectué"
+                          disabled
+                        >
+                          <i className="fa-solid fa-circle-check"></i>
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          className="reminder-ok-btn"
+                          title="Cliquer pour confirmer l'appel effectué"
+                          disabled={isBusy}
+                          onClick={() => openOkPrompt(r)}
+                        >
+                          {isBusy
+                            ? <i className="fa-solid fa-spinner fa-spin"></i>
+                            : <i className="fa-solid fa-phone-volume"></i>
+                          }
+                        </button>
+                      )}
+
+                      <div className="reminder-info">
+                        <div className="reminder-name">
+                          {r.prospectPrenom} {r.prospectNom}
+                        </div>
+                        <div className="reminder-phone">
+                          <i className="fa-solid fa-phone"></i> {r.prospectTelephone}
+                        </div>
+                        <div className="reminder-date">
+                          <i className="fa-regular fa-calendar"></i> {fmtDate(r.dateRelance)}
+                        </div>
+                        {r.commentaire && (
+                          <div className="reminder-comment">
+                            <i className="fa-regular fa-comment"></i> {r.commentaire}
+                          </div>
+                        )}
                       </div>
-                      <div className="reminder-date">
-                        <i className="fa-regular fa-calendar"></i>{" "}
-                        {new Date(r.date).toLocaleDateString("fr-FR", {
-                          day: "2-digit", month: "short", year: "numeric",
-                        })}
+                    </div>
+
+                    <div className="reminder-right">
+                      <span className={`reminder-badge ${cfg.badgeCls}`}>{cfg.label}</span>
+                      <div className="reminder-actions">
+                        <button
+                          type="button"
+                          className="btn-detail"
+                          title="Voir détails"
+                          onClick={() => setDetailModal(r)}
+                        >
+                          <i className="fa-solid fa-eye"></i>
+                        </button>
+                        <button
+                          type="button"
+                          className="btn-delete-reminder"
+                          title="Supprimer"
+                          onClick={() => handleDelete(r.id)}
+                        >
+                          <i className="fa-solid fa-xmark"></i>
+                        </button>
                       </div>
                     </div>
                   </div>
-                  <div className="reminder-right">
-                    <span className={`reminder-badge ${cls}`}>{label}</span>
-                    <div className="reminder-actions">
-                      <button
-                        className="btn-detail"
-                        onClick={() => setDetailModal(r)}
-                        title="Voir détails"
-                      >
-                        <i className="fa-solid fa-eye"></i>
-                      </button>
-                      <button
-                        className="btn-delete-reminder"
-                        onClick={() => deleteReminder(r.id)}
-                        title="Supprimer"
-                      >
-                        <i className="fa-solid fa-xmark"></i>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </section>
       </div>
 
-      {/* ══════════════════ DETAIL MODAL ══════════════════ */}
+      {/* ══════ MODAL : Détail relance ══════ */}
       {detailModal && (
-        <div className="modal-overlay" onClick={() => setDetailModal(null)}>
+        <div className="modal-overlay show" onClick={() => setDetailModal(null)}>
           <div className="modal-card" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>Détails du Prospect</h3>
-              <button className="modal-close" onClick={() => setDetailModal(null)}>
+              <h3>Détails de la relance</h3>
+              <button type="button" className="modal-close" onClick={() => setDetailModal(null)}>
                 <i className="fa-solid fa-xmark"></i>
               </button>
             </div>
             <div className="modal-body">
               <div className="modal-row">
-                <span className="modal-label"><i className="fa-solid fa-user"></i> Nom</span>
-                <span className="modal-value">{detailModal.name}</span>
+                <span className="modal-label"><i className="fa-solid fa-user"></i> Prospect</span>
+                <span className="modal-value">{detailModal.prospectPrenom} {detailModal.prospectNom}</span>
               </div>
               <div className="modal-row">
                 <span className="modal-label"><i className="fa-solid fa-phone"></i> Téléphone</span>
-                <span className="modal-value">{detailModal.phone}</span>
+                <span className="modal-value">{detailModal.prospectTelephone}</span>
               </div>
               <div className="modal-row">
                 <span className="modal-label"><i className="fa-regular fa-calendar"></i> Date relance</span>
                 <span className="modal-value">
-                  {new Date(detailModal.date).toLocaleDateString("fr-FR", {
-                    weekday: "long", day: "2-digit", month: "long", year: "numeric",
+                  {new Date(detailModal.dateRelance).toLocaleDateString('fr-FR', {
+                    weekday: 'long', day: '2-digit', month: 'long', year: 'numeric',
                   })}
                 </span>
               </div>
+              {detailModal.commentaire && (
+                <div className="modal-row">
+                  <span className="modal-label"><i className="fa-regular fa-comment"></i> Commentaire</span>
+                  <span className="modal-value">{detailModal.commentaire}</span>
+                </div>
+              )}
               <div className="modal-row">
                 <span className="modal-label"><i className="fa-solid fa-circle-info"></i> Statut</span>
-                <span className={`modal-value ${detailModal.done ? "status-done" : "status-pending"}`}>
-                  {detailModal.done ? "✅ Fait" : "⏳ En attente"}
+                <span className={`modal-value reminder-badge ${STATUT_CONFIG[detailModal.statutCalc]?.badgeCls}`}>
+                  {STATUT_CONFIG[detailModal.statutCalc]?.label}
                 </span>
               </div>
+              {detailModal.dateAction && (
+                <div className="modal-row">
+                  <span className="modal-label"><i className="fa-solid fa-clock"></i> Traité le</span>
+                  <span className="modal-value">{fmtDate(detailModal.dateAction)}</span>
+                </div>
+              )}
             </div>
             <div className="modal-footer">
-              <a href="/prospects" className="btn-goto-prospect">
+              {detailModal.statutCalc !== 'fait' && (
+                <button
+                  type="button"
+                  className="btn-ok-from-detail"
+                  onClick={() => {
+                    setDetailModal(null);
+                    openOkPrompt(detailModal);
+                  }}
+                >
+                  <i className="fa-solid fa-phone-volume"></i> Appel effectué
+                </button>
+              )}
+              <button
+                type="button"
+                className="btn-goto-prospect"
+                onClick={() => navigate(`/prospects?id=${detailModal.prospectId}`)}
+              >
                 <i className="fa-solid fa-arrow-right"></i> Voir fiche prospect
-              </a>
+              </button>
             </div>
           </div>
         </div>
       )}
+
+      {/* ══════ PROMPT : Confirmer l'appel + notes ══════ */}
+      {showOkPrompt && (
+        <div className="modal-overlay show" onClick={() => setShowOkPrompt(false)}>
+          <div className="relance-modal-card" onClick={(e) => e.stopPropagation()}>
+
+            <div className="relance-modal-header">
+              <div className="relance-modal-icon ok-icon">
+                <i className="fa-solid fa-phone-volume"></i>
+              </div>
+              <h3 className="relance-modal-title">Appel effectué</h3>
+              <button type="button" className="relance-modal-close" onClick={() => setShowOkPrompt(false)}>
+                <i className="fa-solid fa-xmark"></i>
+              </button>
+            </div>
+
+            <div className="relance-modal-body">
+              {pendingRelance && (
+                <div className="ok-prompt-info">
+                  <i className="fa-solid fa-circle-info" style={{ color: '#3b82f6' }}></i>{' '}
+                  Vous confirmez l'appel pour{' '}
+                  <strong>{pendingRelance.prospectPrenom} {pendingRelance.prospectNom}</strong>.
+                  <br />
+                  <span style={{ fontSize: '12px', color: '#6b7280' }}>
+                    L'échange sera ajouté à l'historique du prospect automatiquement.
+                  </span>
+                </div>
+              )}
+              <div className="relance-field">
+                <label className="relance-label">
+                  <i className="fa-regular fa-comment"></i> Notes sur l'échange
+                  <span className="optional-tag">optionnel</span>
+                </label>
+                <textarea
+                  className="relance-textarea"
+                  placeholder="Ex : Intéressé, souhaite rappeler la semaine prochaine…"
+                  rows={3}
+                  value={okNotes}
+                  onChange={(e) => setOkNotes(e.target.value)}
+                  autoFocus
+                />
+              </div>
+            </div>
+
+            <div className="relance-modal-footer">
+              <button type="button" className="btn-relance-cancel" onClick={() => setShowOkPrompt(false)}>
+                Annuler
+              </button>
+              <button
+                type="button"
+                className="btn-relance-save btn-ok"
+                onClick={confirmOk}
+                disabled={savingId !== null}
+              >
+                {savingId !== null
+                  ? <><i className="fa-solid fa-spinner fa-spin"></i> Enregistrement…</>
+                  : <><i className="fa-solid fa-check-double"></i> Confirmer l'appel</>
+                }
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ══════ POPUP : Programmer une autre relance ? ══════ */}
+      <RelanceModal
+        isOpen={reprogModal}
+        onClose={() => setReprogModal(false)}
+        onSave={handleReprog}
+        loading={modalLoading}
+        title="Programmer une autre relance ?"
+      />
     </Layout>
   );
 }

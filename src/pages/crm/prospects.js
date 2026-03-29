@@ -2,6 +2,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import Layout from '../../components/Layout';
 import '../../styles/crm/prospects.css';
+import '../../styles/crm/relances.css';
 import {
   getProspects,
   getProspect,
@@ -10,6 +11,8 @@ import {
   deleteProspect,
   convertToEtudiant,
 } from '../../services/crm/prospectsService';
+import { createRelance } from '../../services/crm/relancesService';
+import ProspectRelances  from '../../components/crm/ProspectRelances';
 import api from '../../services/api';
 import { validateField, validateAll, validateNiveauEtudesDiplome } from '../../script/crm/validation';
 import ImportProspectsModal from './ImportProspectsModal';
@@ -35,8 +38,7 @@ const FORM_FIELDS = [
   'nom', 'prenom', 'email', 'tel', 'ville', 'pays',
   'dateNaissance', 'genre', 'niveauEtudes', 'diplomeObtenu',
   'source', 'formation', 'niveau', 'modePreference',
-  'canalContact', 'commentaires',
-  'statut',
+  'canalContact', 'commentaires', 'statut',
 ];
 
 /* ══════════════════════════════════════════════════════════
@@ -46,55 +48,31 @@ const F = ({ label, name, type = 'text', placeholder = '', autoComplete, fd, set
   <div className={`pf-group${errors[name] ? ' pf-group--error' : ''}`}>
     <label>{label}</label>
     <input
-      type={type}
-      value={fd[name] || ''}
-      placeholder={placeholder}
-      autoComplete={autoComplete || 'off'}
-      onChange={e => set(name, e.target.value)}
+      type={type} value={fd[name] || ''} placeholder={placeholder}
+      autoComplete={autoComplete || 'off'} onChange={e => set(name, e.target.value)}
       className={errors[name] ? 'input-error' : ''}
     />
-    {errors[name] && (
-      <span className="pf-error-msg">
-        <i className="fa-solid fa-circle-exclamation"></i> {errors[name]}
-      </span>
-    )}
+    {errors[name] && <span className="pf-error-msg"><i className="fa-solid fa-circle-exclamation"></i> {errors[name]}</span>}
   </div>
 );
 
 const S = ({ label, name, options, fd, set, errors = {} }) => (
   <div className={`pf-group${errors[name] ? ' pf-group--error' : ''}`}>
     <label>{label}</label>
-    <select
-      value={fd[name] || ''}
-      onChange={e => set(name, e.target.value)}
-      className={errors[name] ? 'input-error' : ''}
-    >
+    <select value={fd[name] || ''} onChange={e => set(name, e.target.value)} className={errors[name] ? 'input-error' : ''}>
       <option value="">— Sélectionner —</option>
       {options.map(o => <option key={o} value={o}>{o}</option>)}
     </select>
-    {errors[name] && (
-      <span className="pf-error-msg">
-        <i className="fa-solid fa-circle-exclamation"></i> {errors[name]}
-      </span>
-    )}
+    {errors[name] && <span className="pf-error-msg"><i className="fa-solid fa-circle-exclamation"></i> {errors[name]}</span>}
   </div>
 );
 
 const T = ({ label, name, placeholder = '', fd, set, errors = {} }) => (
   <div className={`pf-group pf-full${errors[name] ? ' pf-group--error' : ''}`}>
     <label>{label}</label>
-    <textarea
-      rows={3}
-      value={fd[name] || ''}
-      placeholder={placeholder}
-      onChange={e => set(name, e.target.value)}
-      className={errors[name] ? 'input-error' : ''}
-    />
-    {errors[name] && (
-      <span className="pf-error-msg">
-        <i className="fa-solid fa-circle-exclamation"></i> {errors[name]}
-      </span>
-    )}
+    <textarea rows={3} value={fd[name] || ''} placeholder={placeholder}
+      onChange={e => set(name, e.target.value)} className={errors[name] ? 'input-error' : ''} />
+    {errors[name] && <span className="pf-error-msg"><i className="fa-solid fa-circle-exclamation"></i> {errors[name]}</span>}
   </div>
 );
 
@@ -106,10 +84,8 @@ const ProspectForm = ({ initial, formRef, FORMATIONS }) => {
     nom: '', prenom: '', email: '', tel: '', ville: '', pays: '',
     dateNaissance: '', genre: '', niveauEtudes: '', diplomeObtenu: '',
     formation: '', niveau: '', modePreference: '',
-    canalContact: '', source: '', statut: '',
-    commentaires: '',
+    canalContact: '', source: '', statut: '', commentaires: '',
   };
-
   const [fd, setFd]         = useState({ ...defaults, ...(initial || {}) });
   const [errors, setErrors] = useState({});
 
@@ -120,170 +96,76 @@ const ProspectForm = ({ initial, formRef, FORMATIONS }) => {
       setErrors(errs);
       return isValid;
     },
-    setApiErrors: (apiErrors) => {
-      setErrors(prev => ({ ...prev, ...apiErrors }));
-    },
+    setApiErrors: (apiErrors) => setErrors(prev => ({ ...prev, ...apiErrors })),
   };
 
   const set = (field, value) => {
     setFd(prev => ({ ...prev, [field]: value }));
-    let msg = validateField(field, value, { ...fd, [field]: value });
-    setErrors(prev => ({ ...prev, [field]: msg }));
-
+    setErrors(prev => ({ ...prev, [field]: validateField(field, value, { ...fd, [field]: value }) }));
     if (field === 'niveauEtudes' || field === 'diplomeObtenu') {
-      const otherField = field === 'niveauEtudes' ? 'diplomeObtenu' : 'niveauEtudes';
-      const otherValue = field === 'niveauEtudes' ? fd.diplomeObtenu : value;
-      const currentValue = value;
-      const otherMsg = validateField(otherField, otherValue, {
-        ...fd,
-        [field]: currentValue,
-        [otherField]: otherValue
-      });
-      setErrors(prev => ({ ...prev, [otherField]: otherMsg }));
-      const currentMsg = validateField(field, currentValue, {
-        ...fd,
-        [field]: currentValue,
-        [otherField]: otherValue
-      });
-      setErrors(prev => ({ ...prev, [field]: currentMsg }));
+      const other = field === 'niveauEtudes' ? 'diplomeObtenu' : 'niveauEtudes';
+      const otherVal = field === 'niveauEtudes' ? fd.diplomeObtenu : value;
+      setErrors(prev => ({
+        ...prev,
+        [other]: validateField(other, otherVal, { ...fd, [field]: value, [other]: otherVal }),
+      }));
     }
   };
 
   return (
     <form className="pf-body" autoComplete="on" onSubmit={e => e.preventDefault()}>
-
-      {/* ── Section 1 : Informations personnelles ── */}
-      <div className="pf-section-title">
-        <i className="fa-solid fa-user"></i> Informations personnelles
-      </div>
+      <div className="pf-section-title"><i className="fa-solid fa-user"></i> Informations personnelles</div>
       <div className="pf-grid">
-        <F label="Nom *"       name="nom"    placeholder="Ben Ali"            fd={fd} set={set} errors={errors} />
-        <F label="Prénom *"    name="prenom" placeholder="Sami"               fd={fd} set={set} errors={errors} />
+        <F label="Nom *"       name="nom"    placeholder="Ben Ali"           fd={fd} set={set} errors={errors} />
+        <F label="Prénom *"    name="prenom" placeholder="Sami"              fd={fd} set={set} errors={errors} />
         <F label="Email *"     name="email"  type="email" placeholder="email@exemple.com" autoComplete="email" fd={fd} set={set} errors={errors} />
-        <F label="Téléphone *" name="tel"    placeholder="+216 XX XXX XXX"    autoComplete="tel" fd={fd} set={set} errors={errors} />
-        <F label="Ville *"     name="ville"  placeholder="Tunis"              fd={fd} set={set} errors={errors} />
-        <S label="Pays *"      name="pays"   options={PAYS_LIST}              fd={fd} set={set} errors={errors} />
+        <F label="Téléphone *" name="tel"    placeholder="+216 XX XXX XXX"   autoComplete="tel" fd={fd} set={set} errors={errors} />
+        <F label="Ville *"     name="ville"  placeholder="Tunis"             fd={fd} set={set} errors={errors} />
+        <S label="Pays *"      name="pays"   options={PAYS_LIST}             fd={fd} set={set} errors={errors} />
       </div>
 
-      {/* ── Section 2 : Profil académique ── */}
-      <div className="pf-section-title" style={{ marginTop: '18px' }}>
-        <i className="fa-solid fa-graduation-cap"></i> Profil académique
-      </div>
+      <div className="pf-section-title" style={{ marginTop: '18px' }}><i className="fa-solid fa-graduation-cap"></i> Profil académique</div>
       <div className="pf-grid">
-        <F label="Date de naissance" name="dateNaissance" type="date"         fd={fd} set={set} errors={errors} />
+        <F label="Date de naissance" name="dateNaissance" type="date"          fd={fd} set={set} errors={errors} />
         <S label="Genre"             name="genre"         options={GENRE_LIST} fd={fd} set={set} errors={errors} />
-
-        {/* Niveau d'études avec gestion des erreurs améliorée */}
         <div className={`pf-group${errors['niveauEtudes'] ? ' pf-group--error' : ''}`}>
           <label>Niveau d'études</label>
-          <select
-            value={fd.niveauEtudes || ''}
-            onChange={e => {
-              const newValue = e.target.value;
-              set('niveauEtudes', newValue);
-              if (fd.diplomeObtenu) {
-                const crossError = validateNiveauEtudesDiplome(newValue, fd.diplomeObtenu);
-                if (crossError) {
-                  setErrors(prev => ({ ...prev, diplomeObtenu: crossError }));
-                } else {
-                  setErrors(prev => {
-                    const newErrors = { ...prev };
-                    delete newErrors.diplomeObtenu;
-                    return newErrors;
-                  });
-                }
-              }
-            }}
-            className={errors['niveauEtudes'] ? 'input-error' : ''}
-          >
+          <select value={fd.niveauEtudes || ''} onChange={e => { set('niveauEtudes', e.target.value); }} className={errors['niveauEtudes'] ? 'input-error' : ''}>
             <option value="">— Sélectionner —</option>
             {NIVEAU_ETUDES_LIST.map(o => <option key={o} value={o}>{o}</option>)}
           </select>
-          {errors['niveauEtudes'] && (
-            <span className="pf-error-msg">
-              <i className="fa-solid fa-circle-exclamation"></i> {errors['niveauEtudes']}
-            </span>
-          )}
+          {errors['niveauEtudes'] && <span className="pf-error-msg"><i className="fa-solid fa-circle-exclamation"></i> {errors['niveauEtudes']}</span>}
         </div>
-
-        {/* Diplôme obtenu avec gestion des erreurs améliorée */}
         <div className={`pf-group${errors['diplomeObtenu'] ? ' pf-group--error' : ''}`}>
           <label>Diplôme obtenu</label>
-          <select
-            value={fd.diplomeObtenu || ''}
-            onChange={e => {
-              const newValue = e.target.value;
-              set('diplomeObtenu', newValue);
-              if (fd.niveauEtudes) {
-                const crossError = validateNiveauEtudesDiplome(fd.niveauEtudes, newValue);
-                if (crossError) {
-                  setErrors(prev => ({ ...prev, diplomeObtenu: crossError, niveauEtudes: crossError }));
-                } else {
-                  setErrors(prev => {
-                    const newErrors = { ...prev };
-                    delete newErrors.diplomeObtenu;
-                    delete newErrors.niveauEtudes;
-                    return newErrors;
-                  });
-                }
-              }
-            }}
-            className={errors['diplomeObtenu'] ? 'input-error' : ''}
-          >
+          <select value={fd.diplomeObtenu || ''} onChange={e => { set('diplomeObtenu', e.target.value); }} className={errors['diplomeObtenu'] ? 'input-error' : ''}>
             <option value="">— Sélectionner —</option>
             {DIPLOME_LIST.map(o => <option key={o} value={o}>{o}</option>)}
           </select>
-          {errors['diplomeObtenu'] && (
-            <span className="pf-error-msg">
-              <i className="fa-solid fa-circle-exclamation"></i> {errors['diplomeObtenu']}
-            </span>
-          )}
+          {errors['diplomeObtenu'] && <span className="pf-error-msg"><i className="fa-solid fa-circle-exclamation"></i> {errors['diplomeObtenu']}</span>}
         </div>
       </div>
 
-      {/* ── Section 3 : Informations commerciales ── */}
-      <div className="pf-section-title" style={{ marginTop: '18px' }}>
-        <i className="fa-solid fa-briefcase"></i> Informations commerciales
-      </div>
+      <div className="pf-section-title" style={{ marginTop: '18px' }}><i className="fa-solid fa-briefcase"></i> Informations commerciales</div>
       <div className="pf-grid">
         <S label="Source * — Comment avez-vous connu 4C Lab ?" name="source" options={SOURCES} fd={fd} set={set} errors={errors} />
-
         <div className={`pf-group${errors['formation'] ? ' pf-group--error' : ''}`}>
           <label>Formation souhaitée *</label>
-          <select
-            value={fd.formation || ''}
-            onChange={e => set('formation', e.target.value)}
-            className={errors['formation'] ? 'input-error' : ''}
-          >
+          <select value={fd.formation || ''} onChange={e => set('formation', e.target.value)} className={errors['formation'] ? 'input-error' : ''}>
             <option value="">— Sélectionner —</option>
-            {FORMATIONS.map(f => (
-              <option key={f.id} value={String(f.id)}>{f.label}</option>
-            ))}
+            {FORMATIONS.map(f => <option key={f.id} value={String(f.id)}>{f.label}</option>)}
           </select>
-          {errors['formation'] && (
-            <span className="pf-error-msg">
-              <i className="fa-solid fa-circle-exclamation"></i> {errors['formation']}
-            </span>
-          )}
+          {errors['formation'] && <span className="pf-error-msg"><i className="fa-solid fa-circle-exclamation"></i> {errors['formation']}</span>}
         </div>
-
         <S label="Niveau estimé *"          name="niveau"         options={['Débutant', 'Intermédiaire', 'Avancé']} fd={fd} set={set} errors={errors} />
         <S label="Mode préféré *"           name="modePreference" options={['Présentiel', 'En ligne', 'Hybride']}   fd={fd} set={set} errors={errors} />
         <S label="Canal de contact préféré" name="canalContact"   options={['Téléphone', 'Email', 'WhatsApp']}     fd={fd} set={set} errors={errors} />
         <T label="Commentaires"             name="commentaires"   placeholder="Notes, observations..."              fd={fd} set={set} errors={errors} />
       </div>
 
-      {/* ── Section 4 : Suivi du prospect ── */}
-      <div className="pf-section-title" style={{ marginTop: '18px' }}>
-        <i className="fa-solid fa-chart-line"></i> Suivi du prospect
-      </div>
+      <div className="pf-section-title" style={{ marginTop: '18px' }}><i className="fa-solid fa-chart-line"></i> Suivi du prospect</div>
       <div className="pf-grid">
-        <S
-          label="Statut *"
-          name="statut"
-          options={['Nouveau', 'Contacté', 'Intéressé', 'Converti', 'Perdu']}
-          fd={fd} set={set} errors={errors}
-        />
+        <S label="Statut *" name="statut" options={['Nouveau', 'Contacté', 'Intéressé', 'Converti', 'Perdu']} fd={fd} set={set} errors={errors} />
       </div>
     </form>
   );
@@ -292,14 +174,9 @@ const ProspectForm = ({ initial, formRef, FORMATIONS }) => {
 /* ══════════════════════════════════════════════════════════
    DRAWER PANEL
 ══════════════════════════════════════════════════════════ */
-const DrawerPanel = ({
-  drawerOpen, drawerMode, drawerTarget,
-  closeDrawer, saveDrawer, saving,
-  formRef, FORMATIONS,
-}) => {
+const DrawerPanel = ({ drawerOpen, drawerMode, drawerTarget, closeDrawer, saveDrawer, saving, formRef, FORMATIONS }) => {
   if (!drawerOpen) return null;
   const isEdit = drawerMode === 'edit';
-
   return (
     <>
       <div className="drawer-overlay" onClick={closeDrawer} />
@@ -309,34 +186,15 @@ const DrawerPanel = ({
             <i className={`fa-solid ${isEdit ? 'fa-pen' : 'fa-user-plus'}`}></i>
             <span>{isEdit ? 'Modifier le prospect' : 'Ajouter un prospect'}</span>
           </div>
-          <button className="drawer-close" onClick={closeDrawer}>
-            <i className="fa-solid fa-xmark"></i>
-          </button>
+          <button className="drawer-close" onClick={closeDrawer}><i className="fa-solid fa-xmark"></i></button>
         </div>
-
         <div className="drawer-body">
-          <ProspectForm
-            key={isEdit ? drawerTarget?.id : 'new'}
-            initial={isEdit ? drawerTarget : null}
-            formRef={formRef}
-            FORMATIONS={FORMATIONS}
-          />
+          <ProspectForm key={isEdit ? drawerTarget?.id : 'new'} initial={isEdit ? drawerTarget : null} formRef={formRef} FORMATIONS={FORMATIONS} />
         </div>
-
         <div className="drawer-footer">
-          <button className="btn btn-cancel" onClick={closeDrawer} disabled={saving}>
-            Annuler
-          </button>
-          <button
-            className={`btn ${isEdit ? 'btn-update' : 'btn-save'}`}
-            onClick={saveDrawer}
-            disabled={saving}
-          >
-            {saving ? (
-              <><i className="fa-solid fa-spinner fa-spin"></i> Enregistrement…</>
-            ) : (
-              <><i className={`fa-solid ${isEdit ? 'fa-floppy-disk' : 'fa-plus'}`}></i> {isEdit ? 'Enregistrer' : 'Ajouter'}</>
-            )}
+          <button className="btn btn-cancel" onClick={closeDrawer} disabled={saving}>Annuler</button>
+          <button className={`btn ${isEdit ? 'btn-update' : 'btn-save'}`} onClick={saveDrawer} disabled={saving}>
+            {saving ? <><i className="fa-solid fa-spinner fa-spin"></i> Enregistrement…</> : <><i className={`fa-solid ${isEdit ? 'fa-floppy-disk' : 'fa-plus'}`}></i> {isEdit ? 'Enregistrer' : 'Ajouter'}</>}
           </button>
         </div>
       </div>
@@ -350,12 +208,8 @@ const DrawerPanel = ({
 const DeleteModal = ({ showDeleteModal, deleteTarget, closeDelete, confirmDelete }) => {
   if (!showDeleteModal || !deleteTarget) return null;
   const sc = STATUT_COLORS[deleteTarget.statut] || {};
-
   return (
-    <div
-      className="modal-overlay show"
-      onClick={e => { if (e.target === e.currentTarget) closeDelete(); }}
-    >
+    <div className="modal-overlay show" onClick={e => { if (e.target === e.currentTarget) closeDelete(); }}>
       <div className="modal-suppr">
         <div style={{ display: 'flex', justifyContent: 'center', paddingTop: '28px' }}>
           <div className="suppr-icon-wrap">
@@ -363,35 +217,16 @@ const DeleteModal = ({ showDeleteModal, deleteTarget, closeDelete, confirmDelete
           </div>
         </div>
         <div style={{ padding: '16px 24px', textAlign: 'center' }}>
-          <h2 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '14px', color: '#1e293b' }}>
-            Supprimer le prospect
-          </h2>
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: '12px',
-            background: '#f8fafc', border: '1px solid #e2e8f0',
-            borderRadius: '10px', padding: '10px 14px',
-            marginBottom: '14px', textAlign: 'left',
-          }}>
-            <div style={{
-              background: '#336699', borderRadius: '8px',
-              width: '38px', height: '38px',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: '#fff', fontWeight: '700', fontSize: '13px', flexShrink: 0,
-            }}>
+          <h2 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '14px', color: '#1e293b' }}>Supprimer le prospect</h2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '10px 14px', marginBottom: '14px', textAlign: 'left' }}>
+            <div style={{ background: '#336699', borderRadius: '8px', width: '38px', height: '38px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: '700', fontSize: '13px', flexShrink: 0 }}>
               {deleteTarget.prenom[0]}{deleteTarget.nom[0]}
             </div>
             <div>
-              <div style={{ fontWeight: '600', color: '#1e293b' }}>
-                {deleteTarget.prenom} {deleteTarget.nom}
-              </div>
+              <div style={{ fontWeight: '600', color: '#1e293b' }}>{deleteTarget.prenom} {deleteTarget.nom}</div>
               <div style={{ fontSize: '11.5px', color: '#94a3b8' }}>{deleteTarget.email}</div>
             </div>
-            <span
-              className="badge"
-              style={{ marginLeft: 'auto', background: sc.bg, color: sc.color, border: `1px solid ${sc.border}` }}
-            >
-              {deleteTarget.statut}
-            </span>
+            <span className="badge" style={{ marginLeft: 'auto', background: sc.bg, color: sc.color, border: `1px solid ${sc.border}` }}>{deleteTarget.statut}</span>
           </div>
           <div className="suppr-warning">
             <i className="fa-solid fa-triangle-exclamation" style={{ flexShrink: 0 }}></i>
@@ -399,12 +234,8 @@ const DeleteModal = ({ showDeleteModal, deleteTarget, closeDelete, confirmDelete
           </div>
         </div>
         <div style={{ padding: '12px 24px 20px', display: 'flex', gap: '10px' }}>
-          <button className="btn btn-cancel" style={{ flex: 1 }} onClick={closeDelete}>
-            <i className="fa-solid fa-xmark"></i> Annuler
-          </button>
-          <button className="btn btn-suppr-confirm" style={{ flex: 1 }} onClick={confirmDelete}>
-            <i className="fa-solid fa-trash"></i> Confirmer
-          </button>
+          <button className="btn btn-cancel" style={{ flex: 1 }} onClick={closeDelete}><i className="fa-solid fa-xmark"></i> Annuler</button>
+          <button className="btn btn-suppr-confirm" style={{ flex: 1 }} onClick={confirmDelete}><i className="fa-solid fa-trash"></i> Confirmer</button>
         </div>
       </div>
     </div>
@@ -414,133 +245,47 @@ const DeleteModal = ({ showDeleteModal, deleteTarget, closeDelete, confirmDelete
 /* ══════════════════════════════════════════════════════════
    MODALE CONFIRMATION CONVERSION
 ══════════════════════════════════════════════════════════ */
-const ConfirmConvertModal = ({
-  show, detailTarget, selectedForms, convertData,
-  FORMATIONS, onCancel, onConfirm, converting,
-}) => {
+const ConfirmConvertModal = ({ show, detailTarget, selectedForms, convertData, FORMATIONS, onCancel, onConfirm, converting }) => {
   if (!show || !detailTarget) return null;
   const { documentsFournis = [] } = convertData;
-
   return (
-    <div
-      className="modal-overlay show"
-      onClick={e => { if (e.target === e.currentTarget && !converting) onCancel(); }}
-    >
+    <div className="modal-overlay show" onClick={e => { if (e.target === e.currentTarget && !converting) onCancel(); }}>
       <div className="modal-suppr" style={{ maxWidth: '430px' }}>
-
         <div style={{ display: 'flex', justifyContent: 'center', paddingTop: '28px' }}>
-          <div style={{
-            width: '60px', height: '60px', borderRadius: '50%',
-            background: 'rgba(26,107,74,.12)', border: '2px solid rgba(26,107,74,.30)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>
+          <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: 'rgba(26,107,74,.12)', border: '2px solid rgba(26,107,74,.30)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <i className="fa-solid fa-graduation-cap" style={{ fontSize: '24px', color: '#1A6B4A' }}></i>
           </div>
         </div>
-
         <div style={{ padding: '16px 24px', textAlign: 'center' }}>
-          <h2 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '6px', color: '#1e293b' }}>
-            Confirmer la conversion
-          </h2>
-          <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '16px' }}>
-            Cette action est <strong>irréversible</strong>. Le prospect sera supprimé
-            et un compte étudiant sera créé automatiquement.
-          </p>
-
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: '12px',
-            background: '#f8fafc', border: '1px solid #e2e8f0',
-            borderRadius: '10px', padding: '10px 14px',
-            marginBottom: '12px', textAlign: 'left',
-          }}>
-            <div style={{
-              background: '#1A6B4A', borderRadius: '8px',
-              width: '38px', height: '38px', flexShrink: 0,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: '#fff', fontWeight: '700', fontSize: '13px',
-            }}>
+          <h2 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '6px', color: '#1e293b' }}>Confirmer la conversion</h2>
+          <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '16px' }}>Cette action est <strong>irréversible</strong>. Le prospect sera supprimé et un compte étudiant sera créé automatiquement.</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '10px 14px', marginBottom: '12px', textAlign: 'left' }}>
+            <div style={{ background: '#1A6B4A', borderRadius: '8px', width: '38px', height: '38px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: '700', fontSize: '13px' }}>
               {detailTarget.prenom[0]}{detailTarget.nom[0]}
             </div>
             <div style={{ textAlign: 'left' }}>
-              <div style={{ fontWeight: '600', color: '#1e293b' }}>
-                {detailTarget.prenom} {detailTarget.nom}
-              </div>
+              <div style={{ fontWeight: '600', color: '#1e293b' }}>{detailTarget.prenom} {detailTarget.nom}</div>
               <div style={{ fontSize: '11.5px', color: '#94a3b8' }}>{detailTarget.email}</div>
             </div>
-            <span style={{
-              marginLeft: 'auto', fontSize: '11px', fontWeight: '600',
-              background: 'rgba(26,107,74,.12)', color: '#1A6B4A',
-              border: '1px solid rgba(26,107,74,.30)',
-              borderRadius: '6px', padding: '2px 8px', whiteSpace: 'nowrap',
-            }}>
-              → Étudiant {convertData.statutEtudiant}
-            </span>
+            <span style={{ marginLeft: 'auto', fontSize: '11px', fontWeight: '600', background: 'rgba(26,107,74,.12)', color: '#1A6B4A', border: '1px solid rgba(26,107,74,.30)', borderRadius: '6px', padding: '2px 8px', whiteSpace: 'nowrap' }}>→ Étudiant {convertData.statutEtudiant}</span>
           </div>
-
-          <div style={{
-            background: 'rgba(51,204,255,.06)', border: '1px solid rgba(51,204,255,.25)',
-            borderRadius: '8px', padding: '10px 14px', textAlign: 'left',
-          }}>
-            <div style={{ fontSize: '11px', color: '#1A7A99', fontWeight: '700', marginBottom: '6px' }}>
-              <i className="fa-solid fa-book-open" style={{ marginRight: '5px' }}></i>
-              {selectedForms.length} formation(s) sélectionnée(s)
-            </div>
-            {selectedForms.map(id => {
-              const f = FORMATIONS.find(x => x.id === id);
-              return f ? (
-                <div key={id} style={{ fontSize: '12.5px', color: '#1e293b', marginBottom: '2px' }}>
-                  • {f.label}
-                  <span style={{ color: '#94a3b8', fontSize: '11px', marginLeft: '4px' }}>({f.duree})</span>
-                </div>
-              ) : null;
-            })}
+          <div style={{ background: 'rgba(51,204,255,.06)', border: '1px solid rgba(51,204,255,.25)', borderRadius: '8px', padding: '10px 14px', textAlign: 'left' }}>
+            <div style={{ fontSize: '11px', color: '#1A7A99', fontWeight: '700', marginBottom: '6px' }}><i className="fa-solid fa-book-open" style={{ marginRight: '5px' }}></i>{selectedForms.length} formation(s) sélectionnée(s)</div>
+            {selectedForms.map(id => { const f = FORMATIONS.find(x => x.id === id); return f ? <div key={id} style={{ fontSize: '12.5px', color: '#1e293b', marginBottom: '2px' }}>• {f.label} <span style={{ color: '#94a3b8', fontSize: '11px' }}>({f.duree})</span></div> : null; })}
           </div>
-
           {documentsFournis.length > 0 && (
-            <div style={{
-              background: 'rgba(120,80,200,.06)', border: '1px solid rgba(120,80,200,.22)',
-              borderRadius: '8px', padding: '10px 14px', textAlign: 'left', marginTop: '8px',
-            }}>
-              <div style={{ fontSize: '11px', color: '#5B2D8E', fontWeight: '700', marginBottom: '6px' }}>
-                <i className="fa-solid fa-file-lines" style={{ marginRight: '5px' }}></i>
-                {documentsFournis.length} document(s) fourni(s)
-              </div>
+            <div style={{ background: 'rgba(120,80,200,.06)', border: '1px solid rgba(120,80,200,.22)', borderRadius: '8px', padding: '10px 14px', textAlign: 'left', marginTop: '8px' }}>
+              <div style={{ fontSize: '11px', color: '#5B2D8E', fontWeight: '700', marginBottom: '6px' }}><i className="fa-solid fa-file-lines" style={{ marginRight: '5px' }}></i>{documentsFournis.length} document(s) fourni(s)</div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
-                {documentsFournis.map(doc => (
-                  <span key={doc} style={{
-                    background: 'rgba(120,80,200,.12)', color: '#5B2D8E',
-                    border: '1px solid rgba(120,80,200,.30)',
-                    borderRadius: '5px', padding: '2px 8px',
-                    fontSize: '11.5px', fontWeight: '600',
-                  }}>
-                    {doc}
-                  </span>
-                ))}
+                {documentsFournis.map(doc => <span key={doc} style={{ background: 'rgba(120,80,200,.12)', color: '#5B2D8E', border: '1px solid rgba(120,80,200,.30)', borderRadius: '5px', padding: '2px 8px', fontSize: '11.5px', fontWeight: '600' }}>{doc}</span>)}
               </div>
             </div>
           )}
         </div>
-
         <div style={{ padding: '12px 24px 20px', display: 'flex', gap: '10px' }}>
-          <button
-            className="btn btn-cancel"
-            style={{ flex: 1 }}
-            onClick={onCancel}
-            disabled={converting}
-          >
-            <i className="fa-solid fa-xmark"></i> Annuler
-          </button>
-          <button
-            className="btn btn-save"
-            style={{ flex: 1, background: '#1A6B4A', borderColor: '#1A6B4A' }}
-            onClick={onConfirm}
-            disabled={converting}
-          >
-            {converting ? (
-              <><i className="fa-solid fa-spinner fa-spin"></i> Conversion…</>
-            ) : (
-              <><i className="fa-solid fa-graduation-cap"></i> Confirmer</>
-            )}
+          <button className="btn btn-cancel" style={{ flex: 1 }} onClick={onCancel} disabled={converting}><i className="fa-solid fa-xmark"></i> Annuler</button>
+          <button className="btn btn-save" style={{ flex: 1, background: '#1A6B4A', borderColor: '#1A6B4A' }} onClick={onConfirm} disabled={converting}>
+            {converting ? <><i className="fa-solid fa-spinner fa-spin"></i> Conversion…</> : <><i className="fa-solid fa-graduation-cap"></i> Confirmer</>}
           </button>
         </div>
       </div>
@@ -565,23 +310,20 @@ const Toast = ({ toast }) => {
    COMPOSANT PRINCIPAL
 ══════════════════════════════════════════════════════════ */
 const Prospects = () => {
-
   const [FORMATIONS, setFORMATIONS] = useState([]);
-
   useEffect(() => {
     api.get('formations/')
       .then(res => setFORMATIONS(res.data.map(f => ({ id: f.id, label: f.intitule, duree: `${f.duree}h` }))))
       .catch(() => setFORMATIONS([]));
   }, []);
 
-  // ── States ──
+  // ── States principaux ──
   const [prospects,          setProspects]          = useState([]);
   const [loading,            setLoading]            = useState(true);
   const [apiError,           setApiError]           = useState(null);
   const [search,             setSearch]             = useState('');
   const [filterStatut,       setFilterStatut]       = useState('Tous');
   const [filterSource,       setFilterSource]       = useState('Toutes');
-  // ✅ NOUVEAU — filtre formation
   const [filterFormation,    setFilterFormation]    = useState('Toutes');
   const [sortAlpha,          setSortAlpha]          = useState(false);
   const [currentPage,        setCurrentPage]        = useState(1);
@@ -590,6 +332,13 @@ const Prospects = () => {
   const [deleteTarget,       setDeleteTarget]       = useState(null);
   const [showDeleteModal,    setShowDeleteModal]    = useState(false);
   const [showImport,         setShowImport]         = useState(false);
+  const [toast,              setToast]              = useState({ show: false, message: '', type: 'success' });
+  const [saving,             setSaving]             = useState(false);
+  const [drawerOpen,         setDrawerOpen]         = useState(false);
+  const [drawerMode,         setDrawerMode]         = useState(null);
+  const [drawerTarget,       setDrawerTarget]       = useState(null);
+  const formRef = useRef(null);
+  const PER_PAGE = 8;
 
   // ── États conversion ──
   const [convertOpen,        setConvertOpen]        = useState(false);
@@ -598,30 +347,20 @@ const Prospects = () => {
   const [showConfirmConvert, setShowConfirmConvert] = useState(false);
   const [converting,         setConverting]         = useState(false);
 
-  const [toast,  setToast]  = useState({ show: false, message: '', type: 'success' });
-  const [saving, setSaving] = useState(false);
+  // ── États relance (boîte inline) ──
+  const [relanceOpen,        setRelanceOpen]        = useState(false);
+  const [relanceDate,        setRelanceDate]        = useState('');
+  const [relanceCommentaire, setRelanceCommentaire] = useState('');
+  const [relanceError,       setRelanceError]       = useState('');
+  const [relanceSaving,      setRelanceSaving]      = useState(false);
 
-  const [drawerOpen,   setDrawerOpen]   = useState(false);
-  const [drawerMode,   setDrawerMode]   = useState(null);
-  const [drawerTarget, setDrawerTarget] = useState(null);
-  const formRef = useRef(null);
-
-  const PER_PAGE = 8;
-
-  // ── Chargement prospects ──
+  // ── Chargement ──
   const loadProspects = useCallback(async () => {
-    setLoading(true);
-    setApiError(null);
-    try {
-      const data = await getProspects();
-      setProspects(data);
-    } catch {
-      setApiError('Impossible de charger les prospects. Vérifiez votre connexion.');
-    } finally {
-      setLoading(false);
-    }
+    setLoading(true); setApiError(null);
+    try { const data = await getProspects(); setProspects(data); }
+    catch { setApiError('Impossible de charger les prospects. Vérifiez votre connexion.'); }
+    finally { setLoading(false); }
   }, []);
-
   useEffect(() => { loadProspects(); }, [loadProspects]);
 
   const showToast = (msg, type = 'success') => {
@@ -634,61 +373,30 @@ const Prospects = () => {
     let f = [...prospects];
     if (search) {
       const q = search.toLowerCase();
-      f = f.filter(p =>
-        p.nom.toLowerCase().includes(q)    ||
-        p.prenom.toLowerCase().includes(q) ||
-        p.email.toLowerCase().includes(q)  ||
-        (p.tel || '').includes(q)
-      );
+      f = f.filter(p => p.nom.toLowerCase().includes(q) || p.prenom.toLowerCase().includes(q) || p.email.toLowerCase().includes(q) || (p.tel || '').includes(q));
     }
     if (filterStatut !== 'Tous')      f = f.filter(p => p.statut === filterStatut);
     if (filterSource !== 'Toutes')    f = f.filter(p => p.source === filterSource);
-    // ✅ NOUVEAU — filtrage par formation
     if (filterFormation !== 'Toutes') f = f.filter(p => String(p.formation) === filterFormation || p.formationLabel === filterFormation);
     if (sortAlpha) f.sort((a, b) => a.nom.localeCompare(b.nom));
     return f;
   };
-
   const filtered     = getFiltered();
   const totalPages   = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
   const currentSlice = filtered.slice((currentPage - 1) * PER_PAGE, currentPage * PER_PAGE);
 
   // ── Drawer ──
-  const openAdd = () => {
-    setDrawerTarget(null);
-    setDrawerMode('add');
-    setDrawerOpen(true);
-  };
-
-  const openEdit = (id) => {
-    const p = prospects.find(x => x.id === id);
-    if (!p) return;
-    setDrawerTarget(p);
-    setDrawerMode('edit');
-    setDrawerOpen(true);
-  };
-
-  const closeDrawer = () => {
-    setDrawerOpen(false);
-    setDrawerMode(null);
-    setDrawerTarget(null);
-    formRef.current = null;
-  };
+  const openAdd = () => { setDrawerTarget(null); setDrawerMode('add'); setDrawerOpen(true); };
+  const openEdit = (id) => { const p = prospects.find(x => x.id === id); if (!p) return; setDrawerTarget(p); setDrawerMode('edit'); setDrawerOpen(true); };
+  const closeDrawer = () => { setDrawerOpen(false); setDrawerMode(null); setDrawerTarget(null); formRef.current = null; };
 
   const saveDrawer = async () => {
-    const ref = formRef.current;
-    if (!ref) return;
-
+    const ref = formRef.current; if (!ref) return;
     const isValid = ref.triggerValidation();
-    if (!isValid) {
-      showToast("Veuillez corriger les erreurs avant d'enregistrer.", 'error');
-      return;
-    }
-
+    if (!isValid) { showToast("Veuillez corriger les erreurs avant d'enregistrer.", 'error'); return; }
     const data = ref.data;
     const formationIds = data.formation ? [parseInt(data.formation, 10)].filter(Boolean) : [];
     const { responsableId, ...cleanData } = data;
-
     setSaving(true);
     try {
       if (drawerMode === 'add') {
@@ -705,39 +413,18 @@ const Prospects = () => {
     } catch (err) {
       const apiData = err.response?.data;
       if (apiData && typeof apiData === 'object') {
-        const FIELD_MAP = {
-          telephone:      'tel',
-          date_naissance: 'dateNaissance',
-          niveau_etudes:  'niveauEtudes',
-          diplome_obtenu: 'diplomeObtenu',
-          responsable:    'responsableId',
-        };
-        const fieldErrors   = {};
-        const otherMessages = [];
+        const FIELD_MAP = { telephone: 'tel', date_naissance: 'dateNaissance', niveau_etudes: 'niveauEtudes', diplome_obtenu: 'diplomeObtenu', responsable: 'responsableId' };
+        const fieldErrors = {}; const otherMessages = [];
         Object.entries(apiData).forEach(([key, val]) => {
-          const msgs       = Array.isArray(val) ? val : [val];
+          const msgs = Array.isArray(val) ? val : [val];
           const reactField = FIELD_MAP[key] || key;
-          if (FORM_FIELDS.includes(reactField)) {
-            fieldErrors[reactField] = msgs.join(' ');
-          } else {
-            otherMessages.push(msgs.join(' '));
-          }
+          if (FORM_FIELDS.includes(reactField)) fieldErrors[reactField] = msgs.join(' ');
+          else otherMessages.push(msgs.join(' '));
         });
-        if (Object.keys(fieldErrors).length > 0 && formRef.current?.setApiErrors) {
-          formRef.current.setApiErrors(fieldErrors);
-        }
-        const toastMsg = otherMessages.length > 0
-          ? otherMessages.join(' ')
-          : Object.keys(fieldErrors).length > 0
-            ? 'Veuillez corriger les erreurs signalées.'
-            : 'Une erreur est survenue.';
-        showToast(toastMsg, 'error');
-      } else {
-        showToast('Une erreur est survenue.', 'error');
-      }
-    } finally {
-      setSaving(false);
-    }
+        if (Object.keys(fieldErrors).length > 0 && formRef.current?.setApiErrors) formRef.current.setApiErrors(fieldErrors);
+        showToast(otherMessages.length > 0 ? otherMessages.join(' ') : Object.keys(fieldErrors).length > 0 ? 'Veuillez corriger les erreurs signalées.' : 'Une erreur est survenue.', 'error');
+      } else { showToast('Une erreur est survenue.', 'error'); }
+    } finally { setSaving(false); }
   };
 
   // ── Détail ──
@@ -745,81 +432,64 @@ const Prospects = () => {
     try {
       const p = await getProspect(id);
       setDetailTarget(p);
-      setConvertOpen(false);
-      setSelectedForms([]);
-      setConvertData({ statutEtudiant: 'Actif', notes: '', documentsFournis: [] });
+      setConvertOpen(false); setRelanceOpen(false);
+      setSelectedForms([]); setConvertData({ statutEtudiant: 'Actif', notes: '', documentsFournis: [] });
+      setRelanceDate(''); setRelanceCommentaire(''); setRelanceError('');
       setPageView('detail');
-    } catch {
-      showToast('Impossible de charger les détails du prospect.', 'error');
-    }
+    } catch { showToast('Impossible de charger les détails du prospect.', 'error'); }
   };
   const closeDetail = () => { setPageView('list'); setDetailTarget(null); };
 
   // ── Supprimer ──
-  const openDelete = (id) => {
-    const p = prospects.find(x => x.id === id);
-    if (!p) return;
-    setDeleteTarget(p);
-    setShowDeleteModal(true);
-  };
-  const closeDelete   = () => { setShowDeleteModal(false); setDeleteTarget(null); };
+  const openDelete = (id) => { const p = prospects.find(x => x.id === id); if (!p) return; setDeleteTarget(p); setShowDeleteModal(true); };
+  const closeDelete = () => { setShowDeleteModal(false); setDeleteTarget(null); };
   const confirmDelete = async () => {
     if (!deleteTarget) return;
     try {
       await deleteProspect(deleteTarget.id);
       setProspects(prev => prev.filter(p => p.id !== deleteTarget.id));
-      if (detailTarget && detailTarget.id === deleteTarget.id) {
-        setPageView('list');
-        setDetailTarget(null);
-      }
-      closeDelete();
-      showToast('Prospect supprimé.');
-    } catch {
-      showToast('Erreur lors de la suppression.', 'error');
-      closeDelete();
-    }
+      if (detailTarget && detailTarget.id === deleteTarget.id) { setPageView('list'); setDetailTarget(null); }
+      closeDelete(); showToast('Prospect supprimé.');
+    } catch { showToast('Erreur lors de la suppression.', 'error'); closeDelete(); }
   };
 
-  // ══════════════════════════════════════════════════════════
-  // CONVERSION PROSPECT → ÉTUDIANT
-  // ══════════════════════════════════════════════════════════
+  // ── Conversion ──
   const toggleConvert = () => {
     setConvertOpen(v => !v);
-    setSelectedForms([]);
-    setConvertData({ statutEtudiant: 'Actif', notes: '', documentsFournis: [] });
+    setRelanceOpen(false); // ferme la relance si ouverte
+    setSelectedForms([]); setConvertData({ statutEtudiant: 'Actif', notes: '', documentsFournis: [] });
   };
-
-  const toggleForm = (id) => setSelectedForms(prev =>
-    prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
-  );
-
-  const handleConvert = () => {
-    if (!selectedForms.length) {
-      showToast('Veuillez sélectionner au moins une formation.', 'error');
-      return;
-    }
-    setShowConfirmConvert(true);
-  };
-
+  const toggleForm = (id) => setSelectedForms(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  const handleConvert = () => { if (!selectedForms.length) { showToast('Veuillez sélectionner au moins une formation.', 'error'); return; } setShowConfirmConvert(true); };
   const confirmConvert = async () => {
     setConverting(true);
     try {
-      await convertToEtudiant(detailTarget.id, {
-        formations_ids:    selectedForms,
-        statut_etudiant:   convertData.statutEtudiant,
-        notes:             convertData.notes,
-        documents_fournis: convertData.documentsFournis,
-      });
+      await convertToEtudiant(detailTarget.id, { formations_ids: selectedForms, statut_etudiant: convertData.statutEtudiant, notes: convertData.notes, documents_fournis: convertData.documentsFournis });
       setProspects(prev => prev.filter(p => p.id !== detailTarget.id));
-      setShowConfirmConvert(false);
-      setConvertOpen(false);
-      closeDetail();
+      setShowConfirmConvert(false); setConvertOpen(false); closeDetail();
       showToast(`🎓 ${detailTarget.prenom} ${detailTarget.nom} a été converti(e) en étudiant(e) !`);
-    } catch (err) {
-      showToast(err.response?.data?.message || 'Erreur lors de la conversion.', 'error');
-    } finally {
-      setConverting(false);
-    }
+    } catch (err) { showToast(err.response?.data?.message || 'Erreur lors de la conversion.', 'error'); }
+    finally { setConverting(false); }
+  };
+
+  // ── Relance (inline) ──
+  const toggleRelance = () => {
+    setRelanceOpen(v => !v);
+    setConvertOpen(false); // ferme la conversion si ouverte
+    setRelanceDate(''); setRelanceCommentaire(''); setRelanceError('');
+  };
+
+  const handleCreateRelance = async () => {
+    if (!relanceDate) { setRelanceError('La date de relance est obligatoire.'); return; }
+    setRelanceError('');
+    try {
+      setRelanceSaving(true);
+      await createRelance(detailTarget.id, { dateRelance: relanceDate, commentaire: relanceCommentaire });
+      showToast('✅ Relance programmée avec succès !');
+      setRelanceOpen(false);
+      setRelanceDate(''); setRelanceCommentaire('');
+    } catch { showToast('Erreur lors de la création de la relance.', 'error'); }
+    finally { setRelanceSaving(false); }
   };
 
   // ══════════════════════════════════════════════════════════
@@ -834,67 +504,42 @@ const Prospects = () => {
         <div className="det-page">
           <div className="det-topbar">
             <button className="back-btn" onClick={closeDetail}>
-              <i className="fa-solid fa-arrow-left"></i>
-              <span>Prospects</span>
+              <i className="fa-solid fa-arrow-left"></i><span>Prospects</span>
             </button>
             <i className="fa-solid fa-chevron-right det-bc-sep"></i>
             <span className="det-bc-name">{p.prenom} {p.nom}</span>
           </div>
 
           <div className="det-body">
-            {/* ════ SIDEBAR GAUCHE ════ */}
+            {/* ════ SIDEBAR ════ */}
             <div className="det-sidebar">
               <div className="det-sid-hero">
                 <div className="det-sid-avatar">{p.prenom[0]}{p.nom[0]}</div>
                 <div className="det-sid-name">{p.prenom} {p.nom}</div>
-                <span className="badge det-sid-badge" style={{ background: sc.bg, color: sc.color, border: `1.5px solid ${sc.border}` }}>
-                  {p.statut}
-                </span>
+                <span className="badge det-sid-badge" style={{ background: sc.bg, color: sc.color, border: `1.5px solid ${sc.border}` }}>{p.statut}</span>
               </div>
               <div className="det-sid-divider" />
               <div className="det-sid-fields">
-                <div className="det-sid-field">
-                  <span className="det-sid-label"><i className="fa-regular fa-envelope"></i> E-mail</span>
-                  <span className="det-sid-val">{p.email}</span>
-                </div>
-                <div className="det-sid-field">
-                  <span className="det-sid-label"><i className="fa-solid fa-phone"></i> Téléphone</span>
-                  <span className="det-sid-val">{p.tel || '—'}</span>
-                </div>
-                <div className="det-sid-field">
-                  <span className="det-sid-label"><i className="fa-solid fa-location-dot"></i> Ville / Pays</span>
-                  <span className="det-sid-val">{[p.ville, p.pays].filter(Boolean).join(', ') || '—'}</span>
-                </div>
-                <div className="det-sid-field">
-                  <span className="det-sid-label"><i className="fa-regular fa-calendar-days"></i> Naissance</span>
-                  <span className="det-sid-val">{p.dateNaissance || '—'}</span>
-                </div>
-                <div className="det-sid-field">
-                  <span className="det-sid-label"><i className="fa-solid fa-venus-mars"></i> Genre</span>
-                  <span className="det-sid-val">{p.genre || '—'}</span>
-                </div>
-                <div className="det-sid-field">
-                  <span className="det-sid-label"><i className="fa-solid fa-share-nodes"></i> Source</span>
-                  <span className="det-sid-val"><span className="src-tag">{p.source || '—'}</span></span>
-                </div>
-                <div className="det-sid-field">
-                  <span className="det-sid-label"><i className="fa-solid fa-message"></i> Canal préféré</span>
-                  <span className="det-sid-val">{p.canalContact || '—'}</span>
-                </div>
-                <div className="det-sid-field">
-                  <span className="det-sid-label"><i className="fa-regular fa-calendar"></i> Date création</span>
-                  <span className="det-sid-val">{p.date}</span>
-                </div>
-                <div className="det-sid-field">
-                  <span className="det-sid-label"><i className="fa-solid fa-user-tie"></i> Responsable</span>
-                  <span className="det-sid-val">{p.responsable || '—'}</span>
-                </div>
+                <div className="det-sid-field"><span className="det-sid-label"><i className="fa-regular fa-envelope"></i> E-mail</span><span className="det-sid-val">{p.email}</span></div>
+                <div className="det-sid-field"><span className="det-sid-label"><i className="fa-solid fa-phone"></i> Téléphone</span><span className="det-sid-val">{p.tel || '—'}</span></div>
+                <div className="det-sid-field"><span className="det-sid-label"><i className="fa-solid fa-location-dot"></i> Ville / Pays</span><span className="det-sid-val">{[p.ville, p.pays].filter(Boolean).join(', ') || '—'}</span></div>
+                <div className="det-sid-field"><span className="det-sid-label"><i className="fa-regular fa-calendar-days"></i> Naissance</span><span className="det-sid-val">{p.dateNaissance || '—'}</span></div>
+                <div className="det-sid-field"><span className="det-sid-label"><i className="fa-solid fa-venus-mars"></i> Genre</span><span className="det-sid-val">{p.genre || '—'}</span></div>
+                <div className="det-sid-field"><span className="det-sid-label"><i className="fa-solid fa-share-nodes"></i> Source</span><span className="det-sid-val"><span className="src-tag">{p.source || '—'}</span></span></div>
+                <div className="det-sid-field"><span className="det-sid-label"><i className="fa-solid fa-message"></i> Canal préféré</span><span className="det-sid-val">{p.canalContact || '—'}</span></div>
+                <div className="det-sid-field"><span className="det-sid-label"><i className="fa-regular fa-calendar"></i> Date création</span><span className="det-sid-val">{p.date}</span></div>
+                <div className="det-sid-field"><span className="det-sid-label"><i className="fa-solid fa-user-tie"></i> Responsable</span><span className="det-sid-val">{p.responsable || '—'}</span></div>
               </div>
               <div className="det-sid-divider" />
               <div className="det-sid-actions">
                 <button className="det-action-btn det-action-convert" onClick={toggleConvert}>
                   <i className="fa-solid fa-graduation-cap"></i>
                   {convertOpen ? 'Fermer la conversion' : 'Convertir en étudiant'}
+                </button>
+                {/* ── Bouton Relance ── */}
+                <button className="det-action-btn det-action-relance" onClick={toggleRelance}>
+                  <i className="fa-solid fa-bell"></i>
+                  {relanceOpen ? 'Fermer la relance' : 'Ajouter une relance'}
                 </button>
                 <button className="det-action-btn det-action-edit" onClick={() => openEdit(p.id)}>
                   <i className="fa-solid fa-pen"></i> Modifier
@@ -905,21 +550,14 @@ const Prospects = () => {
             {/* ════ CONTENU DROITE ════ */}
             <div className="det-main">
 
-              {/* ════ CONVERT-BOX (formulaire contrôlé) ════ */}
+              {/* ── Boîte Conversion ── */}
               {convertOpen && (
                 <div className="convert-box det-convert-box">
                   <div className="convert-title">
                     <i className="fa-solid fa-graduation-cap"></i> Conversion en Étudiant
-                    <button className="det-convert-close" onClick={toggleConvert}>
-                      <i className="fa-solid fa-xmark"></i>
-                    </button>
+                    <button className="det-convert-close" onClick={toggleConvert}><i className="fa-solid fa-xmark"></i></button>
                   </div>
-
-                  {/* ── Formations ── */}
-                  <div className="conv-section-label">
-                    <i className="fa-solid fa-book-open"></i> Formation(s) suivie(s)
-                    <span style={{ color: '#e53e3e', marginLeft: '4px' }}>*</span>
-                  </div>
+                  <div className="conv-section-label"><i className="fa-solid fa-book-open"></i> Formation(s) suivie(s) <span style={{ color: '#e53e3e', marginLeft: '4px' }}>*</span></div>
                   <div className="det-form-checks">
                     {FORMATIONS.map(f => (
                       <div key={f.id} className="form-check" onClick={() => toggleForm(f.id)}>
@@ -929,66 +567,91 @@ const Prospects = () => {
                       </div>
                     ))}
                   </div>
-
-                  {/* ── Documents fournis ── */}
                   <div className="form-group" style={{ marginTop: '12px' }}>
                     <label className="form-label">Documents fournis</label>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px 20px', marginTop: '6px' }}>
                       {['CIN', 'CV', 'Contrat', 'Reçu', 'RNE', 'Autres'].map(doc => (
                         <label key={doc} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: '#374151', cursor: 'pointer', userSelect: 'none' }}>
-                          <input
-                            type="checkbox"
-                            checked={convertData.documentsFournis.includes(doc)}
-                            onChange={() =>
-                              setConvertData(prev => ({
-                                ...prev,
-                                documentsFournis: prev.documentsFournis.includes(doc)
-                                  ? prev.documentsFournis.filter(d => d !== doc)
-                                  : [...prev.documentsFournis, doc],
-                              }))
-                            }
-                            style={{ width: '15px', height: '15px', cursor: 'pointer' }}
-                          />
+                          <input type="checkbox" checked={convertData.documentsFournis.includes(doc)}
+                            onChange={() => setConvertData(prev => ({ ...prev, documentsFournis: prev.documentsFournis.includes(doc) ? prev.documentsFournis.filter(d => d !== doc) : [...prev.documentsFournis, doc] }))}
+                            style={{ width: '15px', height: '15px', cursor: 'pointer' }} />
                           {doc}
                         </label>
                       ))}
                     </div>
                   </div>
-
-                  {/* ── Statut étudiant ── */}
                   <div className="form-group" style={{ marginTop: '12px' }}>
                     <label className="form-label">Statut étudiant</label>
-                    <select
-                      className="form-control"
-                      value={convertData.statutEtudiant}
-                      onChange={e => setConvertData(prev => ({ ...prev, statutEtudiant: e.target.value }))}
-                    >
-                      <option>Actif</option>
-                      <option>Abandonné</option>
-                      <option>Certifié</option>
+                    <select className="form-control" value={convertData.statutEtudiant} onChange={e => setConvertData(prev => ({ ...prev, statutEtudiant: e.target.value }))}>
+                      <option>Actif</option><option>Abandonné</option><option>Certifié</option>
                     </select>
                   </div>
-
-                  {/* ── Notes ── */}
                   <div className="form-group" style={{ marginTop: '10px' }}>
                     <label className="form-label">Notes / Observations</label>
-                    <textarea
-                      className="form-control"
-                      rows={2}
-                      placeholder="Observations, remarques sur l'étudiant..."
-                      value={convertData.notes}
-                      onChange={e => setConvertData(prev => ({ ...prev, notes: e.target.value }))}
+                    <textarea className="form-control" rows={2} placeholder="Observations, remarques sur l'étudiant..." value={convertData.notes} onChange={e => setConvertData(prev => ({ ...prev, notes: e.target.value }))} />
+                  </div>
+                  <div className="det-convert-footer">
+                    <button className="btn btn-cancel" onClick={toggleConvert}>Annuler</button>
+                    <button className="btn-confirm" style={{ flex: 1 }} onClick={handleConvert}>
+                      <i className="fa-solid fa-check" style={{ marginRight: '5px' }}></i> Confirmer la conversion
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* ── Boîte Relance (inline, même style que convert-box) ── */}
+              {relanceOpen && (
+                <div className="relance-box">
+                  <div className="relance-box-title">
+                    <i className="fa-solid fa-bell"></i> Programmer une relance
+                    <button className="relance-box-close" onClick={toggleRelance}>
+                      <i className="fa-solid fa-xmark"></i>
+                    </button>
+                  </div>
+
+                  {relanceError && (
+                    <div className="relance-error-banner">
+                      <i className="fa-solid fa-triangle-exclamation"></i> {relanceError}
+                    </div>
+                  )}
+
+                  <div className="relance-field">
+                    <label className="relance-label">
+                      <i className="fa-regular fa-calendar"></i> Date de relance
+                      <span className="required-star">*</span>
+                    </label>
+                    <input
+                      type="date"
+                      className="relance-input"
+                      value={relanceDate}
+                      min={new Date().toISOString().split('T')[0]}
+                      onChange={e => { setRelanceDate(e.target.value); setRelanceError(''); }}
                     />
                   </div>
 
-                  {/* ── Footer ── */}
-                  <div className="det-convert-footer">
-                    <button className="btn btn-cancel" onClick={toggleConvert}>
+                  <div className="relance-field">
+                    <label className="relance-label">
+                      <i className="fa-regular fa-comment"></i> Commentaire
+                      <span className="optional-tag">optionnel</span>
+                    </label>
+                    <textarea
+                      className="relance-textarea"
+                      placeholder="Ex : Rappeler pour confirmer son intérêt…"
+                      rows={3}
+                      value={relanceCommentaire}
+                      onChange={e => setRelanceCommentaire(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="relance-box-footer">
+                    <button className="btn-relance-cancel" onClick={toggleRelance} disabled={relanceSaving}>
                       Annuler
                     </button>
-                    <button className="btn-confirm" style={{ flex: 1 }} onClick={handleConvert}>
-                      <i className="fa-solid fa-check" style={{ marginRight: '5px' }}></i>
-                      Confirmer la conversion
+                    <button className="btn-relance-save" onClick={handleCreateRelance} disabled={relanceSaving}>
+                      {relanceSaving
+                        ? <><i className="fa-solid fa-spinner fa-spin"></i> Enregistrement…</>
+                        : <><i className="fa-solid fa-check"></i> Enregistrer</>
+                      }
                     </button>
                   </div>
                 </div>
@@ -1030,16 +693,11 @@ const Prospects = () => {
                 </div>
               </div>
 
-              {/* ── Suivi du prospect ── */}
+              {/* ── Suivi ── */}
               <div className="det-section-card">
                 <div className="det-section-header"><i className="fa-solid fa-chart-line"></i> Suivi du prospect</div>
                 <div className="det-fields-grid">
-                  <div className="det-field">
-                    <span className="det-field-label">Statut</span>
-                    <span className="det-field-val">
-                      <span className="badge" style={{ background: sc.bg, color: sc.color, border: `1px solid ${sc.border}` }}>{p.statut}</span>
-                    </span>
-                  </div>
+                  <div className="det-field"><span className="det-field-label">Statut</span><span className="det-field-val"><span className="badge" style={{ background: sc.bg, color: sc.color, border: `1px solid ${sc.border}` }}>{p.statut}</span></span></div>
                   <div className="det-field"><span className="det-field-label">Date de création</span><span className="det-field-val">{p.date}</span></div>
                   <div className="det-field"><span className="det-field-label">Responsable</span><span className="det-field-val">{p.responsable || '—'}</span></div>
                 </div>
@@ -1052,29 +710,16 @@ const Prospects = () => {
                 </div>
               ) : null}
 
+              {/* ── Historique des relances ── */}
+              <ProspectRelances prospectId={p.id} prospectNom={`${p.prenom} ${p.nom}`} />
+
             </div>
           </div>
         </div>
 
-        <DrawerPanel
-          drawerOpen={drawerOpen} drawerMode={drawerMode} drawerTarget={drawerTarget}
-          closeDrawer={closeDrawer} saveDrawer={saveDrawer} saving={saving}
-          formRef={formRef} FORMATIONS={FORMATIONS}
-        />
-        <DeleteModal
-          showDeleteModal={showDeleteModal} deleteTarget={deleteTarget}
-          closeDelete={closeDelete} confirmDelete={confirmDelete}
-        />
-        <ConfirmConvertModal
-          show={showConfirmConvert}
-          detailTarget={detailTarget}
-          selectedForms={selectedForms}
-          convertData={convertData}
-          FORMATIONS={FORMATIONS}
-          onCancel={() => setShowConfirmConvert(false)}
-          onConfirm={confirmConvert}
-          converting={converting}
-        />
+        <DrawerPanel drawerOpen={drawerOpen} drawerMode={drawerMode} drawerTarget={drawerTarget} closeDrawer={closeDrawer} saveDrawer={saveDrawer} saving={saving} formRef={formRef} FORMATIONS={FORMATIONS} />
+        <DeleteModal showDeleteModal={showDeleteModal} deleteTarget={deleteTarget} closeDelete={closeDelete} confirmDelete={confirmDelete} />
+        <ConfirmConvertModal show={showConfirmConvert} detailTarget={detailTarget} selectedForms={selectedForms} convertData={convertData} FORMATIONS={FORMATIONS} onCancel={() => setShowConfirmConvert(false)} onConfirm={confirmConvert} converting={converting} />
         <Toast toast={toast} />
       </Layout>
     );
@@ -1083,15 +728,8 @@ const Prospects = () => {
   // ══════════════════════════════════════════════════════════
   // PAGE LISTE
   // ══════════════════════════════════════════════════════════
-
-  // ✅ Badges filtres actifs — inclut maintenant la formation
   const hasActiveFilters = filterStatut !== 'Tous' || filterSource !== 'Toutes' || filterFormation !== 'Toutes';
-  const clearAllFilters  = () => {
-    setFilterStatut('Tous');
-    setFilterSource('Toutes');
-    setFilterFormation('Toutes');
-    setCurrentPage(1);
-  };
+  const clearAllFilters  = () => { setFilterStatut('Tous'); setFilterSource('Toutes'); setFilterFormation('Toutes'); setCurrentPage(1); };
 
   return (
     <Layout>
@@ -1102,76 +740,30 @@ const Prospects = () => {
 
       <div className="toolbar">
         <div className="tb-left">
-          {/* Barre de recherche */}
           <div className="search-box">
             <i className="fa-solid fa-magnifying-glass"></i>
-            <input
-              placeholder="Rechercher..."
-              value={search}
-              onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
-            />
+            <input placeholder="Rechercher..." value={search} onChange={e => { setSearch(e.target.value); setCurrentPage(1); }} />
           </div>
-
-          {/* Filtre Statut */}
-          <select
-            className="filter-sel"
-            value={filterStatut}
-            onChange={e => { setFilterStatut(e.target.value); setCurrentPage(1); }}
-          >
+          <select className="filter-sel" value={filterStatut} onChange={e => { setFilterStatut(e.target.value); setCurrentPage(1); }}>
             <option value="Tous">Tous les statuts</option>
-            <option>Nouveau</option>
-            <option>Contacté</option>
-            <option>Intéressé</option>
-            <option>Converti</option>
-            <option>Perdu</option>
+            <option>Nouveau</option><option>Contacté</option><option>Intéressé</option><option>Converti</option><option>Perdu</option>
           </select>
-
-          {/* Filtre Source */}
-          <select
-            className="filter-sel"
-            value={filterSource}
-            onChange={e => { setFilterSource(e.target.value); setCurrentPage(1); }}
-          >
+          <select className="filter-sel" value={filterSource} onChange={e => { setFilterSource(e.target.value); setCurrentPage(1); }}>
             <option value="Toutes">Toutes les sources</option>
-            <option>Facebook</option>
-            <option>Instagram</option>
-            <option>TikTok</option>
-            <option>LinkedIn</option>
-            <option>Google</option>
-            <option>Site web</option>
-            <option>Recommandation</option>
-            <option>Appel entrant</option>
-            <option>Autre</option>
+            <option>Facebook</option><option>Instagram</option><option>TikTok</option><option>LinkedIn</option>
+            <option>Google</option><option>Site web</option><option>Recommandation</option><option>Appel entrant</option><option>Autre</option>
           </select>
-
-          {/* ✅ NOUVEAU — Filtre Formation */}
-          <select
-            className="filter-sel"
-            value={filterFormation}
-            onChange={e => { setFilterFormation(e.target.value); setCurrentPage(1); }}
-          >
+          <select className="filter-sel" value={filterFormation} onChange={e => { setFilterFormation(e.target.value); setCurrentPage(1); }}>
             <option value="Toutes">Toutes les formations</option>
-            {FORMATIONS.map(f => (
-              <option key={f.id} value={String(f.id)}>{f.label}</option>
-            ))}
+            {FORMATIONS.map(f => <option key={f.id} value={String(f.id)}>{f.label}</option>)}
           </select>
-
-          {/* Bouton tri A→Z */}
           <button className={`btn btn-sort ${sortAlpha ? 'active' : ''}`} onClick={() => setSortAlpha(v => !v)}>
             <i className="fa-solid fa-arrow-down-a-z"></i> A → Z
           </button>
         </div>
-
         <div className="tb-right">
-          <button
-            className="btn btn-imp"
-            onClick={() => setShowImport(true)}
-          >
-            <i className="fa-solid fa-file-import"></i> Importer Excel
-          </button>
-          <button className="btn btn-add" onClick={openAdd}>
-            <i className="fa-solid fa-plus"></i> Ajouter un prospect
-          </button>
+          <button className="btn btn-imp" onClick={() => setShowImport(true)}><i className="fa-solid fa-file-import"></i> Importer Excel</button>
+          <button className="btn btn-add" onClick={openAdd}><i className="fa-solid fa-plus"></i> Ajouter un prospect</button>
         </div>
       </div>
 
@@ -1180,44 +772,18 @@ const Prospects = () => {
           <strong>{filtered.length}</strong> prospect{filtered.length !== 1 ? 's' : ''} trouvé{filtered.length !== 1 ? 's' : ''}
           {hasActiveFilters && (
             <div className="active-filters">
-              {filterStatut !== 'Tous' && (
-                <span className="filter-badge">
-                  <i className="fa-solid fa-circle-dot" style={{ fontSize: '9px' }}></i>
-                  Statut : {filterStatut}
-                </span>
-              )}
-              {filterSource !== 'Toutes' && (
-                <span className="filter-badge">
-                  <i className="fa-solid fa-circle-dot" style={{ fontSize: '9px' }}></i>
-                  Source : {filterSource}
-                </span>
-              )}
-              {filterFormation !== 'Toutes' && (
-                <span className="filter-badge">
-                  <i className="fa-solid fa-circle-dot" style={{ fontSize: '9px' }}></i>
-                  Formation : {FORMATIONS.find(f => String(f.id) === filterFormation)?.label || filterFormation}
-                </span>
-              )}
-              <button className="clear-filters" onClick={clearAllFilters}>
-                <i className="fa-solid fa-xmark"></i> Effacer
-              </button>
+              {filterStatut !== 'Tous' && <span className="filter-badge"><i className="fa-solid fa-circle-dot" style={{ fontSize: '9px' }}></i> Statut : {filterStatut}</span>}
+              {filterSource !== 'Toutes' && <span className="filter-badge"><i className="fa-solid fa-circle-dot" style={{ fontSize: '9px' }}></i> Source : {filterSource}</span>}
+              {filterFormation !== 'Toutes' && <span className="filter-badge"><i className="fa-solid fa-circle-dot" style={{ fontSize: '9px' }}></i> Formation : {FORMATIONS.find(f => String(f.id) === filterFormation)?.label || filterFormation}</span>}
+              <button className="clear-filters" onClick={clearAllFilters}><i className="fa-solid fa-xmark"></i> Effacer</button>
             </div>
           )}
         </div>
 
         {loading ? (
-          <div className="empty-state">
-            <i className="fa-solid fa-spinner fa-spin" style={{ fontSize: '28px', color: '#336699' }}></i>
-            <p>Chargement des prospects…</p>
-          </div>
+          <div className="empty-state"><i className="fa-solid fa-spinner fa-spin" style={{ fontSize: '28px', color: '#336699' }}></i><p>Chargement des prospects…</p></div>
         ) : apiError ? (
-          <div className="empty-state">
-            <i className="fa-solid fa-triangle-exclamation" style={{ color: '#ef4444' }}></i>
-            <p>{apiError}</p>
-            <button className="btn btn-add" style={{ marginTop: '12px' }} onClick={loadProspects}>
-              <i className="fa-solid fa-rotate-right"></i> Réessayer
-            </button>
-          </div>
+          <div className="empty-state"><i className="fa-solid fa-triangle-exclamation" style={{ color: '#ef4444' }}></i><p>{apiError}</p><button className="btn btn-add" style={{ marginTop: '12px' }} onClick={loadProspects}><i className="fa-solid fa-rotate-right"></i> Réessayer</button></div>
         ) : (
           <>
             <div className="table-wrap">
@@ -1225,12 +791,8 @@ const Prospects = () => {
                 <thead>
                   <tr>
                     <th style={{ width: '32px' }}>#</th>
-                    <th>Nom & Prénom</th>
-                    <th>Contact</th>
-                    <th>Formation souhaitée</th>
-                    <th>Statut</th>
-                    <th>Source</th>
-                    <th>Date</th>
+                    <th>Nom & Prénom</th><th>Contact</th><th>Formation souhaitée</th>
+                    <th>Statut</th><th>Source</th><th>Date</th>
                     <th style={{ textAlign: 'center' }}>Actions</th>
                   </tr>
                 </thead>
@@ -1240,20 +802,10 @@ const Prospects = () => {
                     return (
                       <tr key={p.id}>
                         <td className="td-num">{(currentPage - 1) * PER_PAGE + i + 1}</td>
-                        <td>
-                          <div className="td-name">{p.nom} {p.prenom}</div>
-                          <div className="td-sub">{p.email}</div>
-                        </td>
-                        <td>
-                          <div className="td-sub">{p.email}</div>
-                          <div className="td-sub">{p.tel}</div>
-                        </td>
+                        <td><div className="td-name">{p.nom} {p.prenom}</div><div className="td-sub">{p.email}</div></td>
+                        <td><div className="td-sub">{p.email}</div><div className="td-sub">{p.tel}</div></td>
                         <td className="td-sub">{p.formationLabel || '—'}</td>
-                        <td>
-                          <span className="badge" style={{ background: sc.bg, color: sc.color, border: `1px solid ${sc.border}` }}>
-                            {p.statut}
-                          </span>
-                        </td>
+                        <td><span className="badge" style={{ background: sc.bg, color: sc.color, border: `1px solid ${sc.border}` }}>{p.statut}</span></td>
                         <td><span className="src-tag">{p.source}</span></td>
                         <td className="td-sub">{p.date}</td>
                         <td className="td-actions">
@@ -1266,18 +818,12 @@ const Prospects = () => {
                   })}
                 </tbody>
               </table>
-              {currentSlice.length === 0 && (
-                <div className="empty-state">
-                  <i className="fa-solid fa-user-slash"></i>
-                  <p>Aucun prospect trouvé.</p>
-                </div>
-              )}
+              {currentSlice.length === 0 && <div className="empty-state"><i className="fa-solid fa-user-slash"></i><p>Aucun prospect trouvé.</p></div>}
             </div>
-
             {totalPages > 1 && (
               <div className="pagination">
-                <button className="pg-btn" disabled={currentPage === 1}          onClick={() => setCurrentPage(1)}><i className="fa-solid fa-angles-left"></i></button>
-                <button className="pg-btn" disabled={currentPage === 1}          onClick={() => setCurrentPage(p => p - 1)}><i className="fa-solid fa-angle-left"></i></button>
+                <button className="pg-btn" disabled={currentPage === 1} onClick={() => setCurrentPage(1)}><i className="fa-solid fa-angles-left"></i></button>
+                <button className="pg-btn" disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)}><i className="fa-solid fa-angle-left"></i></button>
                 {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
                   <button key={page} className={`pg-num ${currentPage === page ? 'active' : ''}`} onClick={() => setCurrentPage(page)}>{page}</button>
                 ))}
@@ -1289,25 +835,10 @@ const Prospects = () => {
         )}
       </div>
 
-      <DrawerPanel
-        drawerOpen={drawerOpen} drawerMode={drawerMode} drawerTarget={drawerTarget}
-        closeDrawer={closeDrawer} saveDrawer={saveDrawer} saving={saving}
-        formRef={formRef} FORMATIONS={FORMATIONS}
-      />
-      <DeleteModal
-        showDeleteModal={showDeleteModal} deleteTarget={deleteTarget}
-        closeDelete={closeDelete} confirmDelete={confirmDelete}
-      />
+      <DrawerPanel drawerOpen={drawerOpen} drawerMode={drawerMode} drawerTarget={drawerTarget} closeDrawer={closeDrawer} saveDrawer={saveDrawer} saving={saving} formRef={formRef} FORMATIONS={FORMATIONS} />
+      <DeleteModal showDeleteModal={showDeleteModal} deleteTarget={deleteTarget} closeDelete={closeDelete} confirmDelete={confirmDelete} />
       <Toast toast={toast} />
-
-      <ImportProspectsModal
-        isOpen={showImport}
-        onClose={() => setShowImport(false)}
-        onSuccess={() => {
-          loadProspects();
-          showToast('Import réussi !', 'success');
-        }}
-      />
+      <ImportProspectsModal isOpen={showImport} onClose={() => setShowImport(false)} onSuccess={() => { loadProspects(); showToast('Import réussi !', 'success'); }} />
     </Layout>
   );
 };

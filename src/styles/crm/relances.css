@@ -1,0 +1,548 @@
+/* ══════════════════════════════════════════════════════════════════════════════
+   relances.css  —  palette assortie à l'application
+   #33CCFF → bleu ciel  (accents, focus, icônes)
+   #336699 → bleu marine (boutons principaux, titres)
+   #FFCC33 → or          (action OK / confirmation)
+   #1E3A5F → marine foncé (textes titres)
+   #F8FAFC → gris perle  (fonds)
+══════════════════════════════════════════════════════════════════════════════ */
+
+/* ─── Overlay (utilisé uniquement dans Home.js) ───────────────────────────── */
+.relance-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 30, 55, 0.38);
+  backdrop-filter: blur(3px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  animation: fadeInOverlay .18s ease;
+}
+
+@keyframes fadeInOverlay {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ─── Carte modale (Home) ──────────────────────────────────────────────────── */
+.relance-modal-card {
+  background: #fff;
+  border-radius: 14px;
+  width: 100%;
+  max-width: 460px;
+  box-shadow: 0 20px 60px rgba(30, 58, 95, 0.18);
+  overflow: hidden;
+  animation: slideUpModal .22s cubic-bezier(.34,1.56,.64,1);
+}
+
+@keyframes slideUpModal {
+  from { transform: translateY(20px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+.relance-modal-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 22px 14px;
+  border-bottom: 3px solid #33CCFF;
+  background: #fff;
+}
+
+.relance-modal-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  background: linear-gradient(135deg, #33CCFF, #1a9ebb);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 15px;
+  flex-shrink: 0;
+}
+
+.relance-modal-icon.ok-icon     { background: linear-gradient(135deg, #1A6B4A, #22a868); }
+.relance-modal-icon.reprog-icon { background: linear-gradient(135deg, #FFCC33, #e6b800); }
+
+.relance-modal-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1E3A5F;
+  flex: 1;
+  margin: 0;
+}
+
+.relance-modal-close {
+  width: 30px;
+  height: 30px;
+  background: #F1F5F9;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background .15s, color .15s;
+}
+.relance-modal-close:hover { background: #fee2e2; color: #e53e3e; }
+
+.relance-modal-body {
+  padding: 18px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.relance-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.relance-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+.relance-label i { color: #33CCFF; }
+
+.required-star { color: #e53e3e; margin-left: 2px; }
+.optional-tag  { font-size: 11px; font-weight: 400; color: #94a3b8; margin-left: 4px; text-transform: none; }
+
+.relance-input,
+.relance-textarea {
+  border: 1.5px solid #E2E8F0;
+  border-radius: 9px;
+  padding: 9px 12px;
+  font-size: 13px;
+  color: #1E3A5F;
+  background: #fff;
+  transition: border-color .2s, box-shadow .2s;
+  resize: vertical;
+  font-family: 'Poppins', sans-serif;
+}
+.relance-input:focus,
+.relance-textarea:focus {
+  outline: none;
+  border-color: #33CCFF;
+  box-shadow: 0 0 0 3px rgba(51,204,255,.12);
+}
+
+.relance-error-banner {
+  background: #fff5f5;
+  color: #c0392b;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  padding: 9px 13px;
+  font-size: 12.5px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.relance-modal-footer {
+  padding: 14px 22px 18px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  border-top: 1px solid #F1F5F9;
+}
+
+.btn-relance-cancel {
+  height: 36px;
+  padding: 0 16px;
+  border: 1.5px solid #E2E8F0;
+  border-radius: 9px;
+  background: #F8FAFC;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: 'Poppins', sans-serif;
+  transition: all .15s;
+}
+.btn-relance-cancel:hover { background: #E2E8F0; }
+
+.btn-relance-save {
+  height: 36px;
+  padding: 0 18px;
+  border: none;
+  border-radius: 9px;
+  background: #336699;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: 'Poppins', sans-serif;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  box-shadow: 0 3px 12px rgba(51,102,153,.28);
+  transition: all .15s;
+}
+.btn-relance-save:hover    { background: #2a5580; transform: translateY(-1px); }
+.btn-relance-save:disabled { opacity: .6; cursor: not-allowed; transform: none; }
+.btn-relance-save.btn-ok   { background: #1A6B4A; box-shadow: 0 3px 12px rgba(26,107,74,.28); }
+.btn-relance-save.btn-ok:hover { background: #155838; }
+
+/* ════════════════════════════════════════════════════════════
+   BOÎTE RELANCE INLINE  (dans la page détail prospect)
+   Identique visuellement à .convert-box
+════════════════════════════════════════════════════════════ */
+.relance-box {
+  background: linear-gradient(135deg, #EBF8FF 0%, #F0F7FF 100%);
+  border: 1.5px solid rgba(51,204,255,.30);
+  border-radius: 12px;
+  padding: 18px 20px;
+  margin-bottom: 18px;
+  position: relative;
+  animation: slideUpModal .2s ease;
+}
+
+.relance-box-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1A7A99;
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.relance-box-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: rgba(0,0,0,.06);
+  border-radius: 7px;
+  cursor: pointer;
+  font-size: 12px;
+  color: #64748B;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: .18s;
+}
+.relance-box-close:hover { background: #fee2e2; color: #e53e3e; }
+
+.relance-box .relance-field { margin-bottom: 12px; }
+
+.relance-box .relance-label {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #336699;
+  text-transform: uppercase;
+  letter-spacing: .4px;
+  margin-bottom: 5px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding-bottom: 5px;
+  border-bottom: 1px solid rgba(51,102,153,.15);
+}
+.relance-box .relance-label i { color: #33CCFF; }
+
+.relance-box .relance-input,
+.relance-box .relance-textarea {
+  background: #fff;
+  border-color: #CBD5E1;
+  border-radius: 8px;
+  font-size: 13px;
+}
+.relance-box .relance-input:focus,
+.relance-box .relance-textarea:focus {
+  border-color: #33CCFF;
+  box-shadow: 0 0 0 3px rgba(51,204,255,.12);
+}
+
+.relance-box-footer {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+  align-items: center;
+}
+
+.relance-box-footer .btn-relance-cancel {
+  height: 36px;
+  background: #F1F5F9;
+  border: none;
+  font-size: 13px;
+}
+
+.relance-box-footer .btn-relance-save {
+  flex: 1;
+  height: 36px;
+  justify-content: center;
+}
+
+/* ════════════════════════════════════════════════════════════
+   BADGES STATUT
+════════════════════════════════════════════════════════════ */
+.badge-late   { background: rgba(249,115,22,.10);  color: #c2410c; border: 1px solid rgba(249,115,22,.30); }
+.badge-today  { background: rgba(229,62,62,.10);   color: #c0392b; border: 1px solid rgba(229,62,62,.30);  }
+.badge-future { background: rgba(34,197,94,.10);   color: #15803d; border: 1px solid rgba(34,197,94,.30);  }
+.badge-done   { background: rgba(51,102,153,.10);  color: #336699; border: 1px solid rgba(51,102,153,.25); }
+
+.reminder-badge,
+.relance-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* ════════════════════════════════════════════════════════════
+   SECTION HISTORIQUE  (dans page détail prospect)
+════════════════════════════════════════════════════════════ */
+.prospect-relances-section {
+  margin-top: 18px;
+  background: #fff;
+  border-radius: 14px;
+  border: 1px solid #E8EDF3;
+  box-shadow: 0 2px 16px rgba(30,58,95,.07);
+  overflow: hidden;
+}
+
+.relances-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 2px solid #33CCFF;
+  background: linear-gradient(90deg, #1E3A5F 0%, #336699 100%);
+}
+
+.relances-section-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  letter-spacing: .3px;
+}
+.relances-section-title i { color: #33CCFF; }
+
+.btn-add-relance {
+  height: 30px;
+  padding: 0 14px;
+  border: 1.5px solid rgba(51,204,255,.5);
+  border-radius: 8px;
+  background: rgba(51,204,255,.15);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: 'Poppins', sans-serif;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all .15s;
+}
+.btn-add-relance:hover { background: rgba(51,204,255,.30); border-color: #33CCFF; }
+
+/* Table historique */
+.relances-history-table-wrap { overflow-x: auto; }
+
+.relances-history-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.relances-history-table th {
+  background: #F8FAFC;
+  padding: 10px 14px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 600;
+  color: #94A3B8;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  border-bottom: 1px solid #E8EDF3;
+  white-space: nowrap;
+}
+
+.relances-history-table td {
+  padding: 11px 14px;
+  border-bottom: 1px solid #F1F5F9;
+  color: #334155;
+  vertical-align: middle;
+  font-size: 13px;
+}
+
+.relances-history-table tbody tr { transition: background .15s; }
+.relances-history-table tbody tr:hover { background: #F0F7FF; }
+.relances-history-table tr:last-child td { border-bottom: none; }
+.relances-history-table tr.row-fait td { opacity: .55; }
+
+.relance-comment-cell {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.no-comment { color: #CBD5E1; font-style: italic; }
+
+.relance-row-actions { display: flex; gap: 6px; align-items: center; }
+
+.btn-ok-relance {
+  height: 28px;
+  padding: 0 12px;
+  border: 1.5px solid rgba(26,107,74,.30);
+  border-radius: 7px;
+  background: rgba(26,107,74,.08);
+  color: #1A6B4A;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: 'Poppins', sans-serif;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: all .15s;
+}
+.btn-ok-relance:hover:not(:disabled) { background: rgba(26,107,74,.18); }
+.btn-ok-relance:disabled             { opacity: .45; cursor: not-allowed; }
+
+.btn-delete-relance {
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 7px;
+  background: rgba(229,62,62,.09);
+  color: #e53e3e;
+  cursor: pointer;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all .15s;
+}
+.btn-delete-relance:hover { background: #e53e3e; color: #fff; }
+
+.relances-loading,
+.relances-empty {
+  text-align: center;
+  padding: 28px;
+  color: #94a3b8;
+  font-size: 13px;
+}
+
+/* ════════════════════════════════════════════════════════════
+   CARTES RELANCES  (dashboard Home)
+════════════════════════════════════════════════════════════ */
+.reminder-ok-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 20px;
+  color: #CBD5E1;
+  flex-shrink: 0;
+  transition: color .15s, transform .15s;
+  padding: 2px;
+}
+.reminder-ok-btn:hover:not(:disabled) { color: #1A6B4A; transform: scale(1.1); }
+.reminder-ok-btn.ok-done  { color: #1A6B4A; cursor: default; }
+.reminder-ok-btn:disabled { opacity: .45; }
+
+.reminder-comment {
+  font-size: 11px;
+  color: #64748b;
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-style: italic;
+}
+
+.relances-total-badge {
+  background: rgba(51,204,255,.12);
+  color: #1A7A99;
+  border: 1px solid rgba(51,204,255,.35);
+  border-radius: 20px;
+  padding: 3px 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.relances-loading-home {
+  text-align: center;
+  padding: 32px;
+  color: #94a3b8;
+  font-size: 13px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.relances-error-home {
+  text-align: center;
+  padding: 24px;
+  color: #c0392b;
+  font-size: 13px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.btn-retry {
+  height: 32px;
+  padding: 0 16px;
+  border: 1.5px solid rgba(229,62,62,.35);
+  border-radius: 8px;
+  background: rgba(229,62,62,.07);
+  color: #c0392b;
+  font-size: 12px;
+  font-family: 'Poppins', sans-serif;
+  cursor: pointer;
+  transition: background .15s;
+}
+.btn-retry:hover { background: rgba(229,62,62,.15); }
+
+/* ════════════════════════════════════════════════════════════
+   POPUP REPROGRAMMATION
+════════════════════════════════════════════════════════════ */
+.reprog-card   { max-width: 420px; }
+.reprog-header { border-bottom-color: #FFCC33 !important; }
+.reprog-footer { gap: 12px; }
+.reprog-prompt-text {
+  font-size: 14px;
+  color: #334155;
+  line-height: 1.7;
+  text-align: center;
+  padding: 4px 0;
+}
+
+/* ════════════════════════════════════════════════════════════
+   BOUTON SIDEBAR  (page détail prospect)
+════════════════════════════════════════════════════════════ */
+.det-action-relance {
+  background: linear-gradient(135deg, #33CCFF 0%, #1a9ebb 100%) !important;
+  color: #fff !important;
+  border: none !important;
+  box-shadow: 0 3px 12px rgba(51,204,255,.30) !important;
+}
+.det-action-relance:hover {
+  opacity: 0.88 !important;
+  transform: translateY(-1px) !important;
+}
+
