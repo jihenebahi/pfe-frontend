@@ -293,6 +293,9 @@ tbody td { padding: 14px 18px; font-size: 13px; color: var(--text); vertical-ali
 .btn-detail:hover { background: #b8ecff !important; }
 
 /* Bouton supprimer — rouge */
+.btn-edit   { background: #fff8e0 !important; color: #d97706 !important; }  /* ✅ NOUVEAU */
+.btn-edit:hover { background: #fef3c7 !important; }
+
 .btn-delete { background: #fff0f0 !important; color: #ef4444 !important; }
 .btn-delete:hover { background: #ffd6d6 !important; }
 

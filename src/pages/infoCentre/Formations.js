@@ -493,12 +493,12 @@ function Formations() {
   /* ── Ajouter ── */
   const handleAjout = async () => {
     const val = validateFormationForm(formAjout, "ajout", { allowPastDates: false });
-    if (!val.isValid) {
+    const errsAjout = (val.errors || []).filter(err => !err.includes("niveau"));
+    if (errsAjout.length > 0 || val.coherenceError) {
       const e = {};
-      val.errors.forEach(err => {
+      errsAjout.forEach(err => {
         if (err.includes("intitulé")) e.intitule = err;
         else if (err.includes("catégorie")) e.categorie = err;
-        else if (err.includes("niveau")) e.niveau = err;
         else if (err.includes("format")) e.format = err;
         else if (err.includes("objectifs")) e.objectifs_pedagogiques = err;
         else if (err.includes("durée")) e.duree = err;
@@ -514,7 +514,7 @@ function Formations() {
     }
     try {
       setSubmitLoading(true); setErreursAjout({}); setErrServeurAjout("");
-      await ajouterFormation(cleanFormData({ ...formAjout, niveau: NIVEAU_MAPPING[formAjout.niveau] || formAjout.niveau, format: FORMAT_MAPPING[formAjout.format] || formAjout.format }));
+      await ajouterFormation(cleanFormData({ ...formAjout, niveau: formAjout.niveau ? (NIVEAU_MAPPING[formAjout.niveau] || formAjout.niveau) : null, format: FORMAT_MAPPING[formAjout.format] || formAjout.format }));
       await fetchFormations();
       setModalAjout(false); setFormAjout(EMPTY_FORM);
       afficherSucces("Formation ajoutée avec succès !");
@@ -526,13 +526,13 @@ function Formations() {
   /* ── Modifier ── */
   const handleModif = async () => {
     if (!modalModif?.id) return;
-    const val = validateFormationForm(formModif, "modif", { allowPastDates: false });
+    const val = validateFormationForm(formModif, "modif", { allowPastDates: true });
     if (!val.isValid) {
+      const errsModif = (val.errors || []).filter(err => !err.includes("niveau"));
       const e = {};
-      val.errors.forEach(err => {
+      errsModif.forEach(err => {
         if (err.includes("intitulé")) e.intitule = err;
         else if (err.includes("catégorie")) e.categorie = err;
-        else if (err.includes("niveau")) e.niveau = err;
         else if (err.includes("format")) e.format = err;
         else if (err.includes("objectifs")) e.objectifs_pedagogiques = err;
         else if (err.includes("durée")) e.duree = err;
@@ -543,12 +543,12 @@ function Formations() {
         else setErrServeurModif(err);
       });
       if (val.coherenceError) e.duree_coherence = val.coherenceError;
-      if (Object.keys(e).length) setErreursModif(e);
-      return;
+      if (errsModif.length > 0 || val.coherenceError) setErreursModif(e);
+      if (errsModif.length > 0 || val.coherenceError) return;
     }
     try {
       setSubmitLoading(true); setErreursModif({}); setErrServeurModif("");
-      await modifierFormation(modalModif.id, cleanFormData({ ...formModif, niveau: NIVEAU_MAPPING[formModif.niveau] || formModif.niveau, format: FORMAT_MAPPING[formModif.format] || formModif.format }));
+      await modifierFormation(modalModif.id, cleanFormData({ ...formModif, niveau: formModif.niveau ? (NIVEAU_MAPPING[formModif.niveau] || formModif.niveau) : null, format: FORMAT_MAPPING[formModif.format] || formModif.format }));
       modalModif.est_active ? await fetchFormations() : await fetchFormationsArchivees();
       setModalModif(null); setFormModif(EMPTY_FORM);
       afficherSucces("Formation modifiée avec succès !");
@@ -718,7 +718,7 @@ function Formations() {
                         <td className="td-title">{f.intitule}</td>
                         <td><span className="cat-tag">{f.categorie}</span></td>
                         <td><FormateurBadges noms={f.formateurs_noms} /></td>
-                        <td><span className={`badge ${NIVEAU_CLASS[f.niveau]}`}>{f.niveau}</span></td>
+                        <td>{f.niveau ? <span className={`badge ${NIVEAU_CLASS[f.niveau]}`}>{f.niveau}</span> : <span style={{ color: "#94a3b8", fontSize: "12px" }}>—</span>}</td>
                         <td className="td-dur">{f.duree}</td>
                         <td className="td-ttc">{f.prixTTC}</td>
                         <td className="td-ht">{f.prixHT}</td>
@@ -848,7 +848,7 @@ function Formations() {
                         <td className="td-title" style={{ opacity: 0.72 }}>{f.intitule}</td>
                         <td><span className="cat-tag">{f.categorie}</span></td>
                         <td><FormateurBadges noms={f.formateurs_noms} /></td>
-                        <td><span className={`badge ${NIVEAU_CLASS[f.niveau]}`}>{f.niveau}</span></td>
+                        <td>{f.niveau ? <span className={`badge ${NIVEAU_CLASS[f.niveau]}`}>{f.niveau}</span> : <span style={{ color: "#94a3b8", fontSize: "12px" }}>—</span>}</td>
                         <td className="td-dur">{f.duree}</td>
                         <td className="td-ttc">{f.prixTTC}</td>
                         <td className="td-ht">{f.prixHT}</td>
@@ -889,7 +889,7 @@ function Formations() {
                   <h2>{modalDetail.intitule}</h2>
                   <div className="detail-badges">
                     <span className="cat-tag">{modalDetail.categorie}</span>
-                    <span className={`badge ${NIVEAU_CLASS[modalDetail.niveau]}`}>{modalDetail.niveau}</span>
+                    {modalDetail.niveau && <span className={`badge ${NIVEAU_CLASS[modalDetail.niveau]}`}>{modalDetail.niveau}</span>}
                     <span className="fmt-tag"><i className="fa-solid fa-location-dot"></i> {modalDetail.format}</span>
                     {!modalDetail.est_active && <span className="status-badge inactive" style={{ fontSize: "11px", padding: "2px 8px" }}><i className="fa-solid fa-box-archive"></i> Archivée</span>}
                   </div>
@@ -943,7 +943,7 @@ function Formations() {
                     error={erreursAjout.categorie}
                   />
                 </div>
-                <div className="form-group"><label>Niveau <span className="req">*</span></label><select value={formAjout.niveau} style={erreursAjout.niveau ? styleInputErreur : {}} onChange={e => { setFormAjout({ ...formAjout, niveau: e.target.value }); setErreursAjout({ ...erreursAjout, niveau: "" }); }}><option value="">-- Choisir --</option><option>Débutant</option><option>Intermédiaire</option><option>Avancé</option></select><ErrMsg msg={erreursAjout.niveau} /></div>
+                <div className="form-group"><label>Niveau</label><select value={formAjout.niveau} onChange={e => setFormAjout({ ...formAjout, niveau: e.target.value })}><option value="">-- Aucun --</option><option>Débutant</option><option>Intermédiaire</option><option>Avancé</option></select></div>
                 <div className="form-group full"><label>Formateurs</label><FormateurMultiSelect formateurs={formateurs} selected={formAjout.formateurs} onChange={ids => setFormAjout({ ...formAjout, formateurs: ids })} /></div>
                 <div className="form-group full"><label>Description</label><textarea value={formAjout.description} rows={3} onChange={e => setFormAjout({ ...formAjout, description: e.target.value })} placeholder="Description de la formation…" /></div>
                 <div className="form-group full"><label>Objectifs pédagogiques <span className="req">*</span></label><textarea value={formAjout.objectifs_pedagogiques} rows={3} style={erreursAjout.objectifs_pedagogiques ? styleInputErreur : {}} onChange={e => { setFormAjout({ ...formAjout, objectifs_pedagogiques: e.target.value }); setErreursAjout({ ...erreursAjout, objectifs_pedagogiques: "" }); }} placeholder="Un objectif par ligne…" /><ErrMsg msg={erreursAjout.objectifs_pedagogiques} /></div>
@@ -984,7 +984,7 @@ function Formations() {
                     error={erreursModif.categorie}
                   />
                 </div>
-                <div className="form-group"><label>Niveau <span className="req">*</span></label><select value={formModif.niveau} style={erreursModif.niveau ? styleInputErreur : {}} onChange={e => { setFormModif({ ...formModif, niveau: e.target.value }); setErreursModif({ ...erreursModif, niveau: "" }); }}><option>Débutant</option><option>Intermédiaire</option><option>Avancé</option></select><ErrMsg msg={erreursModif.niveau} /></div>
+                <div className="form-group"><label>Niveau</label><select value={formModif.niveau} onChange={e => setFormModif({ ...formModif, niveau: e.target.value })}><option value="">-- Aucun --</option><option>Débutant</option><option>Intermédiaire</option><option>Avancé</option></select></div>
                 <div className="form-group full"><label>Formateurs</label><FormateurMultiSelect formateurs={formateurs} selected={formModif.formateurs} onChange={ids => setFormModif({ ...formModif, formateurs: ids })} /></div>
                 <div className="form-group full"><label>Description</label><textarea value={formModif.description} rows={3} onChange={e => setFormModif({ ...formModif, description: e.target.value })} /></div>
                 <div className="form-group full"><label>Objectifs pédagogiques <span className="req">*</span></label><textarea value={formModif.objectifs_pedagogiques} rows={3} style={erreursModif.objectifs_pedagogiques ? styleInputErreur : {}} onChange={e => { setFormModif({ ...formModif, objectifs_pedagogiques: e.target.value }); setErreursModif({ ...erreursModif, objectifs_pedagogiques: "" }); }} /><ErrMsg msg={erreursModif.objectifs_pedagogiques} /></div>

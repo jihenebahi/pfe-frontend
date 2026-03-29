@@ -1,17 +1,16 @@
 // src/pages/auth/GestionComptes.js
 import React, { useState, useEffect, useCallback } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import Layout from "../../components/Layout";
 import { getUsers, toggleUserStatus, deleteUser } from "../../services/auth/userService";
 import "../../styles/auth/gestioncomptes.css";
 
-// Mapping role -> badge
 const ROLE_META = {
-  super_admin:  { label: "Super Admin",  roleClass: "badge-admin",       roleIcon: "fa-shield-halved"    },
-  responsable:  { label: "Responsable",  roleClass: "badge-gestionnaire", roleIcon: "fa-briefcase"        },
-  assistante:   { label: "Assistante",   roleClass: "badge-user",         roleIcon: "fa-user"             },
-  formateur:    { label: "Formateur",    roleClass: "badge-formateur",    roleIcon: "fa-chalkboard-user"  },
-  etudiant:     { label: "Etudiant",     roleClass: "badge-user",         roleIcon: "fa-user-graduate"    },
+  super_admin: { label: "Super Admin",  roleClass: "badge-admin",        roleIcon: "fa-shield-halved"   },
+  responsable: { label: "Responsable",  roleClass: "badge-gestionnaire",  roleIcon: "fa-briefcase"       },
+  assistante:  { label: "Assistante",   roleClass: "badge-user",          roleIcon: "fa-user"            },
+  formateur:   { label: "Formateur",    roleClass: "badge-formateur",     roleIcon: "fa-chalkboard-user" },
+  etudiant:    { label: "Etudiant",     roleClass: "badge-user",          roleIcon: "fa-user-graduate"   },
 };
 const getRoleMeta = (role) =>
   ROLE_META[role] ?? { label: role, roleClass: "badge-user", roleIcon: "fa-user" };
@@ -19,22 +18,24 @@ const getRoleMeta = (role) =>
 const AVATAR_CLASSES = ["av1", "av2", "av3", "av4", "av5", "av6"];
 
 function GestionComptes() {
-  const [users, setUsers]         = useState([]);
-  const [canManage, setCanManage] = useState(false);
-  const [loading, setLoading]     = useState(true);
-  const [error, setError]         = useState(null);
-  const [searchTerm, setSearchTerm] = useState("");
+  const location = useLocation();
+
+  const [users,       setUsers]       = useState([]);
+  const [canManage,   setCanManage]   = useState(false);
+  const [loading,     setLoading]     = useState(true);
+  const [error,       setError]       = useState(null);
+  const [searchTerm,  setSearchTerm]  = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [succesMsg,   setSuccesMsg]   = useState("");  // ✅ message de succès
   const usersPerPage = 6;
 
-  // ── État modale suppression ──
+  // ── Modale suppression ──
   const [showModal,    setShowModal]    = useState(false);
-  const [userToDelete, setUserToDelete] = useState(null); // { id, nom, initiales, code, avatarClass }
+  const [userToDelete, setUserToDelete] = useState(null);
   const [deleting,     setDeleting]     = useState(false);
 
   const fetchUsers = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+    setLoading(true); setError(null);
     try {
       const data = await getUsers();
       setUsers(data.users || []);
@@ -49,7 +50,17 @@ function GestionComptes() {
 
   useEffect(() => { fetchUsers(); }, [fetchUsers]);
 
-  // Filtrage local
+  // ✅ Afficher le message de succès venant de AjouterCompte ou ModifierCompte
+  useEffect(() => {
+    if (location.state?.message) {
+      setSuccesMsg(location.state.message);
+      setTimeout(() => setSuccesMsg(""), 4000);
+      // Nettoyer le state pour ne pas réafficher au retour
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
+
+  // Filtrage
   const filteredUsers = users.filter((user) => {
     const term = searchTerm.toLowerCase();
     return (
@@ -62,7 +73,7 @@ function GestionComptes() {
 
   // Stats
   const totalUsers    = users.length;
-  const activeUsers   = users.filter((u) => u.is_active).length;
+  const activeUsers   = users.filter((u) =>  u.is_active).length;
   const inactiveUsers = users.filter((u) => !u.is_active).length;
 
   // Pagination
@@ -70,7 +81,6 @@ function GestionComptes() {
   const indexOfFirstUser = indexOfLastUser - usersPerPage;
   const currentUsers     = filteredUsers.slice(indexOfFirstUser, indexOfLastUser);
   const totalPages       = Math.ceil(filteredUsers.length / usersPerPage);
-
   useEffect(() => { setCurrentPage(1); }, [searchTerm]);
 
   // Toggle statut
@@ -87,14 +97,13 @@ function GestionComptes() {
     }
   };
 
-  // Ouvre la modale avec les infos de l'utilisateur ciblé
+  // Modale suppression
   const openDeleteModal = (user) => {
     const avatarClass = AVATAR_CLASSES[(user.id - 1) % AVATAR_CLASSES.length];
     setUserToDelete({ ...user, avatarClass });
     setShowModal(true);
   };
 
-  // Confirme la suppression
   const handleDeleteConfirm = async () => {
     if (!userToDelete) return;
     setDeleting(true);
@@ -104,6 +113,8 @@ function GestionComptes() {
         setUsers((prev) => prev.filter((u) => u.id !== userToDelete.id));
         setShowModal(false);
         setUserToDelete(null);
+        setSuccesMsg("Compte supprimé avec succès !");
+        setTimeout(() => setSuccesMsg(""), 4000);
       }
     } catch (err) {
       alert(err.response?.data?.message || "Impossible de supprimer cet utilisateur.");
@@ -118,6 +129,18 @@ function GestionComptes() {
         <h1><i className="fa-solid fa-users-gear"></i> Gestion des Comptes</h1>
         <p>Gerez les utilisateurs, leurs roles et leurs acces a la plateforme.</p>
       </div>
+
+      {/* ✅ Message de succès global */}
+      {succesMsg && (
+        <div style={{
+          background: "#f0fdf4", border: "1px solid #86efac", borderRadius: 10,
+          padding: "12px 18px", marginBottom: 16, display: "flex", alignItems: "center",
+          gap: 10, color: "#16a34a", fontSize: 13, fontWeight: 500,
+        }}>
+          <i className="fa-solid fa-circle-check"></i>
+          <span>{succesMsg}</span>
+        </div>
+      )}
 
       {/* Toolbar */}
       <div className="toolbar">
@@ -238,6 +261,7 @@ function GestionComptes() {
                         {canManage && (
                           <td>
                             <div className="actions">
+                              {/* Détail */}
                               <Link
                                 to={`/details-compte?id=${user.id}`}
                                 className="action-btn btn-detail"
@@ -245,6 +269,17 @@ function GestionComptes() {
                               >
                                 <i className="fa-solid fa-eye"></i>
                               </Link>
+
+                              {/* ✅ NOUVEAU : Modifier */}
+                              <Link
+                                to={`/modifier-compte?id=${user.id}`}
+                                className="action-btn btn-edit"
+                                title="Modifier"
+                              >
+                                <i className="fa-solid fa-pen"></i>
+                              </Link>
+
+                              {/* Supprimer */}
                               <button
                                 className="action-btn btn-delete"
                                 title="Supprimer"
@@ -270,27 +305,15 @@ function GestionComptes() {
                 {filteredUsers.length} entrees
               </span>
               <div className="pagination">
-                <button
-                  className="page-btn"
-                  onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
-                  disabled={currentPage === 1}
-                >
+                <button className="page-btn" onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))} disabled={currentPage === 1}>
                   <i className="fa-solid fa-chevron-left"></i>
                 </button>
                 {[...Array(totalPages)].map((_, i) => (
-                  <button
-                    key={i + 1}
-                    className={`page-btn ${currentPage === i + 1 ? "active" : ""}`}
-                    onClick={() => setCurrentPage(i + 1)}
-                  >
+                  <button key={i + 1} className={`page-btn ${currentPage === i + 1 ? "active" : ""}`} onClick={() => setCurrentPage(i + 1)}>
                     {i + 1}
                   </button>
                 ))}
-                <button
-                  className="page-btn"
-                  onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
-                  disabled={currentPage === totalPages}
-                >
+                <button className="page-btn" onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))} disabled={currentPage === totalPages}>
                   <i className="fa-solid fa-chevron-right"></i>
                 </button>
               </div>
@@ -299,51 +322,31 @@ function GestionComptes() {
         )}
       </div>
 
-      {/* ══ MODALE SUPPRESSION (identique à DetailsCompte) ══ */}
+      {/* Modale suppression */}
       {showModal && userToDelete && (
         <div className="dc-modal-overlay" onClick={() => !deleting && setShowModal(false)}>
           <div className="dc-modal-box" onClick={(e) => e.stopPropagation()}>
-
-            <div className="dc-modal-icon">
-              <i className="fa-solid fa-trash-can"></i>
-            </div>
+            <div className="dc-modal-icon"><i className="fa-solid fa-trash-can"></i></div>
             <h2 className="dc-modal-title">Supprimer le compte</h2>
-
             <div className="dc-modal-preview">
-              <div className={`dc-modal-avatar ${userToDelete.avatarClass}`}>
-                {userToDelete.initiales}
-              </div>
+              <div className={`dc-modal-avatar ${userToDelete.avatarClass}`}>{userToDelete.initiales}</div>
               <div>
                 <span className="dc-modal-name">{userToDelete.nom}</span>
                 <span className="dc-modal-code">{userToDelete.code}</span>
               </div>
             </div>
-
             <p className="dc-modal-warning">
               <i className="fa-solid fa-triangle-exclamation"></i>
               Cette action est <strong>irréversible</strong>. Toutes les données associées seront définitivement supprimées.
             </p>
-
             <div className="dc-modal-actions">
-              <button
-                className="dc-modal-btn dc-modal-btn--cancel"
-                onClick={() => setShowModal(false)}
-                disabled={deleting}
-              >
+              <button className="dc-modal-btn dc-modal-btn--cancel" onClick={() => setShowModal(false)} disabled={deleting}>
                 <i className="fa-solid fa-xmark"></i> Annuler
               </button>
-              <button
-                className="dc-modal-btn dc-modal-btn--confirm"
-                onClick={handleDeleteConfirm}
-                disabled={deleting}
-              >
-                {deleting
-                  ? <><i className="fa-solid fa-spinner fa-spin"></i> Suppression...</>
-                  : <><i className="fa-solid fa-trash-can"></i> Confirmer</>
-                }
+              <button className="dc-modal-btn dc-modal-btn--confirm" onClick={handleDeleteConfirm} disabled={deleting}>
+                {deleting ? <><i className="fa-solid fa-spinner fa-spin"></i> Suppression...</> : <><i className="fa-solid fa-trash-can"></i> Confirmer</>}
               </button>
             </div>
-
           </div>
         </div>
       )}
