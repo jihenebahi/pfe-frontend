@@ -102,7 +102,7 @@ export default function ImportProspectsModal({ isOpen, onClose, onSuccess }) {
                 <div className="imp-info-rows">
                   <div className="imp-info-item">
                     <span className="imp-badge imp-badge-req">Obligatoires</span>
-                    <span className="imp-info-cols">nom &nbsp;·&nbsp; prenom &nbsp;·&nbsp; telephone</span>
+                    <span className="imp-info-cols">nom &nbsp;·&nbsp; prenom &nbsp;·&nbsp; telephone &nbsp;·&nbsp; formations</span>
                   </div>
                   <div className="imp-info-item">
                     <span className="imp-badge imp-badge-opt">Optionnelles</span>
@@ -112,6 +112,24 @@ export default function ImportProspectsModal({ isOpen, onClose, onSuccess }) {
                       niveau_etudes &nbsp;·&nbsp; diplome &nbsp;·&nbsp; date_naissance &nbsp;·&nbsp; commentaires
                     </span>
                   </div>
+                </div>
+                              
+                {/* Format du téléphone tunisien */}
+                <div className="imp-info-note imp-info-note--phone">
+                  <i className="fa-solid fa-phone"></i>
+                  <strong>Format du téléphone (Tunisie) :</strong>
+                  <ul className="imp-info-list">
+                    <li>8 chiffres commençant par <strong>2, 4, 5, 7 ou 9</strong> : <code>55123456</code></li>
+                    <li>Accepte aussi : <code>+21655123456</code>, <code>0021655123456</code>, <code>055123456</code></li>
+                    <li>Les espaces, tirets et points sont automatiquement ignorés</li>
+                  </ul>
+                </div>
+                
+                {/* Format des formations */}
+                <div className="imp-info-note imp-info-note--highlight">
+                  <i className="fa-solid fa-graduation-cap"></i>
+                  <strong>formations :</strong> Utilisez les intitulés exacts des formations. 
+                  Pour plusieurs formations, séparez-les par des virgules (ex: "Notion, Excel, Power BI").
                 </div>
               </div>
 

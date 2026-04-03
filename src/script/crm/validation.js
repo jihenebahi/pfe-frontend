@@ -2,7 +2,29 @@
 
 const ALPHA_REGEX  = /^[a-zA-ZÀ-ÿ\u0600-\u06FF\s'-]+$/;
 const EMAIL_REGEX  = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
-const TEL_TN_REGEX = /^(\+216|00216)?[\s-]?[24578-9]\d[\s-]?\d{3}[\s-]?\d{3}$/;
+// src/script/crm/validation.js
+
+// ✅ NOUVELLE REGEX : 8 chiffres commençant par 2,4,5,7,9
+//    Exemples valides : 55123456, 23456789, 41234567, 71234567, 91234567
+//    Accepte aussi les espaces, tirets, points et indicatifs (les nettoie)
+// src/script/crm/validation.js
+
+// ✅ Bonne regex pour 8 chiffres commençant par 2,4,5,7,9
+const TEL_TN_REGEX = /^[24579]\d{7}$/;
+
+// Fonction de nettoyage
+export const cleanPhoneNumber = (phone) => {
+  if (!phone) return '';
+  let cleaned = String(phone).replace(/[^\d]/g, '');
+  
+  if (cleaned.startsWith('216') && cleaned.length === 11) cleaned = cleaned.slice(3);
+  else if (cleaned.startsWith('00216') && cleaned.length === 13) cleaned = cleaned.slice(5);
+  else if (cleaned.startsWith('0') && cleaned.length === 9) cleaned = cleaned.slice(1);
+  
+  return cleaned;
+};
+
+
 
 const VALID_PAYS   = ['Tunisie', 'France', 'Algérie', 'Maroc', 'Belgique', 'Canada', 'Autre'];
 const VALID_SOURCE = [
@@ -70,10 +92,17 @@ export const validateField = (field, value, allValues = {}) => {
       if (v.length > 150)       return "L'email ne peut pas dépasser 150 caractères.";
       return '';
 
-    case 'tel':
-      if (!v)                    return 'Le téléphone est obligatoire.';
-      if (!TEL_TN_REGEX.test(v)) return 'Numéro tunisien invalide (ex : 55 123 456 ou +216 55 123 456).';
+    // Modifiez la validation du champ 'tel'
+    // Dans validateField, remplacez le case 'tel' par :
+    case 'tel': {
+      if (!v) return 'Le téléphone est obligatoire.';
+      
+      const cleaned = cleanPhoneNumber(v);
+      if (!TEL_TN_REGEX.test(cleaned)) {
+        return 'Numéro tunisien invalide. Format attendu : 8 chiffres commençant par 2, 4, 5, 7 ou 9 (ex: 55123456)';
+      }
       return '';
+    }
 
     case 'ville':
       if (!v)                   return 'La ville est obligatoire.';

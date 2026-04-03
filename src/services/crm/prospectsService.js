@@ -98,8 +98,6 @@ const DIPLOME_MAP_INV       = invertMap(DIPLOME_MAP);
 
 /**
  * Convertit un objet du formulaire React → payload Django
- * Le champ responsable est automatiquement défini par le backend
- * (l'utilisateur connecté est assigné comme responsable)
  */
 export const toApiPayload = (fd, formationIds = []) => ({
   nom:       fd.nom?.trim()    || '',
@@ -122,13 +120,10 @@ export const toApiPayload = (fd, formationIds = []) => ({
   commentaires:          fd.commentaires             || '',
 
   statut: STATUT_MAP[fd.statut] || 'nouveau',
-  // ✅ Le champ responsable n'est plus envoyé - le backend l'ajoute automatiquement
 });
 
 /**
  * Convertit une réponse Django → objet React
- * p.responsable     = ID du user (pour pré-remplir le select)
- * p.responsable_nom = username du user (pour l'affichage)
  */
 export const fromApiResponse = (p) => ({
   id:     p.id,
@@ -194,6 +189,24 @@ export const deleteProspect = async (id) => {
   await api.delete(`${BASE}${id}/`);
 };
 
+/**
+ * Supprime plusieurs prospects en parallèle.
+ * @param {number[]} ids  Liste des IDs à supprimer
+ * @returns {{ deleted: number[], errors: number[] }}
+ */
+export const deleteMultipleProspects = async (ids) => {
+  const results = await Promise.allSettled(
+    ids.map((id) => api.delete(`${BASE}${id}/`))
+  );
+  const deleted = [];
+  const errors  = [];
+  results.forEach((result, index) => {
+    if (result.status === 'fulfilled') deleted.push(ids[index]);
+    else                               errors.push(ids[index]);
+  });
+  return { deleted, errors };
+};
+
 export const getProspectStats = async () => {
   const res = await api.get(`${BASE}stats/`);
   return res.data;
@@ -206,35 +219,28 @@ export const addHistorique = async (prospectId, data) => {
 
 /**
  * Convertit un prospect en étudiant.
- * Le prospect est supprimé côté backend après création de l'étudiant.
  * @param {number} prospectId
  * @param {object} data  { formations_ids, statut_etudiant, notes }
  */
 export const convertToEtudiant = async (prospectId, data) => {
   const res = await api.post(`${BASE}${prospectId}/convert/`, data);
-  return res.data;  // { message, etudiant_id }
+  return res.data;
 };
-
-// src/services/crm/prospectsService.js
 
 /**
  * Importe des prospects depuis un fichier Excel.
- * On utilise FormData car on envoie un fichier binaire (pas du JSON).
- * @param {File} file  L'objet File sélectionné par l'utilisateur
+ * @param {File} file
  * @returns {{ created, errors, total }}
  */
 export const importProspectsExcel = async (file) => {
-  // FormData permet d'envoyer des fichiers dans une requête HTTP
   const formData = new FormData();
-  formData.append('file', file);  // 'file' = nom du champ attendu par Django
+  formData.append('file', file);
 
   const res = await api.post('prospects/import/', formData, {
     headers: {
-      // On override le Content-Type pour que axios gère
-      // automatiquement le boundary du multipart/form-data
       'Content-Type': 'multipart/form-data',
     },
   });
 
-  return res.data; // { created, errors, total }
+  return res.data;
 };

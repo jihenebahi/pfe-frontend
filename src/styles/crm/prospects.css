@@ -129,10 +129,8 @@ tbody td { padding: 10px 14px; vertical-align: middle; }
 
 /* ═══════════════════════════════════════════════════════════
    DRAWER LATÉRAL DROIT (style HubSpot)
-   Remplace les modales centrées pour Ajouter et Modifier
 ═══════════════════════════════════════════════════════════ */
 
-/* Overlay semi-transparent derrière le drawer */
 .drawer-overlay {
   position: fixed;
   inset: 0;
@@ -144,7 +142,6 @@ tbody td { padding: 10px 14px; vertical-align: middle; }
 
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-/* Panneau lui-même */
 .drawer-panel {
   position: fixed;
   top: 0;
@@ -171,7 +168,6 @@ tbody td { padding: 10px 14px; vertical-align: middle; }
   to   { transform: translateX(0);    }
 }
 
-/* Header du drawer */
 .drawer-header {
   flex-shrink: 0;
   display: flex;
@@ -220,7 +216,6 @@ tbody td { padding: 10px 14px; vertical-align: middle; }
 }
 .drawer-close:hover { background: #fee2e2; color: #e53e3e; }
 
-/* Corps scrollable */
 .drawer-body {
   flex: 1;
   overflow-y: auto;
@@ -232,7 +227,6 @@ tbody td { padding: 10px 14px; vertical-align: middle; }
 .drawer-body::-webkit-scrollbar-thumb { background: #E2E8F0; border-radius: 4px; }
 .drawer-body::-webkit-scrollbar-track { background: transparent; }
 
-/* Footer avec boutons */
 .drawer-footer {
   flex-shrink: 0;
   padding: 14px 22px;
@@ -244,7 +238,7 @@ tbody td { padding: 10px 14px; vertical-align: middle; }
 }
 
 /* ─── Formulaire dans le drawer ── */
-.pf-body { /* wrapper du formulaire */ }
+.pf-body { }
 
 .pf-section-title {
   font-size: 12px;
@@ -307,7 +301,7 @@ tbody td { padding: 10px 14px; vertical-align: middle; }
 }
 
 /* ═══════════════════════════════════════════════════════════
-   BOUTONS FOOTER (modales + drawer)
+   BOUTONS FOOTER
 ═══════════════════════════════════════════════════════════ */
 .btn-cancel { background: #F1F5F9; color: #475569; border: 1.5px solid #E2E8F0; }
 .btn-cancel:hover { background: #E2E8F0; }
@@ -319,7 +313,7 @@ tbody td { padding: 10px 14px; vertical-align: middle; }
 .btn-suppr-confirm:hover { background: #dc2626; }
 
 /* ═══════════════════════════════════════════════════════════
-   MODALE SUPPRESSION (reste centrée)
+   MODALE SUPPRESSION
 ═══════════════════════════════════════════════════════════ */
 .modal-overlay {
   position: fixed; inset: 0;
@@ -346,10 +340,9 @@ tbody td { padding: 10px 14px; vertical-align: middle; }
 .suppr-warning i { margin-top: 2px; flex-shrink: 0; }
 
 /* ═══════════════════════════════════════════════════════════
-   PAGE DÉTAIL — Layout HubSpot (sidebar gauche + main droite)
+   PAGE DÉTAIL
 ═══════════════════════════════════════════════════════════ */
 
-/* Wrapper global de la page */
 .det-page {
   display: flex;
   flex-direction: column;
@@ -357,7 +350,6 @@ tbody td { padding: 10px 14px; vertical-align: middle; }
   min-height: 0;
 }
 
-/* Breadcrumb top */
 .det-topbar {
   display: flex;
   align-items: center;
@@ -381,7 +373,6 @@ tbody td { padding: 10px 14px; vertical-align: middle; }
 .det-bc-sep { font-size: 9px; color: #CBD5E1; }
 .det-bc-name { font-size: 13px; color: #1E3A5F; font-weight: 600; }
 
-/* Corps : sidebar + main côte à côte */
 .det-body {
   display: flex;
   flex: 1;
@@ -390,7 +381,6 @@ tbody td { padding: 10px 14px; vertical-align: middle; }
   overflow: hidden;
 }
 
-/* ── SIDEBAR GAUCHE ── */
 .det-sidebar {
   width: 280px;
   flex-shrink: 0;
@@ -405,7 +395,6 @@ tbody td { padding: 10px 14px; vertical-align: middle; }
 .det-sidebar::-webkit-scrollbar { width: 3px; }
 .det-sidebar::-webkit-scrollbar-thumb { background: #E2E8F0; border-radius: 4px; }
 
-/* Avatar + nom */
 .det-sid-hero {
   display: flex;
   flex-direction: column;
@@ -436,7 +425,6 @@ tbody td { padding: 10px 14px; vertical-align: middle; }
   height: 1px; background: #F1F5F9; margin: 4px 0 14px;
 }
 
-/* Champs infos dans la sidebar */
 .det-sid-fields { display: flex; flex-direction: column; gap: 12px; flex: 1; }
 
 .det-sid-field { display: flex; flex-direction: column; gap: 3px; }
@@ -449,7 +437,6 @@ tbody td { padding: 10px 14px; vertical-align: middle; }
 
 .det-sid-val { font-size: 13px; color: #1E3A5F; font-weight: 500; word-break: break-word; }
 
-/* ── 3 BOUTONS EN BAS DE LA SIDEBAR ── */
 .det-sid-actions {
   display: flex;
   flex-direction: column;
@@ -479,6 +466,16 @@ tbody td { padding: 10px 14px; vertical-align: middle; }
 }
 .det-action-edit:hover { background: #FFCC33; color: #fff; }
 
+.det-action-relance {
+  background: rgba(255, 204, 51, .15) !important;
+  color: #8A6200 !important;
+  border: 1.5px solid rgba(255, 204, 51, .45) !important;
+}
+.det-action-relance:hover {
+  background: #FFCC33 !important;
+  color: #fff !important;
+}
+
 .det-action-del {
   background: rgba(229,62,62,.09);
   color: #c0392b;
@@ -486,7 +483,6 @@ tbody td { padding: 10px 14px; vertical-align: middle; }
 }
 .det-action-del:hover { background: #e53e3e; color: #fff; }
 
-/* ── CONTENU PRINCIPAL DROITE ── */
 .det-main {
   flex: 1;
   overflow-y: auto;
@@ -500,7 +496,6 @@ tbody td { padding: 10px 14px; vertical-align: middle; }
 .det-main::-webkit-scrollbar { width: 4px; }
 .det-main::-webkit-scrollbar-thumb { background: #E2E8F0; border-radius: 4px; }
 
-/* Cartes sections */
 .det-section-card {
   background: #fff;
   border: 1px solid #E8EDF3;
@@ -517,7 +512,6 @@ tbody td { padding: 10px 14px; vertical-align: middle; }
 }
 .det-section-header i { color: #33CCFF; }
 
-/* Grille 3 colonnes pour les champs */
 .det-fields-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -536,18 +530,173 @@ tbody td { padding: 10px 14px; vertical-align: middle; }
   font-size: 13.5px; color: #1E3A5F; font-weight: 500;
 }
 
-.det-notes-row {
-  margin-top: 14px; padding-top: 14px; border-top: 1px solid #F1F5F9;
-  display: flex; flex-direction: column; gap: 6px;
-}
-
-/* Notes box */
 .notes-box {
   background: #F8FAFC; border: 1.5px solid #E8EDF3; border-radius: 9px;
   padding: 11px 14px; font-size: 13px; color: #475569; line-height: 1.65;
 }
 
-/* Conversion box dans le main */
+/* ═══════════════════════════════════════════════════════════
+   HISTORIQUE DES ÉCHANGES - DATE ET NOTE SUR 2 LIGNES
+═══════════════════════════════════════════════════════════ */
+
+.histo-timeline {
+  display: flex;
+  flex-direction: column;
+  padding: 4px 0 0;
+  gap: 8px;
+}
+
+.histo-row {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.histo-left {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+  width: 36px;
+}
+
+.histo-dot {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  flex-shrink: 0;
+  z-index: 1;
+}
+
+.histo-line {
+  width: 2px;
+  flex: 1;
+  min-height: 16px;
+  background: #e2e8f0;
+  margin: 4px 0 4px;
+}
+
+.histo-card {
+  flex: 1;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 12px 16px;
+  margin-bottom: 0;
+  transition: background 0.15s;
+}
+
+.histo-card:hover {
+  background: #f1f5f9;
+}
+
+.histo-card-top {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.histo-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  font-weight: 700;
+  border-radius: 6px;
+  padding: 3px 9px;
+  text-transform: capitalize;
+}
+
+.histo-meta {
+  margin-left: auto;
+  font-size: 11px;
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* CONTENU PRINCIPAL - DATE ET NOTE SUR LIGNES SÉPARÉES */
+.histo-content {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Ligne de la date */
+.histo-date {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #336699;
+  background: #ffffff;
+  padding: 6px 12px;
+  border-radius: 8px;
+  width: fit-content;
+  border: 1px solid #e2e8f0;
+  font-weight: 500;
+}
+
+.histo-date i {
+  font-size: 12px;
+  color: #33CCFF;
+}
+
+.histo-date span {
+  font-weight: 500;
+}
+
+/* Ligne du commentaire/texte */
+.histo-text {
+  font-size: 13px;
+  color: #1e293b;
+  line-height: 1.55;
+  background: #ffffff;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  margin: 0;
+}
+
+@media (max-width: 640px) {
+  .histo-card {
+    padding: 10px 12px;
+  }
+  
+  .histo-card-top {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .histo-meta {
+    margin-left: 0;
+    white-space: normal;
+  }
+  
+  .histo-date {
+    font-size: 11px;
+    padding: 4px 10px;
+  }
+  
+  .histo-text {
+    font-size: 12px;
+    padding: 8px 10px;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   AUTRES STYLES
+═══════════════════════════════════════════════════════════ */
+
 .det-convert-box {
   border: 1.5px solid rgba(51,204,255,.35) !important;
   background: linear-gradient(135deg, #EBF8FF 0%, #F0F7FF 100%) !important;
@@ -564,16 +713,6 @@ tbody td { padding: 10px 14px; vertical-align: middle; }
 }
 .det-convert-close:hover { background: #fee2e2; color: #e53e3e; }
 
-.det-form-checks { display: flex; flex-direction: column; gap: 2px; }
-
-.det-convert-footer {
-  display: flex; gap: 10px; margin-top: 14px; align-items: center;
-}
-.det-convert-footer .btn-confirm {
-  margin-top: 0; flex: 1;
-}
-
-/* Convert box */
 .convert-box {
   background: linear-gradient(135deg, #EBF8FF 0%, #F0F7FF 100%);
   border: 1.5px solid rgba(51,204,255,.30); border-radius: 12px;
@@ -581,7 +720,6 @@ tbody td { padding: 10px 14px; vertical-align: middle; }
 }
 .convert-title { font-size: 13px; font-weight: 700; color: #1A7A99; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
 .conv-section-label { font-size: 11.5px; font-weight: 700; color: #336699; text-transform: uppercase; letter-spacing: .4px; margin: 10px 0 6px; padding-bottom: 5px; border-bottom: 1px solid rgba(51,102,153,.15); display: flex; align-items: center; gap: 6px; }
-.conv-sub-label { font-size: 12.5px; font-weight: 500; color: #444; margin-bottom: 7px; }
 
 .form-check { display: flex; align-items: center; gap: 9px; padding: 7px 10px; border-radius: 8px; cursor: pointer; transition: background .15s; margin-bottom: 3px; }
 .form-check:hover { background: rgba(51,204,255,.10); }
@@ -590,41 +728,35 @@ tbody td { padding: 10px 14px; vertical-align: middle; }
 
 .dur-tag { font-size: 11px; color: #94A3B8; background: #F1F5F9; padding: 1px 8px; border-radius: 10px; }
 
-.form-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-
 .form-group { display: flex; flex-direction: column; gap: 5px; }
 .form-label { display: block; font-size: 12px; font-weight: 600; color: #475569; margin-bottom: 4px; }
 .form-control { width: 100%; height: 36px; padding: 0 11px; border: 1.5px solid #E2E8F0; border-radius: 8px; font-size: 13px; color: #334155; font-family: 'Poppins', sans-serif; outline: none; transition: border-color .2s, box-shadow .2s; background: #fff; }
 .form-control:focus { border-color: #33CCFF; box-shadow: 0 0 0 3px rgba(51,204,255,.12); }
 textarea.form-control { height: 72px; padding: 8px 11px; resize: vertical; }
 
-.docs-checks { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 5px; }
-.doc-check-item { display: flex; align-items: center; gap: 5px; font-size: 12.5px; color: #334155; background: rgba(51,102,153,.07); border: 1.5px solid rgba(51,102,153,.18); border-radius: 7px; padding: 4px 11px; cursor: pointer; user-select: none; transition: background .15s; }
-.doc-check-item:hover { background: rgba(51,102,153,.14); }
-
 .btn-confirm { width: 100%; background: #336699; color: #fff; border: none; height: 36px; border-radius: 9px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: 'Poppins', sans-serif; transition: background .2s, transform .15s; margin-top: 10px; }
 .btn-confirm:hover { background: #2a5580; transform: translateY(-1px); }
-.btn-cc { width: 100%; background: #F1F5F9; color: #475569; border: none; height: 32px; border-radius: 8px; font-size: 12.5px; cursor: pointer; font-family: 'Poppins', sans-serif; margin-top: 6px; transition: background .2s; }
-.btn-cc:hover { background: #E2E8F0; }
 
-/* ─── TOAST ──────────────────────────────────────────────── */
+.det-convert-footer {
+  display: flex; gap: 10px; margin-top: 14px; align-items: center;
+}
+.det-convert-footer .btn-confirm {
+  margin-top: 0; flex: 1;
+}
+
 .toast { position: fixed; bottom: 26px; right: 26px; z-index: 5000; padding: 12px 20px; border-radius: 10px; font-size: 13px; font-weight: 500; font-family: 'Poppins', sans-serif; box-shadow: 0 8px 28px rgba(0,0,0,.15); display: flex; align-items: center; gap: 8px; animation: toastIn .25s ease; }
 .toast.success { background: #1A6B4A; color: #fff; }
 .toast.error   { background: #c0392b; color: #fff; }
 @keyframes toastIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-/* ─── EMPTY STATE ─────────────────────────────────────────── */
 .empty-state { padding: 50px 20px; text-align: center; }
 .empty-state i { font-size: 34px; color: #E2E8F0; margin-bottom: 10px; display: block; }
 .empty-state p { color: #94A3B8; font-size: 14px; }
 
-/* ─── UTILITY ─────────────────────────────────────────────── */
 .hidden { display: none !important; }
 .req { color: #e53e3e; }
 
-/* ─── VALIDATION DES CHAMPS ──────────────────────────────── */
-
-/* Bordure rouge sur l'input en erreur */
+/* Validation des champs */
 .pf-group input.input-error,
 .pf-group textarea.input-error {
   border-color: #e53e3e !important;
@@ -632,7 +764,6 @@ textarea.form-control { height: 72px; padding: 8px 11px; resize: vertical; }
   box-shadow: 0 0 0 3px rgba(229, 62, 62, 0.12);
 }
 
-/* Message d'erreur sous le champ */
 .pf-error-msg {
   display: flex;
   align-items: center;
@@ -650,7 +781,6 @@ textarea.form-control { height: 72px; padding: 8px 11px; resize: vertical; }
   flex-shrink: 0;
 }
 
-/* Légère teinte rouge sur le groupe en erreur */
 .pf-group--error label {
   color: #c0392b;
 }
@@ -660,9 +790,7 @@ textarea.form-control { height: 72px; padding: 8px 11px; resize: vertical; }
   to   { opacity: 1; transform: translateY(0);    }
 }
 
-
-
-/* Styles pour les filtres actifs */
+/* Filtres actifs */
 .active-filters {
   display: flex;
   align-items: center;
@@ -703,14 +831,6 @@ textarea.form-control { height: 72px; padding: 8px 11px; resize: vertical; }
   color: #1e293b;
 }
 
-/* Ajustement pour le toolbar avec trois selects */
-.tb-left {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
 .filter-sel {
   height: 38px;
   padding: 0 12px;
@@ -735,7 +855,6 @@ textarea.form-control { height: 72px; padding: 8px 11px; resize: vertical; }
   box-shadow: 0 0 0 3px rgba(51, 204, 255, 0.12);
 }
 
-/* Responsive */
 @media (max-width: 1100px) {
   .filter-sel {
     max-width: 150px;
@@ -774,138 +893,124 @@ textarea.form-control { height: 72px; padding: 8px 11px; resize: vertical; }
   }
 }
 
-
-/* ── Bouton Ajouter une relance (sidebar détail prospect) ── */
-.det-action-relance {
-  background: rgba(255, 204, 51, .15) !important;
-  color: #8A6200 !important;
-  border: 1.5px solid rgba(255, 204, 51, .45) !important;
-}
-.det-action-relance:hover {
-  background: #FFCC33 !important;
-  color: #fff !important;
-}
-
-
-/* ══════════════════════════════════════════════════════════
-   AJOUTS prospects.css  — Historique des échanges + bouton OK détail
-   À COLLER À LA FIN de votre fichier prospects.css existant
-══════════════════════════════════════════════════════════ */
-
-/* ── Section historique des échanges ── */
-.historiques-list {
+/* Barre d'actions en masse */
+.bulk-action-bar {
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  padding: 10px 20px;
+  margin: 0 16px 16px 16px;
+}
+
+.bulk-action-info {
+  display: flex;
+  align-items: center;
   gap: 12px;
-  padding: 4px 0;
 }
 
-.historique-item {
-  display: flex;
-  gap: 14px;
-  align-items: flex-start;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  padding: 12px 14px;
-  transition: background 0.15s;
-}
-
-.historique-item:hover {
-  background: #f1f5f9;
-}
-
-.historique-icon {
-  flex-shrink: 0;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: #dbeafe;
-  color: #2563eb;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
-}
-
-.historique-content {
-  flex: 1;
-  min-width: 0;
-}
-
-.historique-header {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 4px;
-}
-
-.historique-type {
-  font-size: 12px;
+.bulk-action-count {
+  background: #336699;
+  color: white;
   font-weight: 600;
-  background: #dbeafe;
-  color: #1d4ed8;
-  border-radius: 5px;
-  padding: 2px 8px;
-  text-transform: capitalize;
-}
-
-.historique-date {
-  font-size: 11px;
-  color: #94a3b8;
-}
-
-.historique-user {
-  font-size: 11px;
-  color: #64748b;
-  font-style: italic;
-}
-
-.historique-contenu {
-  font-size: 13px;
-  color: #374151;
-  line-height: 1.5;
-}
-
-.historique-notes {
-  margin-top: 5px;
-  font-size: 12px;
-  color: #6b7280;
-  background: #fef9c3;
-  border-radius: 6px;
-  padding: 4px 8px;
-}
-
-/* ── Bouton "Appel effectué" dans le modal détail Home.js ── */
-.btn-ok-from-detail {
+  font-size: 14px;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 8px;
+  border-radius: 20px;
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  padding: 9px 18px;
-  background: linear-gradient(135deg, #10b981, #059669);
-  color: #fff;
+  justify-content: center;
+}
+
+.bulk-action-info span {
+  font-size: 13px;
+  font-weight: 500;
+  color: #475569;
+}
+
+.bulk-action-btns {
+  display: flex;
+  gap: 10px;
+}
+
+.bulk-btn-clear {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
   border: none;
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 600;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #64748B;
   cursor: pointer;
-  transition: opacity 0.2s, transform 0.15s;
-}
-
-.btn-ok-from-detail:hover {
-  opacity: 0.9;
-  transform: translateY(-1px);
-}
-
-/* ── Info dans le prompt OK ── */
-.ok-prompt-info {
-  font-size: 13px;
-  color: #374151;
-  background: #eff6ff;
-  border: 1px solid #bfdbfe;
+  transition: all 0.2s ease;
+  font-family: 'Poppins', sans-serif;
   border-radius: 8px;
-  padding: 10px 14px;
-  margin-bottom: 14px;
-  line-height: 1.6;
+}
+
+.bulk-btn-clear:hover {
+  background: #F1F5F9;
+  color: #475569;
+}
+
+.bulk-btn-delete {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: none;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #e53e3e;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: 'Poppins', sans-serif;
+  border-radius: 8px;
+}
+
+.bulk-btn-delete:hover {
+  background: rgba(229, 62, 62, 0.08);
+  color: #c0392b;
+}
+
+.th-check {
+  width: 40px;
+  text-align: center;
+}
+
+.td-check {
+  text-align: center;
+  vertical-align: middle;
+}
+
+.row-checkbox {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: #336699;
+}
+
+tr.row-selected {
+  background: rgba(51, 102, 153, 0.03) !important;
+}
+
+tr.row-selected:hover {
+  background: rgba(51, 102, 153, 0.06) !important;
+}
+
+@media (max-width: 640px) {
+  .bulk-action-bar {
+    flex-direction: column;
+    gap: 12px;
+    align-items: stretch;
+  }
+  
+  .bulk-action-btns {
+    justify-content: flex-end;
+  }
 }

@@ -9,6 +9,7 @@ import {
   createProspect,
   updateProspect,
   deleteProspect,
+  deleteMultipleProspects,
   convertToEtudiant,
 } from '../../services/crm/prospectsService';
 import { createRelance } from '../../services/crm/relancesService';
@@ -203,7 +204,7 @@ const DrawerPanel = ({ drawerOpen, drawerMode, drawerTarget, closeDrawer, saveDr
 };
 
 /* ══════════════════════════════════════════════════════════
-   MODALE SUPPRESSION
+   MODALE SUPPRESSION (unitaire)
 ══════════════════════════════════════════════════════════ */
 const DeleteModal = ({ showDeleteModal, deleteTarget, closeDelete, confirmDelete }) => {
   if (!showDeleteModal || !deleteTarget) return null;
@@ -237,6 +238,89 @@ const DeleteModal = ({ showDeleteModal, deleteTarget, closeDelete, confirmDelete
           <button className="btn btn-cancel" style={{ flex: 1 }} onClick={closeDelete}><i className="fa-solid fa-xmark"></i> Annuler</button>
           <button className="btn btn-suppr-confirm" style={{ flex: 1 }} onClick={confirmDelete}><i className="fa-solid fa-trash"></i> Confirmer</button>
         </div>
+      </div>
+    </div>
+  );
+};
+
+/* ══════════════════════════════════════════════════════════
+   MODALE SUPPRESSION EN MASSE  ← NOUVEAU
+══════════════════════════════════════════════════════════ */
+const BulkDeleteModal = ({ show, count, onCancel, onConfirm, deleting }) => {
+  if (!show) return null;
+  return (
+    <div className="modal-overlay show" onClick={e => { if (e.target === e.currentTarget && !deleting) onCancel(); }}>
+      <div className="modal-suppr">
+        <div style={{ display: 'flex', justifyContent: 'center', paddingTop: '28px' }}>
+          <div className="suppr-icon-wrap">
+            <i className="fa-solid fa-trash-can" style={{ fontSize: '26px', color: '#ef4444' }}></i>
+          </div>
+        </div>
+        <div style={{ padding: '16px 24px', textAlign: 'center' }}>
+          <h2 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '10px', color: '#1e293b' }}>
+            Supprimer {count} prospect{count > 1 ? 's' : ''}
+          </h2>
+          <p style={{ fontSize: '13.5px', color: '#64748b', marginBottom: '16px' }}>
+            Vous êtes sur le point de supprimer <strong>{count} prospect{count > 1 ? 's' : ''}</strong> sélectionné{count > 1 ? 's' : ''}.
+          </p>
+
+          {/* Compteur visuel */}
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px',
+            background: 'rgba(239,68,68,.06)', border: '1px solid rgba(239,68,68,.20)',
+            borderRadius: '10px', padding: '12px 18px', marginBottom: '14px',
+          }}>
+            <div style={{
+              background: '#ef4444', borderRadius: '50%', width: '40px', height: '40px',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: '#fff', fontWeight: '700', fontSize: '16px', flexShrink: 0,
+            }}>
+              {count}
+            </div>
+            <span style={{ fontSize: '13.5px', color: '#7f1d1d', fontWeight: '500' }}>
+              prospect{count > 1 ? 's' : ''} seront supprimé{count > 1 ? 's' : ''} définitivement
+            </span>
+          </div>
+
+          <div className="suppr-warning">
+            <i className="fa-solid fa-triangle-exclamation" style={{ flexShrink: 0 }}></i>
+            <span>Cette action est <strong>irréversible</strong>. Toutes les données associées seront perdues.</span>
+          </div>
+        </div>
+        <div style={{ padding: '12px 24px 20px', display: 'flex', gap: '10px' }}>
+          <button className="btn btn-cancel" style={{ flex: 1 }} onClick={onCancel} disabled={deleting}>
+            <i className="fa-solid fa-xmark"></i> Annuler
+          </button>
+          <button className="btn btn-suppr-confirm" style={{ flex: 1 }} onClick={onConfirm} disabled={deleting}>
+            {deleting
+              ? <><i className="fa-solid fa-spinner fa-spin"></i> Suppression…</>
+              : <><i className="fa-solid fa-trash"></i> Supprimer {count}</>
+            }
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/* ══════════════════════════════════════════════════════════
+   BARRE D'ACTIONS EN MASSE  ← NOUVEAU
+══════════════════════════════════════════════════════════ */
+const BulkActionBar = ({ count, onDelete, onClear }) => {
+  if (count === 0) return null;
+  return (
+    <div className="bulk-action-bar">
+      <div className="bulk-action-info">
+        <div className="bulk-action-count">{count}</div>
+        <span>prospect{count > 1 ? 's' : ''} sélectionné{count > 1 ? 's' : ''}</span>
+      </div>
+      <div className="bulk-action-btns">
+        <button className="bulk-btn-clear" onClick={onClear}>
+          <i className="fa-solid fa-xmark"></i> Désélectionner tout
+        </button>
+        <button className="bulk-btn-delete" onClick={onDelete}>
+          <i className="fa-solid fa-trash"></i> Supprimer la sélection
+        </button>
       </div>
     </div>
   );
@@ -340,6 +424,11 @@ const Prospects = () => {
   const formRef = useRef(null);
   const PER_PAGE = 8;
 
+  // ── États sélection en masse  ← NOUVEAU ──
+  const [selectedIds,         setSelectedIds]         = useState(new Set());
+  const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
+  const [bulkDeleting,        setBulkDeleting]        = useState(false);
+
   // ── États conversion ──
   const [convertOpen,        setConvertOpen]        = useState(false);
   const [selectedForms,      setSelectedForms]      = useState([]);
@@ -363,6 +452,11 @@ const Prospects = () => {
   }, []);
   useEffect(() => { loadProspects(); }, [loadProspects]);
 
+  // Réinitialiser la sélection quand les filtres/recherche changent ← NOUVEAU
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [search, filterStatut, filterSource, filterFormation, sortAlpha, currentPage]);
+
   const showToast = (msg, type = 'success') => {
     setToast({ show: true, message: msg, type });
     setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 3500);
@@ -384,6 +478,71 @@ const Prospects = () => {
   const filtered     = getFiltered();
   const totalPages   = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
   const currentSlice = filtered.slice((currentPage - 1) * PER_PAGE, currentPage * PER_PAGE);
+
+  // ── Sélection en masse  ← NOUVEAU ──
+  const currentPageIds   = currentSlice.map(p => p.id);
+  const isAllPageSelected = currentPageIds.length > 0 && currentPageIds.every(id => selectedIds.has(id));
+  const isSomePageSelected = currentPageIds.some(id => selectedIds.has(id));
+
+  const toggleSelect = (id) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else              next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (isAllPageSelected) {
+      // Décocher tous de la page courante
+      setSelectedIds(prev => {
+        const next = new Set(prev);
+        currentPageIds.forEach(id => next.delete(id));
+        return next;
+      });
+    } else {
+      // Cocher tous de la page courante
+      setSelectedIds(prev => {
+        const next = new Set(prev);
+        currentPageIds.forEach(id => next.add(id));
+        return next;
+      });
+    }
+  };
+
+  const clearSelection = () => setSelectedIds(new Set());
+
+  // ── Suppression en masse  ← NOUVEAU ──
+  const openBulkDelete  = () => setShowBulkDeleteModal(true);
+  const closeBulkDelete = () => setShowBulkDeleteModal(false);
+
+  const confirmBulkDelete = async () => {
+    setBulkDeleting(true);
+    try {
+      const ids = Array.from(selectedIds);
+      const { deleted, errors } = await deleteMultipleProspects(ids);
+
+      // Retirer les supprimés de la liste locale
+      setProspects(prev => prev.filter(p => !deleted.includes(p.id)));
+      clearSelection();
+      closeBulkDelete();
+
+      if (errors.length === 0) {
+        showToast(`${deleted.length} prospect${deleted.length > 1 ? 's' : ''} supprimé${deleted.length > 1 ? 's' : ''} avec succès.`);
+      } else {
+        showToast(
+          `${deleted.length} supprimé${deleted.length > 1 ? 's' : ''}, ${errors.length} erreur${errors.length > 1 ? 's' : ''}.`,
+          'error'
+        );
+      }
+    } catch {
+      showToast('Erreur lors de la suppression en masse.', 'error');
+      closeBulkDelete();
+    } finally {
+      setBulkDeleting(false);
+    }
+  };
 
   // ── Drawer ──
   const openAdd = () => { setDrawerTarget(null); setDrawerMode('add'); setDrawerOpen(true); };
@@ -438,9 +597,17 @@ const Prospects = () => {
       setPageView('detail');
     } catch { showToast('Impossible de charger les détails du prospect.', 'error'); }
   };
+
+  // ── Recharger la fiche détail (pour rafraîchir l'historique) ──
+  const refreshDetail = async (id) => {
+    try {
+      const p = await getProspect(id);
+      setDetailTarget(p);
+    } catch { /* silencieux */ }
+  };
   const closeDetail = () => { setPageView('list'); setDetailTarget(null); };
 
-  // ── Supprimer ──
+  // ── Supprimer (unitaire) ──
   const openDelete = (id) => { const p = prospects.find(x => x.id === id); if (!p) return; setDeleteTarget(p); setShowDeleteModal(true); };
   const closeDelete = () => { setShowDeleteModal(false); setDeleteTarget(null); };
   const confirmDelete = async () => {
@@ -448,6 +615,8 @@ const Prospects = () => {
     try {
       await deleteProspect(deleteTarget.id);
       setProspects(prev => prev.filter(p => p.id !== deleteTarget.id));
+      // Retirer aussi de la sélection si présent ← NOUVEAU
+      setSelectedIds(prev => { const next = new Set(prev); next.delete(deleteTarget.id); return next; });
       if (detailTarget && detailTarget.id === deleteTarget.id) { setPageView('list'); setDetailTarget(null); }
       closeDelete(); showToast('Prospect supprimé.');
     } catch { showToast('Erreur lors de la suppression.', 'error'); closeDelete(); }
@@ -456,7 +625,7 @@ const Prospects = () => {
   // ── Conversion ──
   const toggleConvert = () => {
     setConvertOpen(v => !v);
-    setRelanceOpen(false); // ferme la relance si ouverte
+    setRelanceOpen(false);
     setSelectedForms([]); setConvertData({ statutEtudiant: 'Actif', notes: '', documentsFournis: [] });
   };
   const toggleForm = (id) => setSelectedForms(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
@@ -475,7 +644,7 @@ const Prospects = () => {
   // ── Relance (inline) ──
   const toggleRelance = () => {
     setRelanceOpen(v => !v);
-    setConvertOpen(false); // ferme la conversion si ouverte
+    setConvertOpen(false);
     setRelanceDate(''); setRelanceCommentaire(''); setRelanceError('');
   };
 
@@ -488,6 +657,8 @@ const Prospects = () => {
       showToast('✅ Relance programmée avec succès !');
       setRelanceOpen(false);
       setRelanceDate(''); setRelanceCommentaire('');
+      // Recharger la fiche pour avoir l'historique à jour
+      await refreshDetail(detailTarget.id);
     } catch { showToast('Erreur lors de la création de la relance.', 'error'); }
     finally { setRelanceSaving(false); }
   };
@@ -536,7 +707,6 @@ const Prospects = () => {
                   <i className="fa-solid fa-graduation-cap"></i>
                   {convertOpen ? 'Fermer la conversion' : 'Convertir en étudiant'}
                 </button>
-                {/* ── Bouton Relance ── */}
                 <button className="det-action-btn det-action-relance" onClick={toggleRelance}>
                   <i className="fa-solid fa-bell"></i>
                   {relanceOpen ? 'Fermer la relance' : 'Ajouter une relance'}
@@ -599,7 +769,7 @@ const Prospects = () => {
                 </div>
               )}
 
-              {/* ── Boîte Relance (inline, même style que convert-box) ── */}
+              {/* ── Boîte Relance (inline) ── */}
               {relanceOpen && (
                 <div className="relance-box">
                   <div className="relance-box-title">
@@ -710,9 +880,82 @@ const Prospects = () => {
                 </div>
               ) : null}
 
-              {/* ── Historique des relances ── */}
-              <ProspectRelances prospectId={p.id} prospectNom={`${p.prenom} ${p.nom}`} />
+{/* ── Historique des échanges ── */}
+{p.historiques && p.historiques.length > 0 && (
+  <div className="det-section-card">
+    <div className="det-section-header">
+      <i className="fa-solid fa-clock-rotate-left"></i> Historique des échanges
+      <span style={{
+        marginLeft: 'auto', fontSize: '11.5px', fontWeight: '700',
+        background: 'rgba(51,204,255,.12)', color: '#1A7A99',
+        border: '1px solid rgba(51,204,255,.25)', borderRadius: '12px',
+        padding: '2px 10px',
+      }}>
+        {p.historiques.length} échange{p.historiques.length > 1 ? 's' : ''}
+      </span>
+    </div>
 
+    <div className="histo-timeline">
+      {p.historiques.map((h, idx) => {
+        const TYPE_CONFIG = {
+          appel:   { icon: 'fa-phone',          color: '#10b981', bg: '#d1fae5', border: '#6ee7b7', label: 'Appel téléphonique' },
+          email:   { icon: 'fa-envelope',       color: '#3b82f6', bg: '#dbeafe', border: '#93c5fd', label: 'Email' },
+          rdv:     { icon: 'fa-calendar-check', color: '#8b5cf6', bg: '#ede9fe', border: '#c4b5fd', label: 'Rendez-vous' },
+          message: { icon: 'fa-comment',        color: '#f59e0b', bg: '#fef3c7', border: '#fcd34d', label: 'Message WhatsApp' },
+          autre:   { icon: 'fa-circle-info',    color: '#64748b', bg: '#f1f5f9', border: '#cbd5e1', label: 'Autre' },
+        };
+        const cfg = TYPE_CONFIG[h.type_echange] || TYPE_CONFIG.autre;
+        const dateStr = h.date_echange
+          ? new Date(h.date_echange).toLocaleDateString('fr-FR', {
+              day: '2-digit', month: 'short', year: 'numeric',
+              hour: '2-digit', minute: '2-digit',
+            })
+          : '—';
+        const isLast = idx === p.historiques.length - 1;
+
+        return (
+          <div key={h.id} className="histo-row">
+            {/* Colonne gauche : point + ligne verticale */}
+            <div className="histo-left">
+              <div className="histo-dot" style={{ background: cfg.bg, border: `2px solid ${cfg.border}`, color: cfg.color }}>
+                <i className={`fa-solid ${cfg.icon}`}></i>
+              </div>
+              {!isLast && <div className="histo-line" />}
+            </div>
+
+            {/* Colonne droite : contenu avec date et commentaire sur 2 lignes */}
+            <div className="histo-card" style={{ borderLeft: `3px solid ${cfg.border}` }}>
+              <div className="histo-card-top">
+                <span className="histo-badge" style={{ background: cfg.bg, color: cfg.color, border: `1px solid ${cfg.border}` }}>
+                  <i className={`fa-solid ${cfg.icon}`} style={{ fontSize: '10px' }}></i> {cfg.label}
+                </span>
+                {h.utilisateur_nom && (
+                  <span className="histo-meta">
+                    <i className="fa-solid fa-user-tie"></i> {h.utilisateur_nom}
+                  </span>
+                )}
+              </div>
+              
+              {/* CONTENU : Date et commentaire sur deux lignes séparées */}
+              <div className="histo-content">
+                {/* Ligne 1 : Date */}
+                <div className="histo-date">
+                  <i className="fa-regular fa-calendar"></i>
+                  <span>{dateStr}</span>
+                </div>
+                
+                {/* Ligne 2 : Commentaire/Contenu */}
+                <div className="histo-text">
+                  {h.contenu || <span style={{ color: '#94a3b8', fontStyle: 'italic' }}>Aucun détail fourni</span>}
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  </div>
+)}
             </div>
           </div>
         </div>
@@ -780,6 +1023,13 @@ const Prospects = () => {
           )}
         </div>
 
+        {/* ── Barre d'actions en masse ── */}
+        <BulkActionBar
+          count={selectedIds.size}
+          onDelete={openBulkDelete}
+          onClear={clearSelection}
+        />
+
         {loading ? (
           <div className="empty-state"><i className="fa-solid fa-spinner fa-spin" style={{ fontSize: '28px', color: '#336699' }}></i><p>Chargement des prospects…</p></div>
         ) : apiError ? (
@@ -790,6 +1040,17 @@ const Prospects = () => {
               <table>
                 <thead>
                   <tr>
+                    {/* ── Colonne checkbox ── */}
+                    <th className="th-check">
+                      <input
+                        type="checkbox"
+                        className="row-checkbox"
+                        checked={isAllPageSelected}
+                        ref={el => { if (el) el.indeterminate = isSomePageSelected && !isAllPageSelected; }}
+                        onChange={toggleSelectAll}
+                        title={isAllPageSelected ? 'Désélectionner tout' : 'Sélectionner tout'}
+                      />
+                    </th>
                     <th style={{ width: '32px' }}>#</th>
                     <th>Nom & Prénom</th><th>Contact</th><th>Formation souhaitée</th>
                     <th>Statut</th><th>Source</th><th>Date</th>
@@ -798,9 +1059,19 @@ const Prospects = () => {
                 </thead>
                 <tbody>
                   {currentSlice.map((p, i) => {
-                    const sc = STATUT_COLORS[p.statut] || {};
+                    const sc         = STATUT_COLORS[p.statut] || {};
+                    const isSelected = selectedIds.has(p.id);
                     return (
-                      <tr key={p.id}>
+                      <tr key={p.id} className={isSelected ? 'row-selected' : ''}>
+                        {/* ── Checkbox de ligne ── */}
+                        <td className="td-check" onClick={e => e.stopPropagation()}>
+                          <input
+                            type="checkbox"
+                            className="row-checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleSelect(p.id)}
+                          />
+                        </td>
                         <td className="td-num">{(currentPage - 1) * PER_PAGE + i + 1}</td>
                         <td><div className="td-name">{p.nom} {p.prenom}</div><div className="td-sub">{p.email}</div></td>
                         <td><div className="td-sub">{p.email}</div><div className="td-sub">{p.tel}</div></td>
@@ -837,6 +1108,13 @@ const Prospects = () => {
 
       <DrawerPanel drawerOpen={drawerOpen} drawerMode={drawerMode} drawerTarget={drawerTarget} closeDrawer={closeDrawer} saveDrawer={saveDrawer} saving={saving} formRef={formRef} FORMATIONS={FORMATIONS} />
       <DeleteModal showDeleteModal={showDeleteModal} deleteTarget={deleteTarget} closeDelete={closeDelete} confirmDelete={confirmDelete} />
+      <BulkDeleteModal
+        show={showBulkDeleteModal}
+        count={selectedIds.size}
+        onCancel={closeBulkDelete}
+        onConfirm={confirmBulkDelete}
+        deleting={bulkDeleting}
+      />
       <Toast toast={toast} />
       <ImportProspectsModal isOpen={showImport} onClose={() => setShowImport(false)} onSuccess={() => { loadProspects(); showToast('Import réussi !', 'success'); }} />
     </Layout>
