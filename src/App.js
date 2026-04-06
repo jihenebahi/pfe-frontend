@@ -25,6 +25,7 @@ import Formateurs from "./pages/infoCentre/Formateurs";
 import Prospects from "./pages/crm/prospects";
 import Etudiants from "./pages/crm/Etudiants";
 import Diplomes  from "./pages/crm/diplomes";
+import MarketingMail from "./pages/crm/MarketingMail";
 
 // Composants
 import PrivateRoute from "./components/PrivateRoute";
@@ -57,6 +58,7 @@ function App() {
           <Route path="/prospects" element={<PrivateRoute><Prospects /></PrivateRoute>} />
           <Route path="/etudiants" element={<PrivateRoute><Etudiants /></PrivateRoute>} />
           <Route path="/diplomes"  element={<PrivateRoute><Diplomes  /></PrivateRoute>} />
+          <Route path="/marketing-mail" element={<PrivateRoute><MarketingMail /></PrivateRoute>} />
 
           {/* Mot de passe oublié */}
           <Route path="/mot-de-passe-oublie" element={<MotPassOublier />} />
