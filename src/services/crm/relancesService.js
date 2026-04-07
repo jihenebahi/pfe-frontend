@@ -32,6 +32,8 @@ export const fromApiRelance = (r) => ({
   dateAction:        r.date_action       || null,
   createdBy:         r.created_by_nom    || '',
   dateCreation:      r.date_creation     || '',
+  formationId:       r.formation         || null,      // ← Ajouté
+  formationNom:      r.formation_nom     || '', 
 });
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -51,10 +53,11 @@ export const getProspectRelances = async (prospectId) => {
 };
 
 /** Créer une relance pour un prospect */
-export const createRelance = async (prospectId, { dateRelance, commentaire }) => {
+export const createRelance = async (prospectId, { dateRelance, commentaire, formationId }) => {
   const res = await api.post(PROSPECT(prospectId), {
     date_relance: dateRelance,
     commentaire:  commentaire || '',
+    formation:    formationId || null,   // ← envoi au backend
   });
   return fromApiRelance(res.data);
 };

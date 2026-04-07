@@ -52,6 +52,7 @@ export default function Home() {
   const [reprogModal,    setReprogModal]    = useState(false);
   const [reprogProspId,  setReprogProspId]  = useState(null);
   const [modalLoading,   setModalLoading]   = useState(false);
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null);  // ← confirmation suppression
 
   // ── Charger les relances ──────────────────────────────────────────────────
   const loadRelances = useCallback(async () => {
@@ -91,11 +92,15 @@ export default function Home() {
 
   // ── Suppression ───────────────────────────────────────────────────────────
   const handleDelete = async (id) => {
-    if (!window.confirm('Supprimer cette relance ?')) return;
+    setDeleteConfirmId(id);
+  };
+
+  const confirmDelete = async () => {
     try {
-      await deleteRelance(id);
-      setRelances((prev) => prev.filter((r) => r.id !== id));
+      await deleteRelance(deleteConfirmId);
+      setRelances((prev) => prev.filter((r) => r.id !== deleteConfirmId));
     } catch (err) { console.error(err); }
+    finally { setDeleteConfirmId(null); }
   };
 
   // ── Ouvrir le prompt OK ───────────────────────────────────────────────────
@@ -344,6 +349,11 @@ export default function Home() {
                         <div className="reminder-date">
                           <i className="fa-regular fa-calendar"></i> {fmtDate(r.dateRelance)}
                         </div>
+                        {r.formationNom && (
+                          <div className="reminder-formation">
+                            <i className="fa-solid fa-graduation-cap"></i> {r.formationNom}
+                          </div>
+                        )}
                         {r.commentaire && (
                           <div className="reminder-comment">
                             <i className="fa-regular fa-comment"></i> {r.commentaire}
@@ -400,6 +410,12 @@ export default function Home() {
                 <span className="modal-label"><i className="fa-solid fa-phone"></i> Téléphone</span>
                 <span className="modal-value">{detailModal.prospectTelephone}</span>
               </div>
+              {detailModal.formationNom && (
+                <div className="modal-row">
+                  <span className="modal-label"><i className="fa-solid fa-graduation-cap"></i> Formation</span>
+                  <span className="modal-value">{detailModal.formationNom}</span>
+                </div>
+              )}
               <div className="modal-row">
                 <span className="modal-label"><i className="fa-regular fa-calendar"></i> Date relance</span>
                 <span className="modal-value">
@@ -523,6 +539,39 @@ export default function Home() {
         loading={modalLoading}
         title="Programmer une autre relance ?"
       />
+      {/* ── Modal confirmation suppression ── */}
+      {deleteConfirmId && (
+        <div className="modal-overlay show" onClick={() => setDeleteConfirmId(null)}>
+          <div className="modal-card delete-confirm-card" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 style={{ display:'flex', alignItems:'center', gap:8 }}>
+                <span style={{ background:'#FEF2F2', color:'#EF4444', borderRadius:'50%', width:32, height:32, display:'flex', alignItems:'center', justifyContent:'center', fontSize:14 }}>
+                  <i className="fa-solid fa-trash"></i>
+                </span>
+                Supprimer la relance
+              </h3>
+              <button type="button" className="modal-close" onClick={() => setDeleteConfirmId(null)}>
+                <i className="fa-solid fa-xmark"></i>
+              </button>
+            </div>
+            <div className="modal-body" style={{ padding:'24px 24px 8px' }}>
+              <p style={{ fontSize:14, color:'#475569', lineHeight:1.6 }}>
+                <i className="fa-solid fa-triangle-exclamation" style={{ color:'#F97316', marginRight:6 }}></i>
+                Êtes-vous sûr de vouloir supprimer cette relance ?
+              </p>
+              <p style={{ fontSize:12, color:'#94A3B8', marginTop:6 }}>Cette action est irréversible.</p>
+            </div>
+            <div className="modal-footer" style={{ gap:10 }}>
+              <button type="button" className="btn-cancel-delete" onClick={() => setDeleteConfirmId(null)}>
+                Annuler
+              </button>
+              <button type="button" className="btn-confirm-delete" onClick={confirmDelete}>
+                <i className="fa-solid fa-trash"></i> Supprimer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </Layout>
   );
 }

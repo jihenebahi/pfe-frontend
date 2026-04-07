@@ -712,7 +712,36 @@ a {
   padding: 16px 24px;
   border-top: 1px solid #F1F5F9;
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.btn-ok-from-detail {
+  background: #DCFCE7;
+  color: #16A34A;
+  border: 1.5px solid #BBF7D0;
+  padding: 9px 20px;
+  border-radius: 9px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: 'Poppins', sans-serif;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-ok-from-detail:hover,
+.btn-ok-from-detail:active {
+  background: #16A34A;
+  color: white;
+  border-color: #16A34A;
+}
+
+.btn-ok-from-detail i {
+  font-size: 13px;
 }
 
 .btn-goto-prospect {
@@ -769,4 +798,72 @@ a {
 .reminder-ok-btn.ok-done:hover {
   background: transparent;
   transform: none;
+}
+
+
+
+
+
+.reminder-comment,
+.reminder-formation {
+  font-size: 11px;      /* même taille que téléphone et date */
+  color: #64748B;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.reminder-comment i,
+.reminder-formation i {
+  color: #94A3B8;
+  font-size: 10px;
+}
+
+
+
+
+
+
+/* ================== MODAL CONFIRMATION SUPPRESSION ================== */
+.delete-confirm-card {
+  max-width: 400px;
+}
+
+.btn-cancel-delete {
+  background: #F1F5F9;
+  color: #64748B;
+  border: none;
+  padding: 9px 20px;
+  border-radius: 9px;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: 'Poppins', sans-serif;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-cancel-delete:hover {
+  background: #E2E8F0;
+}
+
+.btn-confirm-delete {
+  background: #FEF2F2;
+  color: #EF4444;
+  border: 1.5px solid #FECACA;
+  padding: 9px 20px;
+  border-radius: 9px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: 'Poppins', sans-serif;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-confirm-delete:hover {
+  background: #EF4444;
+  color: white;
+  border-color: #EF4444;
 }

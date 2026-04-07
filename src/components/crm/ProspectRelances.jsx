@@ -21,7 +21,7 @@ import {
   STATUT_CONFIG,
 } from '../../services/crm/relancesService';
 
-export default function ProspectRelances({ prospectId, prospectNom, onHistoriqueUpdated }) {
+export default function ProspectRelances({ prospectId, prospectNom, formations_ids = [], onHistoriqueUpdated }) {
   const [relances,     setRelances]     = useState([]);
   const [loading,      setLoading]      = useState(true);
   const [savingId,     setSavingId]     = useState(null);
@@ -35,6 +35,9 @@ export default function ProspectRelances({ prospectId, prospectNom, onHistorique
 
   // ── popup "reprogrammer ?" après action OK ──────────────────────────────
   const [reprogModal,  setReprogModal]  = useState(false);
+
+  // ── popup confirmation suppression ────────────────────────────────────────
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null);
 
   // ── chargement initial ──────────────────────────────────────────────────
   const load = useCallback(async () => {
@@ -52,27 +55,33 @@ export default function ProspectRelances({ prospectId, prospectNom, onHistorique
   useEffect(() => { load(); }, [load]);
 
   // ── Créer une relance ───────────────────────────────────────────────────
-  const handleCreate = async ({ dateRelance, commentaire }) => {
-    try {
-      setModalLoading(true);
-      const created = await createRelance(prospectId, { dateRelance, commentaire });
-      setRelances((prev) => [created, ...prev]);
-      setShowModal(false);
-    } catch (err) {
-      console.error('Erreur création relance :', err);
-    } finally {
-      setModalLoading(false);
-    }
-  };
-
+const handleCreate = async ({ dateRelance, commentaire }) => {
+  try {
+    setModalLoading(true);
+    const created = await createRelance(prospectId, { 
+      dateRelance, 
+      commentaire,
+      formationId: formations_ids[0] || null,   // ← première formation du prospect
+    });
+    setRelances((prev) => [created, ...prev]);
+    setShowModal(false);
+  } catch (err) {
+    console.error('Erreur création relance :', err);
+  } finally {
+    setModalLoading(false);
+  }
+};
   // ── Supprimer ───────────────────────────────────────────────────────────
-  const handleDelete = async (id) => {
-    if (!window.confirm('Supprimer cette relance ?')) return;
+  const handleDelete = (id) => setDeleteConfirmId(id);
+
+  const confirmDelete = async () => {
     try {
-      await deleteRelance(id);
-      setRelances((prev) => prev.filter((r) => r.id !== id));
+      await deleteRelance(deleteConfirmId);
+      setRelances((prev) => prev.filter((r) => r.id !== deleteConfirmId));
     } catch (err) {
       console.error('Erreur suppression relance :', err);
+    } finally {
+      setDeleteConfirmId(null);
     }
   };
 
@@ -117,7 +126,11 @@ export default function ProspectRelances({ prospectId, prospectNom, onHistorique
   const handleReprog = async ({ dateRelance, commentaire }) => {
     try {
       setModalLoading(true);
-      const created = await createRelance(prospectId, { dateRelance, commentaire });
+      const created = await createRelance(prospectId, {
+        dateRelance,
+        commentaire,
+        formationId: formations_ids[0] || null,   // ← même formation
+      });
       setRelances((prev) => [created, ...prev]);
       setReprogModal(false);
     } catch (err) {
@@ -164,6 +177,7 @@ export default function ProspectRelances({ prospectId, prospectNom, onHistorique
             <thead>
               <tr>
                 <th>Date prévue</th>
+                <th>Formation</th> 
                 <th>Commentaire</th>
                 <th>Statut</th>
                 <th>Date action</th>
@@ -176,6 +190,16 @@ export default function ProspectRelances({ prospectId, prospectNom, onHistorique
                 return (
                   <tr key={r.id} className={r.statutCalc === 'fait' ? 'row-fait' : ''}>
                     <td>{fmtDate(r.dateRelance)}</td>
+                            {/* Nouvelle cellule Formation */}
+                    <td>
+                      {r.formationNom ? (
+                        <span className="relance-formation">
+                          <i className="fa-solid fa-tag"></i> {r.formationNom}
+                        </span>
+                      ) : (
+                        <span className="no-formation">—</span>
+                      )}
+                    </td>
                     <td className="relance-comment-cell">
                       {r.commentaire || <span className="no-comment">—</span>}
                     </td>
@@ -329,6 +353,37 @@ export default function ProspectRelances({ prospectId, prospectNom, onHistorique
                 }}
               >
                 <i className="fa-solid fa-calendar-plus"></i> Oui, programmer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* ── Modal confirmation suppression ── */}
+      {deleteConfirmId && (
+        <div className="relance-modal-overlay" onClick={() => setDeleteConfirmId(null)}>
+          <div className="relance-modal-card delete-confirm-card" onClick={(e) => e.stopPropagation()}>
+            <div className="relance-modal-header delete-header">
+              <div className="relance-modal-icon delete-icon">
+                <i className="fa-solid fa-trash"></i>
+              </div>
+              <h3 className="relance-modal-title">Supprimer la relance</h3>
+              <button className="relance-modal-close" onClick={() => setDeleteConfirmId(null)}>
+                <i className="fa-solid fa-xmark"></i>
+              </button>
+            </div>
+            <div className="relance-modal-body">
+              <p className="delete-confirm-text">
+                <i className="fa-solid fa-triangle-exclamation" style={{ color: '#ef4444' }}></i>{' '}
+                Êtes-vous sûr de vouloir supprimer cette relance ?<br />
+                <span className="delete-confirm-sub">Cette action est irréversible.</span>
+              </p>
+            </div>
+            <div className="relance-modal-footer">
+              <button className="btn-relance-cancel" onClick={() => setDeleteConfirmId(null)}>
+                Annuler
+              </button>
+              <button className="btn-relance-delete" onClick={confirmDelete}>
+                <i className="fa-solid fa-trash"></i> Supprimer
               </button>
             </div>
           </div>
