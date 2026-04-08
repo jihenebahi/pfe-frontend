@@ -25,7 +25,7 @@ import Formateurs from "./pages/infoCentre/Formateurs";
 import Prospects from "./pages/crm/prospects";
 import Etudiants from "./pages/crm/Etudiants";
 import Diplomes  from "./pages/crm/diplomes";
-import MarketingMail from "./pages/crm/MarketingMail";
+import MarketingMail from "./pages/crm/MarketingMail"
 
 // Composants
 import PrivateRoute from "./components/PrivateRoute";
