@@ -1043,14 +1043,6 @@ const Prospects = () => {
                   ))
                 )
               ),
-              React.createElement('div', { className: 'form-group', style: { marginTop: '12px' } },
-                React.createElement('label', { className: 'form-label' }, 'Statut étudiant'),
-                React.createElement('select', { className: 'form-control', value: convertData.statutEtudiant, onChange: e => setConvertData(prev => ({ ...prev, statutEtudiant: e.target.value })) },
-                  React.createElement('option', null, 'Actif'),
-                  React.createElement('option', null, 'Abandonné'),
-                  React.createElement('option', null, 'Certifié')
-                )
-              ),
               React.createElement('div', { className: 'form-group', style: { marginTop: '10px' } },
                 React.createElement('label', { className: 'form-label' }, 'Notes / Observations'),
                 React.createElement('textarea', {

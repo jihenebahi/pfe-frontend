@@ -20,7 +20,6 @@ const PAYS_MAP = {
 const STATUT_MAP = {
   'Actif':     'actif',
   'Abandonné': 'abandonne',
-  'Certifié':  'certifie',
 };
 
 const GENRE_MAP = {
@@ -46,14 +45,13 @@ const DIPLOME_MAP = {
   'Autre':        'autre',
 };
 
-// Ajouter le mapping inverse pour les documents
 const DOCUMENT_TYPE_MAP_INV = {
-  'cin':      'CIN',
-  'cv':       'CV',
-  'contrat':  'Contrat',
-  'recu':     'Reçu',
-  'rne':      'RNE',
-  'autre':    'Autres',
+  'cin':     'CIN',
+  'cv':      'CV',
+  'contrat': 'Contrat',
+  'recu':    'Reçu',
+  'rne':     'RNE',
+  'autre':   'Autres',
 };
 
 // ── Maps inverses (Django → React) ──
@@ -72,25 +70,41 @@ const DIPLOME_MAP_INV       = invertMap(DIPLOME_MAP);
 
 /**
  * Formulaire React → payload Django (pour create / update)
+ *
+ * CORRECTION : on envoie uniquement les champs définis pour éviter
+ * d'écraser des valeurs existantes avec des chaînes vides ou des
+ * valeurs par défaut incorrectes lors d'un PATCH partiel.
  */
-export const toApiPayload = (fd, formationIds = []) => ({
-  nom:              fd.nom?.trim()    || '',
-  prenom:           fd.prenom?.trim() || '',
-  email:            fd.email?.trim()  || '',
-  telephone:        fd.tel?.trim()    || '',
-  ville:            fd.ville?.trim()  || '',
-  pays:             PAYS_MAP[fd.pays] || 'tunisie',
-  statut:           STATUT_MAP[fd.statut] || 'actif',
-  notes:            fd.notes          || '',
-  mode_paiement:    'espece',           // valeur par défaut
-  formations_suivies: formationIds,
-});
+export const toApiPayload = (fd, formationIds = []) => {
+  const payload = {
+    nom:                fd.nom?.trim()    || '',
+    prenom:             fd.prenom?.trim() || '',
+    email:              fd.email?.trim()  || '',
+    telephone:          fd.tel?.trim()    || '',
+    ville:              fd.ville?.trim()  || '',
+    pays:               PAYS_MAP[fd.pays] || 'tunisie',
+    notes:              fd.notes          || '',
+    mode_paiement:      'espece',
+    formations_suivies: formationIds,
+  };
+
+  // CORRECTION : n'envoyer le statut que s'il est défini et mappable,
+  // pour éviter d'écraser le statut réel avec une valeur par défaut.
+  if (fd.statut && STATUT_MAP[fd.statut]) {
+    payload.statut = STATUT_MAP[fd.statut];
+  }
+
+  return payload;
+};
 
 /**
  * Réponse Django → objet React
- * - formations      : tableau d'IDs  (pour les filtres / formulaire)
- * - formationsDetail: tableau {id, label, duree}  (pour l'affichage)
- * - attestation     : dérivé de statut ('certifie' → 'Oui')
+ *
+ * formations_suivies_detail provient désormais du through model
+ * EtudiantFormation et contient, par formation :
+ *   - dateInscription  (date d'ajout à cette formation spécifique)
+ *   - attestation      'Oui' | 'Non'
+ *   - dateAttestation  string | ''
  */
 export const fromApiResponse = (e) => {
   const statutFr = STATUT_MAP_INV[e.statut] || e.statut;
@@ -105,28 +119,35 @@ export const fromApiResponse = (e) => {
     pays:   PAYS_MAP_INV[e.pays] || e.pays || '',
 
     dateNaissance: e.date_naissance  || '',
-    genre:         GENRE_MAP_INV[e.genre]                        || e.genre         || '',
-    niveauEtudes:  NIVEAU_ETUDES_MAP_INV[e.niveau_etudes]        || e.niveau_etudes  || '',
-    diplomeObtenu: DIPLOME_MAP_INV[e.diplome_obtenu]             || e.diplome_obtenu || '',
+    genre:         GENRE_MAP_INV[e.genre]                     || e.genre         || '',
+    niveauEtudes:  NIVEAU_ETUDES_MAP_INV[e.niveau_etudes]     || e.niveau_etudes  || '',
+    diplomeObtenu: DIPLOME_MAP_INV[e.diplome_obtenu]          || e.diplome_obtenu || '',
 
-    formations:       e.formations_suivies || [],
+    // IDs bruts pour les filtres et le formulaire
+    formations: e.formations_suivies || [],
+
+    // Données enrichies par formation (via EtudiantFormation through model)
     formationsDetail: (e.formations_suivies_detail || []).map(f => ({
-      id:    f.id,
-      label: f.intitule,
-      duree: f.duree ? `${f.duree}h` : '',
+      id:              f.id,
+      label:           f.intitule,
+      duree:           f.duree ? `${f.duree}h` : '',
+      dateInscription: f.date_inscription_formation || '',
+      attestation:     f.attestation ? 'Oui' : 'Non',
+      dateAttestation: f.date_attestation || '',
     })),
+
     formationsNoms: e.formations_noms || '',
 
+    // Date d'inscription globale de l'étudiant (conversion prospect → étudiant)
     dateInscription: e.date_inscription || '',
     statut:          statutFr,
 
-    attestation:     e.statut === 'certifie' ? 'Oui' : 'Non',
-    dateAttestation: '',
-    modeFormation:   'Présentiel',
+    modeFormation: 'Présentiel',
+    notes:         e.notes || '',
 
-    notes:     e.notes || '',
-    // ✅ MODIFICATION: mapper les documents correctement
-    documents: (e.documents || []).map(d => DOCUMENT_TYPE_MAP_INV[d.type_document] || d.type_document),
+    documents: (e.documents || []).map(
+      d => DOCUMENT_TYPE_MAP_INV[d.type_document] || d.type_document
+    ),
 
     responsableId: e.responsable ? String(e.responsable) : '',
     responsable:   e.responsable_nom || '',
@@ -165,9 +186,13 @@ export const deleteEtudiant = async (id) => {
 };
 
 /**
- * Passe le statut d'un étudiant à 'certifie' (Diplômé)
+ * Marque une formation comme "Attestée" pour un étudiant donné.
+ * Retourne l'étudiant mis à jour (avec toutes ses formations).
  */
-export const certifierEtudiant = async (id) => {
-  const res = await api.patch(`${BASE}${id}/`, { statut: 'certifie' });
+export const attesterFormation = async (etudiantId, formationId, dateAttestation) => {
+  const res = await api.post(
+    `${BASE}${etudiantId}/formations/${formationId}/attester/`,
+    { date_attestation: dateAttestation || null }
+  );
   return fromApiResponse(res.data);
 };

@@ -1,101 +1,8 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import Layout from "../../components/Layout";
+// src/pages/crm/Diplomes.js
+import React, { useState, useEffect, useCallback } from 'react';
+import Layout from '../../components/Layout';
 import '../../styles/crm/etudiants.css';
-
-/* ──────────────────────────────────────────────────────────
-   LISTES STATIQUES
-────────────────────────────────────────────────────────── */
-const FORMATIONS_LIST = [
-  { id: 1,  label: 'React Avancé',            duree: '40h' },
-  { id: 2,  label: 'Python Data Science',     duree: '60h' },
-  { id: 3,  label: 'UI/UX Design',            duree: '35h' },
-  { id: 4,  label: 'Angular Débutant',        duree: '30h' },
-  { id: 5,  label: 'DevOps CI/CD',            duree: '50h' },
-  { id: 6,  label: 'Node.js REST API',        duree: '45h' },
-  { id: 7,  label: 'Flutter Mobile',          duree: '55h' },
-  { id: 8,  label: 'Cybersécurité',           duree: '70h' },
-  { id: 9,  label: 'Machine Learning',        duree: '80h' },
-  { id: 10, label: 'Gestion de projet Agile', duree: '25h' },
-];
-
-const PAY_STYLES = {
-  'Payé':        'pay-tag-paid',
-  'Par tranche': 'pay-tag-tranche',
-  'Non payé':    'pay-tag-unpaid',
-};
-
-/* ──────────────────────────────────────────────────────────
-   DONNÉES INITIALES
-   formationCertifiee = ID de la formation pour laquelle
-   l'attestation a été délivrée (une seule par enregistrement)
-────────────────────────────────────────────────────────── */
-const INIT_DATA = [
-  {
-    id:1, nom:'Meddeb', prenom:'Karim', email:'k.meddeb@email.com', tel:'+216 99 333 222',
-    ville:'Sousse', pays:'Tunisie',
-    formations:[3,5], formationCertifiee:3,
-    modeFormation:'Hybride', dateInscription:'2024-09-15', dateAttestation:'2025-03-01',
-    seancesTotal:40, absences:2,
-    typeFinancement:'Personnel', documents:['CIN','CV','Reçu'], paiement:'Payé', modePaiement:'Espèce',
-  },
-  {
-    id:2, nom:'Boukadida', prenom:'Yassine', email:'y.boukadida@email.com', tel:'+216 99 888 777',
-    ville:'Monastir', pays:'Tunisie',
-    formations:[3], formationCertifiee:3,
-    modeFormation:'En ligne', dateInscription:'2024-10-05', dateAttestation:'2025-01-15',
-    seancesTotal:35, absences:1,
-    typeFinancement:'Entreprise', documents:['CIN','CV','Contrat','Reçu','RNE'], paiement:'Payé', modePaiement:'Chèque',
-  },
-  {
-    id:3, nom:'Sfaxi', prenom:'Sara', email:'sara.sfaxi@email.com', tel:'+216 22 111 999',
-    ville:'Sfax', pays:'Tunisie',
-    formations:[1], formationCertifiee:1,
-    modeFormation:'En ligne', dateInscription:'2024-08-20', dateAttestation:'2025-02-10',
-    seancesTotal:30, absences:3,
-    typeFinancement:'Personnel', documents:['CIN','CV','Contrat'], paiement:'Par tranche', modePaiement:'Chèque',
-  },
-  {
-    id:4, nom:'Khelifi', prenom:'Amine', email:'amine.khelifi@email.com', tel:'+216 55 432 111',
-    ville:'Tunis', pays:'Tunisie',
-    formations:[2,9], formationCertifiee:2,
-    modeFormation:'Présentiel', dateInscription:'2024-07-01', dateAttestation:'2025-01-20',
-    seancesTotal:50, absences:8,
-    typeFinancement:'Entreprise', documents:['CIN','RNE','Contrat'], paiement:'Payé', modePaiement:'Virement',
-  },
-  {
-    id:5, nom:'Dridi', prenom:'Fatma', email:'fatma.dridi@email.com', tel:'+216 77 654 321',
-    ville:'Tunis', pays:'Tunisie',
-    formations:[8], formationCertifiee:8,
-    modeFormation:'Présentiel', dateInscription:'2024-06-15', dateAttestation:'2024-12-20',
-    seancesTotal:60, absences:0,
-    typeFinancement:'Personnel', documents:['CIN','CV'], paiement:'Payé', modePaiement:'Espèce',
-  },
-  {
-    id:6, nom:'Belhadj', prenom:'Omar', email:'omar.bh@email.com', tel:'+216 22 987 654',
-    ville:'Nabeul', pays:'Tunisie',
-    formations:[6,7], formationCertifiee:6,
-    modeFormation:'Hybride', dateInscription:'2024-05-10', dateAttestation:'2024-11-30',
-    seancesTotal:45, absences:4,
-    typeFinancement:'Personnel', documents:['CIN','CV','Reçu'], paiement:'Non payé', modePaiement:'Espèce',
-  },
-  {
-    id:7, nom:'Mansouri', prenom:'Nadia', email:'nadia.mansouri@email.com', tel:'+216 55 111 222',
-    ville:'Bizerte', pays:'Tunisie',
-    formations:[4,10], formationCertifiee:4,
-    modeFormation:'En ligne', dateInscription:'2024-09-01', dateAttestation:'2025-02-28',
-    seancesTotal:28, absences:2,
-    typeFinancement:'Entreprise', documents:['CIN','CV','Contrat','RNE'], paiement:'Payé', modePaiement:'Virement',
-  },
-  {
-    id:8, nom:'Chouchane', prenom:'Bilel', email:'bilel.ch@email.com', tel:'+216 99 333 444',
-    ville:'Sousse', pays:'Tunisie',
-    formations:[5], formationCertifiee:5,
-    modeFormation:'Présentiel', dateInscription:'2024-04-15', dateAttestation:'2024-10-15',
-    seancesTotal:50, absences:12,
-    typeFinancement:'Personnel', documents:['CIN'], paiement:'Par tranche', modePaiement:'Chèque',
-  },
-];
+import { getDiplomes, deleteDiplome } from '../../services/crm/diplomeService';
 
 /* ──────────────────────────────────────────────────────────
    HELPERS
@@ -107,19 +14,15 @@ const calcPct = (seancesTotal, absences) => {
   return Math.round(((total - abs) / total) * 100);
 };
 
-const getFormationLabel  = (id)    => FORMATIONS_LIST.find(f => f.id === id)?.label || '—';
-const getFormationLabels = (ids=[])=> ids.map(id => FORMATIONS_LIST.find(f=>f.id===id)?.label).filter(Boolean);
-
 /* ──────────────────────────────────────────────────────────
    COMPOSANT PRINCIPAL
 ────────────────────────────────────────────────────────── */
 const Diplomes = () => {
-  const navigate = useNavigate();
-
-  const [diplomes,        setDiplomes]        = useState(INIT_DATA);
+  // ── State ────────────────────────────────────────────────────────
+  const [diplomes,        setDiplomes]        = useState([]);
+  const [loading,         setLoading]         = useState(true);
+  const [apiError,        setApiError]        = useState(null);
   const [search,          setSearch]          = useState('');
-  const [filterFormation, setFilterFormation] = useState('Toutes');
-  const [filterPaiement,  setFilterPaiement]  = useState('Tous');
   const [sortAlpha,       setSortAlpha]       = useState(false);
   const [currentPage,     setCurrentPage]     = useState(1);
   const [pageView,        setPageView]        = useState('list');
@@ -128,14 +31,36 @@ const Diplomes = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [toast,           setToast]           = useState({ show: false, message: '', type: 'success' });
 
+  // ── Sélection groupée ──
+  const [selectedIds,    setSelectedIds]    = useState([]);
+  const [showBulkDelete, setShowBulkDelete] = useState(false);
+  const [bulkDeleting,   setBulkDeleting]   = useState(false);
+
   const PER_PAGE = 8;
 
+  // ── Chargement depuis l'API ───────────────────────────────────────
+  const loadDiplomes = useCallback(async () => {
+    setLoading(true);
+    setApiError(null);
+    try {
+      const data = await getDiplomes();
+      setDiplomes(data);
+    } catch {
+      setApiError('Impossible de charger les certifiés. Vérifiez votre connexion.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { loadDiplomes(); }, [loadDiplomes]);
+
+  // ── Toast ─────────────────────────────────────────────────────────
   const showToast = (msg, type = 'success') => {
     setToast({ show: true, message: msg, type });
-    setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 3000);
+    setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 3500);
   };
 
-  // ── Filtres ──
+  // ── Filtres ───────────────────────────────────────────────────────
   const getFiltered = () => {
     let f = [...diplomes];
     if (search) {
@@ -144,14 +69,9 @@ const Diplomes = () => {
         d.nom.toLowerCase().includes(q) ||
         d.prenom.toLowerCase().includes(q) ||
         d.email.toLowerCase().includes(q) ||
-        d.tel.includes(q)
+        (d.tel || '').includes(q)
       );
     }
-    if (filterFormation !== 'Toutes') {
-      const fid = parseInt(filterFormation);
-      f = f.filter(d => d.formationCertifiee === fid);
-    }
-    if (filterPaiement !== 'Tous') f = f.filter(d => d.paiement === filterPaiement);
     if (sortAlpha) f.sort((a, b) => a.nom.localeCompare(b.nom));
     return f;
   };
@@ -160,32 +80,288 @@ const Diplomes = () => {
   const totalPages   = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
   const currentSlice = filtered.slice((currentPage - 1) * PER_PAGE, currentPage * PER_PAGE);
 
-  // ── Détail ──
+  // ── Sélection groupée ──
+  const toggleSelect = (id) => setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  const toggleSelectAll = () => {
+    if (selectedIds.length === currentSlice.length && currentSlice.length > 0) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(currentSlice.map(d => d.id));
+    }
+  };
+  const allChecked  = currentSlice.length > 0 && selectedIds.length === currentSlice.length;
+  const someChecked = selectedIds.length > 0 && selectedIds.length < currentSlice.length;
+
+  // ── Suppression groupée ──
+  const handleBulkDelete = async () => {
+    setBulkDeleting(true);
+    try {
+      await Promise.all(selectedIds.map(id => deleteDiplome(id)));
+      const nb = selectedIds.length;
+      setDiplomes(prev => prev.filter(d => !selectedIds.includes(d.id)));
+      setSelectedIds([]);
+      setShowBulkDelete(false);
+      showToast(`${nb} certifié${nb > 1 ? 's' : ''} supprimé${nb > 1 ? 's' : ''}.`);
+      if (detailTarget && selectedIds.includes(detailTarget.id)) {
+        setPageView('list');
+        setDetailTarget(null);
+      }
+    } catch {
+      showToast('Erreur lors de la suppression.', 'error');
+    } finally {
+      setBulkDeleting(false);
+    }
+  };
+
+  // ── Détail ────────────────────────────────────────────────────────
   const openDetail = (id) => {
     const d = diplomes.find(x => x.id === id);
     if (!d) return;
-    setDetailTarget(d); setPageView('detail');
+    setDetailTarget(d);
+    setPageView('detail');
   };
   const closeDetail = () => { setPageView('list'); setDetailTarget(null); };
 
-  // ── Supprimer ──
+  // ── Supprimer (individuel) ────────────────────────────────────────
   const openDelete = (id) => {
     const d = diplomes.find(x => x.id === id);
     if (!d) return;
-    setDeleteTarget(d); setShowDeleteModal(true);
+    setDeleteTarget(d);
+    setShowDeleteModal(true);
   };
-  const closeDelete   = () => { setShowDeleteModal(false); setDeleteTarget(null); };
-  const confirmDelete = () => {
+  const closeDelete = () => { setShowDeleteModal(false); setDeleteTarget(null); };
+  const confirmDelete = async () => {
     if (!deleteTarget) return;
-    setDiplomes(prev => prev.filter(d => d.id !== deleteTarget.id));
-    if (detailTarget?.id === deleteTarget.id) { setPageView('list'); setDetailTarget(null); }
-    closeDelete();
-    showToast('Diplômé supprimé.');
+    try {
+      await deleteDiplome(deleteTarget.id);
+      setDiplomes(prev => prev.filter(d => d.id !== deleteTarget.id));
+      if (detailTarget?.id === deleteTarget.id) { setPageView('list'); setDetailTarget(null); }
+      closeDelete();
+      showToast('Certifié supprimé.');
+    } catch {
+      showToast('Erreur lors de la suppression.', 'error');
+      closeDelete();
+    }
   };
 
   // ══════════════════════════════════════════════════════════
-  // MODALE SUPPRESSION
+  //  IMPRESSION ATTESTATION
   // ══════════════════════════════════════════════════════════
+  const printAttestation = (d) => {
+    const win = window.open('', '_blank', 'width=794,height=1123');
+    if (!win) return;
+
+    win.document.write(`
+      <!DOCTYPE html>
+      <html lang="fr">
+      <head>
+        <meta charset="UTF-8"/>
+        <title>Attestation — ${d.prenom} ${d.nom}</title>
+        <style>
+          * { margin:0; padding:0; box-sizing:border-box; }
+          body {
+            font-family: 'Georgia', serif;
+            background: #fff;
+            color: #1e293b;
+            padding: 60px 80px;
+          }
+          .header {
+            text-align: center;
+            border-bottom: 3px solid #1A6B4A;
+            padding-bottom: 20px;
+            margin-bottom: 40px;
+          }
+          .org { font-size: 13px; color: #64748b; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 8px; }
+          .title { font-size: 32px; font-weight: bold; color: #1A6B4A; margin-bottom: 6px; }
+          .subtitle { font-size: 14px; color: #475569; }
+          .seal {
+            width: 80px; height: 80px; border-radius: 50%;
+            background: linear-gradient(135deg,#1A6B4A,#33CCFF);
+            display: flex; align-items: center; justify-content: center;
+            margin: 20px auto;
+            font-size: 32px; color: #fff;
+          }
+          .body-text { font-size: 15px; line-height: 2; text-align: center; margin: 30px 0; color: #334155; }
+          .name { font-size: 28px; color: #1E3A5F; font-weight: bold; margin: 10px 0; border-bottom: 2px dotted #94a3b8; display: inline-block; padding-bottom: 4px; }
+          .formation-box {
+            background: #f0fdf4; border: 1px solid #bbf7d0;
+            border-radius: 12px; padding: 20px 30px; margin: 30px 0;
+            text-align: center;
+          }
+          .formation-label { font-size: 11px; color: #6b7280; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 8px; }
+          .formation-name { font-size: 20px; font-weight: bold; color: #1A6B4A; }
+          .formation-duree { font-size: 13px; color: #475569; margin-top: 4px; }
+          .footer {
+            margin-top: 60px; display: flex;
+            justify-content: space-between; align-items: flex-end;
+          }
+          .date-block { font-size: 13px; color: #64748b; }
+          .sign-block { text-align: center; }
+          .sign-line { border-top: 1px solid #1e293b; width: 200px; margin: 0 auto 6px; padding-top: 6px; }
+          .sign-title { font-size: 12px; color: #64748b; }
+          .watermark {
+            position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%);
+            font-size: 11px; color: #cbd5e1; text-align: center; letter-spacing: 1px;
+          }
+          @media print {
+            body { padding: 40px 60px; }
+            .watermark { position: fixed; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div class="org">Centre de Formation Professionnelle</div>
+          <div class="title">Attestation de Réussite</div>
+          <div class="subtitle">Ce document certifie l'achèvement d'une formation</div>
+        </div>
+
+        <div class="seal">🎓</div>
+
+        <div class="body-text">
+          Nous soussignés certifions que
+          <br/>
+          <span class="name">${d.prenom} ${d.nom}</span>
+          <br/>
+          a suivi avec succès et obtenu son attestation pour la formation :
+        </div>
+
+        <div class="formation-box">
+          <div class="formation-label">Formation certifiée</div>
+          <div class="formation-name">${d.formationIntitule || '—'}</div>
+          ${d.formationDuree ? `<div class="formation-duree">Durée : ${d.formationDuree}</div>` : ''}
+        </div>
+
+        ${d.seancesTotal > 0 ? `
+          <div style="text-align:center; font-size:13px; color:#475569; margin-bottom:20px;">
+            Taux de présence : <strong>${calcPct(d.seancesTotal, d.absences)}%</strong>
+            (${d.seancesTotal - d.absences} séances sur ${d.seancesTotal})
+          </div>
+        ` : ''}
+
+        <div class="footer">
+          <div class="date-block">
+            Délivrée le : <strong>${d.dateAttestation || new Date().toLocaleDateString('fr-FR')}</strong>
+          </div>
+          <div class="sign-block">
+            <div class="sign-line">Signature & Cachet</div>
+            <div class="sign-title">Le Directeur de Formation</div>
+          </div>
+        </div>
+
+        <div class="watermark">Document officiel — Confidentiel</div>
+      </body>
+      </html>
+    `);
+    win.document.close();
+    setTimeout(() => { win.focus(); win.print(); }, 400);
+  };
+
+  // ══════════════════════════════════════════════════════════
+  //  TÉLÉCHARGEMENT ATTESTATION (PDF)
+  // ══════════════════════════════════════════════════════════
+  const downloadAttestation = async (d) => {
+    // Charger html2pdf.js dynamiquement si pas encore chargé
+    if (!window.html2pdf) {
+      await new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+        script.onload = resolve;
+        script.onerror = reject;
+        document.head.appendChild(script);
+      });
+    }
+
+    const pct = calcPct(d.seancesTotal, d.absences);
+    const dateStr = d.dateAttestation || new Date().toLocaleDateString('fr-FR');
+
+    // Construire le contenu visible dans le DOM (pas hors-écran)
+    const container = document.createElement('div');
+    container.style.cssText = [
+      'position:fixed', 'top:0', 'left:0', 'width:794px',
+      'background:#fff', 'z-index:-1', 'opacity:0', 'pointer-events:none',
+    ].join(';');
+
+    container.innerHTML = `
+      <div style="font-family:Georgia,serif;color:#1e293b;padding:60px 80px;width:794px;background:#fff;">
+        <div style="text-align:center;border-bottom:3px solid #1A6B4A;padding-bottom:20px;margin-bottom:40px;">
+          <div style="font-size:13px;color:#64748b;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;">
+            Centre de Formation Professionnelle
+          </div>
+          <div style="font-size:32px;font-weight:bold;color:#1A6B4A;margin-bottom:6px;">Attestation de Réussite</div>
+          <div style="font-size:14px;color:#475569;">Ce document certifie l'achèvement d'une formation</div>
+        </div>
+
+        <div style="width:80px;height:80px;border-radius:50%;background:#1A6B4A;
+          margin:20px auto;font-size:36px;text-align:center;line-height:80px;">🎓</div>
+
+        <div style="font-size:15px;line-height:2;text-align:center;margin:30px 0;color:#334155;">
+          Nous soussignés certifions que<br/>
+          <span style="font-size:26px;color:#1E3A5F;font-weight:bold;
+            border-bottom:2px dotted #94a3b8;display:inline-block;padding-bottom:4px;">
+            ${d.prenom} ${d.nom}
+          </span><br/>
+          a suivi avec succès et obtenu son attestation pour la formation :
+        </div>
+
+        <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;
+          padding:20px 30px;margin:30px 0;text-align:center;">
+          <div style="font-size:11px;color:#6b7280;letter-spacing:2px;
+            text-transform:uppercase;margin-bottom:8px;">Formation certifiée</div>
+          <div style="font-size:20px;font-weight:bold;color:#1A6B4A;">
+            ${d.formationIntitule || '—'}
+          </div>
+          ${d.formationDuree
+            ? `<div style="font-size:13px;color:#475569;margin-top:4px;">Durée : ${d.formationDuree}</div>`
+            : ''}
+        </div>
+
+        ${d.seancesTotal > 0 ? `
+          <div style="text-align:center;font-size:13px;color:#475569;margin-bottom:20px;">
+            Taux de présence : <strong>${pct}%</strong>
+            &nbsp;(${d.seancesTotal - d.absences} séances sur ${d.seancesTotal})
+          </div>` : ''}
+
+        <div style="margin-top:60px;display:table;width:100%;">
+          <div style="display:table-cell;font-size:13px;color:#64748b;vertical-align:bottom;">
+            Délivrée le : <strong>${dateStr}</strong>
+          </div>
+          <div style="display:table-cell;text-align:center;vertical-align:bottom;">
+            <div style="border-top:1px solid #1e293b;width:200px;margin:0 auto 6px;
+              padding-top:6px;font-size:13px;">Signature &amp; Cachet</div>
+            <div style="font-size:12px;color:#64748b;">Le Directeur de Formation</div>
+          </div>
+        </div>
+
+        <div style="margin-top:40px;text-align:center;font-size:11px;
+          color:#cbd5e1;letter-spacing:1px;">Document officiel — Confidentiel</div>
+      </div>
+    `;
+
+    document.body.appendChild(container);
+
+    // Laisser le navigateur rendre l'élément avant de le capturer
+    await new Promise(r => setTimeout(r, 100));
+
+    const opt = {
+      margin:      0,
+      filename:    `attestation_${d.prenom}_${d.nom}.pdf`,
+      image:       { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false },
+      jsPDF:       { unit: 'mm', format: 'a4', orientation: 'portrait' },
+    };
+
+    try {
+      await window.html2pdf().set(opt).from(container.firstElementChild).save();
+    } finally {
+      document.body.removeChild(container);
+    }
+  };
+
+  // ══════════════════════════════════════════════════════════
+  //  SUB-COMPOSANTS
+  // ══════════════════════════════════════════════════════════
+
   const DeleteModal = () => {
     if (!showDeleteModal || !deleteTarget) return null;
     return (
@@ -198,7 +374,7 @@ const Diplomes = () => {
           </div>
           <div style={{ padding:'16px 24px', textAlign:'center' }}>
             <h2 style={{ fontSize:'18px', fontWeight:'700', marginBottom:'14px', color:'#1e293b' }}>
-              Supprimer le diplômé
+              Supprimer le certifié
             </h2>
             <div style={{ display:'flex', alignItems:'center', gap:'12px', background:'#f8fafc', border:'1px solid #e2e8f0', borderRadius:'10px', padding:'10px 14px', marginBottom:'14px', textAlign:'left' }}>
               <div style={{ background:'linear-gradient(135deg,#FFCC33,#e6b800)', borderRadius:'8px', width:'38px', height:'38px', display:'flex', alignItems:'center', justifyContent:'center', color:'#5A4000', fontWeight:'700', fontSize:'13px', flexShrink:0 }}>
@@ -206,15 +382,15 @@ const Diplomes = () => {
               </div>
               <div>
                 <div style={{ fontWeight:'600', color:'#1e293b' }}>{deleteTarget.prenom} {deleteTarget.nom}</div>
-                <div style={{ fontSize:'11.5px', color:'#94a3b8' }}>{getFormationLabel(deleteTarget.formationCertifiee)}</div>
+                <div style={{ fontSize:'11.5px', color:'#94a3b8' }}>{deleteTarget.formationIntitule || '—'}</div>
               </div>
               <span className="badge" style={{ marginLeft:'auto', background:'rgba(255,204,51,.18)', color:'#8A6200', border:'1px solid rgba(255,204,51,.40)' }}>
-                🎓 Diplômé
+                🎓 Certifié
               </span>
             </div>
             <div className="suppr-warning">
               <i className="fa-solid fa-triangle-exclamation" style={{ flexShrink:0 }}></i>
-              <span>Cette action est <strong>irréversible</strong>. Le diplômé sera définitivement supprimé.</span>
+              <span>Cette action est <strong>irréversible</strong>. Le certifié sera définitivement supprimé.</span>
             </div>
           </div>
           <div style={{ padding:'12px 24px 20px', display:'flex', gap:'10px' }}>
@@ -230,9 +406,6 @@ const Diplomes = () => {
     );
   };
 
-  // ══════════════════════════════════════════════════════════
-  // TOAST
-  // ══════════════════════════════════════════════════════════
   const Toast = () => toast.show ? (
     <div className={`toast ${toast.type}`}>
       <i className={`fa-solid ${toast.type === 'success' ? 'fa-circle-check' : 'fa-circle-exclamation'}`}></i>
@@ -241,24 +414,49 @@ const Diplomes = () => {
   ) : null;
 
   // ══════════════════════════════════════════════════════════
-  // PAGE DÉTAIL
+  //  PAGE DÉTAIL
   // ══════════════════════════════════════════════════════════
   if (pageView === 'detail' && detailTarget) {
-    const d          = detailTarget;
-    const formLabels = getFormationLabels(d.formations);
-    const certLabel  = getFormationLabel(d.formationCertifiee);
-    const pct        = calcPct(d.seancesTotal, d.absences);
-    const presences  = Math.max(0, (parseInt(d.seancesTotal)||0) - (parseInt(d.absences)||0));
+    const d   = detailTarget;
+    // Activités simulées à partir des données disponibles
+    const activites = [
+      {
+        id: 1,
+        icon: 'fa-solid fa-calendar-check',
+        iconBg: '#EBF4FF',
+        iconColor: '#336699',
+        label: 'Attestation délivrée',
+        date: d.dateAttestation ? `Aujourd'hui à ${new Date().getHours()}h${String(new Date().getMinutes()).padStart(2,'0')}` : '—',
+        done: true,
+      },
+      {
+        id: 2,
+        icon: 'fa-solid fa-circle-check',
+        iconBg: '#F0FDF4',
+        iconColor: '#1A6B4A',
+        label: 'Fin de la formation',
+        date: d.dateAttestation || '—',
+        done: true,
+      },
+      {
+        id: 3,
+        icon: 'fa-solid fa-calendar-plus',
+        iconBg: '#EBF4FF',
+        iconColor: '#336699',
+        label: `Inscription au cours ${d.formationIntitule || ''}`,
+        date: d.dateCreation || '—',
+        done: false,
+      },
+    ];
 
     return (
       <Layout>
         <div className="det-page">
-
           {/* ── Breadcrumb ── */}
           <div className="det-topbar">
             <button className="back-btn" onClick={closeDetail}>
               <i className="fa-solid fa-arrow-left"></i>
-              <span>Diplômés</span>
+              <span>Certifiés</span>
             </button>
             <i className="fa-solid fa-chevron-right det-bc-sep"></i>
             <span className="det-bc-name">{d.prenom} {d.nom}</span>
@@ -266,27 +464,45 @@ const Diplomes = () => {
 
           <div className="det-body">
 
-            {/* ════ SIDEBAR ════ */}
+            {/* ════════════════════════════════════
+                SIDEBAR GAUCHE
+            ════════════════════════════════════ */}
             <div className="det-sidebar">
+
+              {/* Avatar + nom + badge */}
               <div className="det-sid-hero">
-                <div style={{ position:'relative', display:'inline-block' }}>
-                  <div className="det-sid-avatar" style={{ background:'linear-gradient(135deg,#FFCC33,#e6b800)', color:'#5A4000' }}>
-                    {d.prenom[0]}{d.nom[0]}
-                  </div>
-                  <div style={{ position:'absolute', top:'-10px', right:'-6px', fontSize:'18px' }}>🎓</div>
+                <div className="det-sid-avatar" style={{ background: 'linear-gradient(135deg, #1E3A5F, #336699)' }}>
+                  {d.prenom[0]}{d.nom[0]}
                 </div>
                 <div className="det-sid-name">{d.prenom} {d.nom}</div>
-                <span className="badge det-sid-badge" style={{ background:'rgba(255,204,51,.18)', color:'#8A6200', border:'1.5px solid rgba(255,204,51,.40)' }}>
-                  Diplômé(e)
+                <span className="badge det-sid-badge" style={{ background: 'rgba(255,204,51,.18)', color: '#8A6200', border: '1px solid rgba(255,204,51,.40)' }}>
+                  🎓 Certifié
                 </span>
+              </div>
+
+              {/* Tags Formation / Niveau */}
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '14px' }}>
+                {d.formationIntitule && (
+                  <span style={{ display:'inline-flex', alignItems:'center', gap:'4px', background:'#EBF4FF', color:'#336699', border:'1px solid rgba(51,102,153,.22)', borderRadius:'20px', padding:'3px 10px', fontSize:'11.5px', fontWeight:'500' }}>
+                    <i className="fa-solid fa-graduation-cap" style={{ fontSize:'10px' }}></i>
+                    Formation : {d.formationIntitule}
+                  </span>
+                )}
+                {d.formationDuree && (
+                  <span style={{ display:'inline-flex', alignItems:'center', gap:'4px', background:'#F0F9FF', color:'#0369a1', border:'1px solid rgba(3,105,161,.18)', borderRadius:'20px', padding:'3px 10px', fontSize:'11.5px', fontWeight:'500' }}>
+                    <i className="fa-solid fa-layer-group" style={{ fontSize:'10px' }}></i>
+                    Durée : {d.formationDuree}
+                  </span>
+                )}
               </div>
 
               <div className="det-sid-divider" />
 
+              {/* Champs contact */}
               <div className="det-sid-fields">
                 <div className="det-sid-field">
                   <span className="det-sid-label"><i className="fa-regular fa-envelope"></i> E-mail</span>
-                  <span className="det-sid-val">{d.email}</span>
+                  <span className="det-sid-val">{d.email || '—'}</span>
                 </div>
                 <div className="det-sid-field">
                   <span className="det-sid-label"><i className="fa-solid fa-phone"></i> Téléphone</span>
@@ -297,199 +513,87 @@ const Diplomes = () => {
                   <span className="det-sid-val">{[d.ville, d.pays].filter(Boolean).join(', ') || '—'}</span>
                 </div>
                 <div className="det-sid-field">
-                  <span className="det-sid-label"><i className="fa-solid fa-certificate"></i> Formation certifiée</span>
-                  <span className="det-sid-val" style={{ color:'#1E3A5F', fontWeight:'600' }}>{certLabel}</span>
-                </div>
-                <div className="det-sid-field">
-                  <span className="det-sid-label"><i className="fa-solid fa-award"></i> Date attestation</span>
-                  <span className="det-sid-val" style={{ fontWeight:'700', color:'#8A6200' }}>{d.dateAttestation || '—'}</span>
-                </div>
-                <div className="det-sid-field">
-                  <span className="det-sid-label"><i className="fa-solid fa-chalkboard-user"></i> Mode</span>
-                  <span className="det-sid-val">{d.modeFormation || '—'}</span>
-                </div>
-                <div className="det-sid-field">
-                  <span className="det-sid-label"><i className="fa-regular fa-calendar"></i> Date inscription</span>
-                  <span className="det-sid-val">{d.dateInscription}</span>
-                </div>
-                <div className="det-sid-field">
-                  <span className="det-sid-label"><i className="fa-solid fa-wallet"></i> Paiement</span>
-                  <span className="det-sid-val">
-                    <span className={`badge ${PAY_STYLES[d.paiement] || ''}`}>{d.paiement}</span>
-                  </span>
-                </div>
-                <div className="det-sid-field">
-                  <span className="det-sid-label"><i className="fa-solid fa-coins"></i> Mode paiement</span>
-                  <span className="det-sid-val">{d.modePaiement || '—'}</span>
-                </div>
-                <div className="det-sid-field">
-                  <span className="det-sid-label"><i className="fa-solid fa-building"></i> Financement</span>
-                  <span className="det-sid-val">{d.typeFinancement || '—'}</span>
+                  <span className="det-sid-label"><i className="fa-solid fa-calendar-check"></i> Date attestation</span>
+                  <span className="det-sid-val">{d.dateAttestation || '—'}</span>
                 </div>
               </div>
 
-              <div className="det-sid-divider" />
-
-              {/* ── Boutons (pas de conversion) ── */}
+              {/* Boutons d'action */}
               <div className="det-sid-actions">
-                <button
-                  className="det-action-btn"
-                  style={{ background:'linear-gradient(135deg,rgba(51,204,255,.15),rgba(51,204,255,.08))', color:'#1A7A99', border:'1.5px solid rgba(51,204,255,.35)' }}
-                  onClick={() => navigate('/attestations')}
-                >
-                  <i className="fa-solid fa-certificate"></i>
-                  Voir liste attestations
+                <button className="det-action-btn det-action-edit" onClick={() => printAttestation(d)}>
+                  <i className="fa-regular fa-envelope"></i> Envoyer attestation
                 </button>
-                <button
-                  className="det-action-btn"
-                  style={{ background:'linear-gradient(135deg,rgba(26,107,74,.12),rgba(26,107,74,.06))', color:'#1A6B4A', border:'1.5px solid rgba(26,107,74,.28)' }}
-                  onClick={() => navigate('/paiements')}
-                >
-                  <i className="fa-solid fa-credit-card"></i>
-                  Voir liste paiements
-                </button>
-                <button className="det-action-btn det-action-del" onClick={() => openDelete(d.id)}>
-                  <i className="fa-solid fa-trash"></i>
-                  Supprimer
+                <button className="det-action-btn det-action-edit" onClick={() => downloadAttestation(d)}>
+                  <i className="fa-solid fa-download"></i> Télécharger
                 </button>
               </div>
             </div>
 
-            {/* ════ CONTENU DROITE ════ */}
+            {/* ════════════════════════════════════
+                CONTENU PRINCIPAL DROITE
+            ════════════════════════════════════ */}
             <div className="det-main">
 
-              {/* Bannière */}
-              <div style={{
-                background:'linear-gradient(135deg,#1E3A5F 0%,#336699 60%,#1A7A99 100%)',
-                borderRadius:'12px', padding:'18px 22px',
-                display:'flex', alignItems:'center', gap:'16px',
-                boxShadow:'0 4px 20px rgba(30,58,95,.20)',
-              }}>
-                <div style={{ fontSize:'36px' }}>🎓</div>
-                <div style={{ flex:1 }}>
-                  <div style={{ fontSize:'16px', fontWeight:'800', color:'#fff' }}>
-                    {d.prenom} {d.nom}
-                  </div>
-                  <div style={{ fontSize:'12.5px', color:'rgba(255,255,255,.75)', marginTop:'3px' }}>
-                    Attestation délivrée le {d.dateAttestation} · {certLabel}
-                  </div>
+
+
+              {/* ── Ligne 2 : Notes ── */}
+              {/* Card Notes */}
+              <div className="det-section-card" style={{ padding: '18px 22px' }}>
+                <div className="det-section-header" style={{ marginBottom: '14px' }}>
+                  <i className="fa-solid fa-note-sticky"></i> Notes
                 </div>
-                <span className="badge" style={{ background:'rgba(255,204,51,.25)', color:'#FFCC33', border:'1.5px solid rgba(255,204,51,.50)', fontSize:'13px', fontWeight:'700', padding:'5px 14px' }}>
-                  Certifié(e)
-                </span>
+                {d.notes ? (
+                  <div style={{
+                    background: 'rgba(255,204,51,.10)', border: '1.5px solid rgba(255,204,51,.30)',
+                    borderRadius: '10px', padding: '14px 16px',
+                    fontSize: '13.5px', color: '#475569', lineHeight: '1.7',
+                  }}>
+                    {d.notes}
+                  </div>
+                ) : (
+                  <p style={{ fontSize: '13.5px', color: '#94A3B8', fontStyle: 'italic', margin: 0 }}>Aucune note.</p>
+                )}
               </div>
 
-              {/* Section : Informations générales */}
-              <div className="det-section-card">
-                <div className="det-section-header"><i className="fa-solid fa-user"></i> Informations générales</div>
-                <div className="det-fields-grid">
-                  <div className="det-field"><span className="det-field-label">Nom</span><span className="det-field-val">{d.nom}</span></div>
-                  <div className="det-field"><span className="det-field-label">Prénom</span><span className="det-field-val">{d.prenom}</span></div>
-                  <div className="det-field"><span className="det-field-label">Email</span><span className="det-field-val">{d.email}</span></div>
-                  <div className="det-field"><span className="det-field-label">Téléphone</span><span className="det-field-val">{d.tel || '—'}</span></div>
-                  <div className="det-field"><span className="det-field-label">Ville</span><span className="det-field-val">{d.ville || '—'}</span></div>
-                  <div className="det-field"><span className="det-field-label">Pays</span><span className="det-field-val">{d.pays || '—'}</span></div>
+              {/* ── Ligne 3 : Timeline détaillée (événements cliquables) ── */}
+              <div className="det-section-card" style={{ padding: '18px 22px' }}>
+                <div className="det-section-header" style={{ marginBottom: '14px' }}>
+                  <i className="fa-solid fa-list-check"></i> Notes
                 </div>
-              </div>
-
-              {/* Section : Informations académiques — SANS mention ni notes */}
-              <div className="det-section-card">
-                <div className="det-section-header"><i className="fa-solid fa-graduation-cap"></i> Informations académiques</div>
-                <div className="det-fields-grid">
-
-                  {/* Toutes les formations suivies, celle certifiée mise en valeur */}
-                  <div className="det-field" style={{ gridColumn:'1 / -1' }}>
-                    <span className="det-field-label">Formation(s) suivie(s)</span>
-                    <div className="formations-list" style={{ marginTop:'6px' }}>
-                      {formLabels.map(l => (
-                        <span key={l} className="formation-pill"
-                          style={ l === certLabel
-                            ? { background:'rgba(255,204,51,.20)', color:'#8A6200', border:'1px solid rgba(255,204,51,.45)' }
-                            : {} }>
-                          <i className={`fa-solid ${l === certLabel ? 'fa-certificate' : 'fa-book-open'}`}></i>
-                          {l}
-                          {l === certLabel && (
-                            <span style={{ fontSize:'10px', marginLeft:'4px', fontWeight:'700' }}>✓ certifiée</span>
-                          )}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="det-field"><span className="det-field-label">Mode de formation</span><span className="det-field-val">{d.modeFormation || '—'}</span></div>
-                  <div className="det-field"><span className="det-field-label">Date d'inscription</span><span className="det-field-val">{d.dateInscription || '—'}</span></div>
-                  <div className="det-field">
-                    <span className="det-field-label">Date attestation</span>
-                    <span className="det-field-val" style={{ fontWeight:'700', color:'#8A6200' }}>{d.dateAttestation || '—'}</span>
-                  </div>
-                  <div className="det-field">
-                    <span className="det-field-label">Attestation</span>
-                    <span className="det-field-val">
-                      <span className="badge" style={{ background:'rgba(26,107,74,.12)', color:'#1A6B4A', border:'1px solid rgba(26,107,74,.28)' }}>
-                        ✓ Délivrée
-                      </span>
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Section : Suivi pédagogique — SANS notes */}
-              <div className="det-section-card">
-                <div className="det-section-header"><i className="fa-solid fa-chart-line"></i> Suivi pédagogique</div>
-                <div className="det-fields-grid">
-                  <div className="det-field">
-                    <span className="det-field-label">Séances total</span>
-                    <span className="det-field-val">{d.seancesTotal || '—'}</span>
-                  </div>
-                  <div className="det-field">
-                    <span className="det-field-label">Absences</span>
-                    <span className="det-field-val" style={{ color: parseInt(d.absences) > 0 ? '#c0392b' : '#1A6B4A', fontWeight:'700' }}>
-                      {d.absences || '0'}
-                    </span>
-                  </div>
-                  <div className="det-field">
-                    <span className="det-field-label">Présences</span>
-                    <span className="det-field-val" style={{ color:'#1A6B4A', fontWeight:'700' }}>{presences}</span>
-                  </div>
-                  <div className="det-field" style={{ gridColumn:'1 / -1' }}>
-                    <span className="det-field-label">Taux de présence</span>
-                    <div className="presence-bar-wrap" style={{ marginTop:'6px' }}>
-                      <div className="presence-bar">
-                        <div className="presence-bar-fill" style={{
-                          width:`${Math.min(pct,100)}%`,
-                          background: pct>=80 ? 'linear-gradient(90deg,#1A6B4A,#33CCFF)' : pct>=60 ? 'linear-gradient(90deg,#FFCC33,#e6b800)' : 'linear-gradient(90deg,#e53e3e,#c0392b)',
-                        }}></div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {activites.map((a) => (
+                    <div
+                      key={a.id}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: '14px',
+                        background: '#F8FAFC', border: '1px solid #E8EDF3',
+                        borderRadius: '10px', padding: '12px 16px', cursor: 'pointer',
+                        transition: 'background .15s, border-color .15s',
+                      }}
+                      onMouseEnter={e => { e.currentTarget.style.background = '#EBF4FF'; e.currentTarget.style.borderColor = '#33CCFF'; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = '#F8FAFC'; e.currentTarget.style.borderColor = '#E8EDF3'; }}
+                    >
+                      {/* Icône */}
+                      <div style={{
+                        width: '38px', height: '38px', borderRadius: '50%', flexShrink: 0,
+                        background: a.iconBg || '#EBF4FF',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      }}>
+                        <i className={a.icon} style={{ fontSize: '14px', color: a.iconColor || '#336699' }}></i>
                       </div>
-                      <span className="presence-pct" style={{ color: pct>=80?'#1A6B4A':pct>=60?'#8A6200':'#c0392b' }}>
-                        {parseInt(d.seancesTotal) > 0 ? `${pct}%` : '—'}
-                      </span>
+                      {/* Label + date */}
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: '13px', fontWeight: '600', color: '#1E3A5F' }}>{a.label}</div>
+                        <div style={{ fontSize: '11.5px', color: '#94A3B8', marginTop: '2px' }}>{a.date}</div>
+                      </div>
+                      {/* Chevron */}
+                      <i className="fa-solid fa-chevron-right" style={{ fontSize: '10px', color: '#CBD5E1' }}></i>
                     </div>
-                  </div>
+                  ))}
                 </div>
               </div>
 
-              {/* Section : Informations administratives */}
-              <div className="det-section-card">
-                <div className="det-section-header"><i className="fa-solid fa-folder-open"></i> Informations administratives</div>
-                <div className="det-fields-grid">
-                  <div className="det-field"><span className="det-field-label">Type de financement</span><span className="det-field-val">{d.typeFinancement || '—'}</span></div>
-                  <div className="det-field">
-                    <span className="det-field-label">Paiement</span>
-                    <span className="det-field-val"><span className={`badge ${PAY_STYLES[d.paiement] || ''}`}>{d.paiement}</span></span>
-                  </div>
-                  <div className="det-field"><span className="det-field-label">Mode de paiement</span><span className="det-field-val">{d.modePaiement || '—'}</span></div>
-                  <div className="det-field" style={{ gridColumn:'1 / -1' }}>
-                    <span className="det-field-label">Documents fournis</span>
-                    <div className="docs-list" style={{ marginTop:'6px' }}>
-                      {d.documents?.length ? d.documents.map(doc => (
-                        <span key={doc} className="doc-pill"><i className="fa-solid fa-check"></i>{doc}</span>
-                      )) : <span style={{ color:'#94A3B8', fontSize:'13px' }}>Aucun document</span>}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-            </div>
+            </div>{/* fin det-main */}
           </div>
         </div>
 
@@ -500,126 +604,235 @@ const Diplomes = () => {
   }
 
   // ══════════════════════════════════════════════════════════
-  // PAGE LISTE
+  //  PAGE LISTE
   // ══════════════════════════════════════════════════════════
   return (
     <Layout>
       <div className="prsp-header">
-        <div className="prsp-title"><i className="fa-solid fa-award"></i> Gestion des Diplômés</div>
-        <div className="prsp-sub">Consultez les diplômés, leurs attestations et leurs paiements</div>
+        <div className="prsp-title"><i className="fa-solid fa-award"></i> Gestion des Certifiés</div>
+        <div className="prsp-sub">Consultez les certifiés et leurs attestations</div>
       </div>
 
       <div className="toolbar">
         <div className="tb-left">
           <div className="search-box">
             <i className="fa-solid fa-magnifying-glass"></i>
-            <input placeholder="Rechercher..." value={search}
-              onChange={ev => { setSearch(ev.target.value); setCurrentPage(1); }} />
+            <input
+              placeholder="Rechercher un certifié..."
+              value={search}
+              onChange={ev => { setSearch(ev.target.value); setCurrentPage(1); }}
+            />
           </div>
-          <select className="filter-sel" value={filterFormation}
-            onChange={ev => { setFilterFormation(ev.target.value); setCurrentPage(1); }}>
-            <option value="Toutes">Toutes les formations</option>
-            {FORMATIONS_LIST.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
-          </select>
-          <select className="filter-sel" value={filterPaiement}
-            onChange={ev => { setFilterPaiement(ev.target.value); setCurrentPage(1); }}>
-            <option value="Tous">Tous les paiements</option>
-            <option>Payé</option><option>Par tranche</option><option>Non payé</option>
-          </select>
-          <button className={`btn btn-sort ${sortAlpha ? 'active' : ''}`} onClick={() => setSortAlpha(v => !v)}>
+          <button
+            className={`btn btn-sort ${sortAlpha ? 'active' : ''}`}
+            onClick={() => setSortAlpha(v => !v)}
+          >
             <i className="fa-solid fa-arrow-down-a-z"></i> A → Z
           </button>
         </div>
-        <div className="tb-right">
-          <button className="btn btn-imp" onClick={() => showToast('Export CSV bientôt disponible.', 'error')}>
-            <i className="fa-solid fa-file-export"></i> Exporter
-          </button>
-        </div>
       </div>
 
-      <div className="table-card">
-        <div className="table-top">
-          <strong>{filtered.length}</strong> diplômé{filtered.length !== 1 ? 's' : ''} trouvé{filtered.length !== 1 ? 's' : ''}
+      {/* Barre actions groupées */}
+      {selectedIds.length > 0 && (
+        <div className="bulk-action-bar bulk-bar-etud">
+          <div className="bulk-action-info">
+            <div className="bulk-count-badge">
+              <i className="fa-solid fa-check"></i>
+              <span>{selectedIds.length}</span>
+            </div>
+            <span className="bulk-label">
+              certifié{selectedIds.length > 1 ? 's' : ''} sélectionné{selectedIds.length > 1 ? 's' : ''}
+            </span>
+          </div>
+          <div className="bulk-action-btns">
+            <button className="bulk-btn bulk-btn-suppr" onClick={() => setShowBulkDelete(true)}>
+              <i className="fa-solid fa-trash"></i> Supprimer ({selectedIds.length})
+            </button>
+            <button className="bulk-btn-close" title="Annuler la sélection" onClick={() => setSelectedIds([])}>
+              <i className="fa-solid fa-xmark"></i>
+            </button>
+          </div>
         </div>
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th style={{ width:'32px' }}>#</th>
-                <th>Nom & Prénom</th>
-                <th>Contact</th>
-                <th>Formation certifiée</th>
-                <th>Date attestation</th>
-                <th>Paiement</th>
-                <th>Présence</th>
-                <th style={{ textAlign:'center' }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {currentSlice.map((d, i) => {
-                const pct       = calcPct(d.seancesTotal, d.absences);
-                const certLabel = getFormationLabel(d.formationCertifiee);
-                return (
-                  <tr key={d.id}>
-                    <td className="td-num">{(currentPage - 1) * PER_PAGE + i + 1}</td>
-                    <td>
-                      <div className="td-name">🎓 {d.nom} {d.prenom}</div>
-                      <div className="td-sub">{d.email}</div>
-                    </td>
-                    <td>
-                      <div className="td-sub">{d.email}</div>
-                      <div className="td-sub">{d.tel}</div>
-                    </td>
-                    <td>
-                      <span className="form-tag" style={{ background:'rgba(255,204,51,.15)', color:'#8A6200', border:'1px solid rgba(255,204,51,.35)' }}>
-                        <i className="fa-solid fa-certificate" style={{ marginRight:'4px', fontSize:'10px' }}></i>
-                        {certLabel}
-                      </span>
-                    </td>
-                    <td>
-                      <div className="td-sub" style={{ fontWeight:'600', color:'#8A6200' }}>{d.dateAttestation}</div>
-                    </td>
-                    <td>
-                      <span className={`badge ${PAY_STYLES[d.paiement] || ''}`}>{d.paiement}</span>
-                    </td>
-                    <td>
-                      <div style={{ display:'flex', alignItems:'center', gap:'7px' }}>
-                        <div style={{ width:'55px', height:'6px', background:'#E8EDF3', borderRadius:'3px', overflow:'hidden' }}>
-                          <div style={{ width:`${Math.min(pct,100)}%`, height:'100%', borderRadius:'3px', background: pct>=80?'#1A6B4A':pct>=60?'#FFCC33':'#e53e3e' }}></div>
-                        </div>
-                        <span style={{ fontSize:'12px', color:'#475569', fontWeight:'600' }}>
-                          {parseInt(d.seancesTotal) > 0 ? `${pct}%` : '—'}
+      )}
+
+      {/* ── État de chargement ── */}
+      {loading && (
+        <div className="empty-state" style={{ paddingTop: '60px' }}>
+          <i className="fa-solid fa-spinner fa-spin" style={{ fontSize: '32px', color: '#1A6B4A' }}></i>
+          <p style={{ marginTop: '12px', color: '#64748b' }}>Chargement des certifiés…</p>
+        </div>
+      )}
+
+      {/* ── Erreur API ── */}
+      {apiError && !loading && (
+        <div className="empty-state">
+          <i className="fa-solid fa-triangle-exclamation" style={{ color: '#ef4444' }}></i>
+          <p>{apiError}</p>
+          <button className="btn btn-add" onClick={loadDiplomes} style={{ marginTop: '12px' }}>
+            <i className="fa-solid fa-rotate-right"></i> Réessayer
+          </button>
+        </div>
+      )}
+
+      {/* ── Table ── */}
+      {!loading && !apiError && (
+        <div className="table-card">
+          <div className="table-top">
+            <strong>{filtered.length}</strong> certifié{filtered.length !== 1 ? 's' : ''} trouvé{filtered.length !== 1 ? 's' : ''}
+          </div>
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th style={{ width: '44px', textAlign: 'center', paddingLeft: '14px' }}>
+                    <label className="cb-wrap">
+                      <input
+                        type="checkbox"
+                        className="cb-input"
+                        checked={allChecked}
+                        ref={el => { if (el) el.indeterminate = someChecked; }}
+                        onChange={toggleSelectAll}
+                        disabled={currentSlice.length === 0}
+                      />
+                      <span className="cb-box"></span>
+                    </label>
+                  </th>
+                  <th style={{ width: '32px' }}>#</th>
+                  <th>Nom & Prénom</th>
+                  <th>Contact</th>
+                  <th>Formation certifiée</th>
+                  <th>Date attestation</th>
+                  <th style={{ textAlign: 'center' }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {currentSlice.map((d, i) => {
+                  const sel = selectedIds.includes(d.id);
+                  return (
+                    <tr key={d.id} className={sel ? 'row-selected' : ''}>
+                      <td style={{ textAlign: 'center', paddingLeft: '14px' }}>
+                        <label className="cb-wrap">
+                          <input
+                            type="checkbox"
+                            className="cb-input"
+                            checked={sel}
+                            onChange={() => toggleSelect(d.id)}
+                          />
+                          <span className="cb-box"></span>
+                        </label>
+                      </td>
+                      <td className="td-num">{(currentPage - 1) * PER_PAGE + i + 1}</td>
+                      <td>
+                        <div className="td-name">{d.nom} {d.prenom}</div>
+                      </td>
+                      <td>
+                        <div className="td-sub">{d.email}</div>
+                        <div className="td-sub">{d.tel}</div>
+                      </td>
+                      <td>
+                        <span className="form-tag" style={{ background: 'rgba(255,204,51,.15)', color: '#8A6200', border: '1px solid rgba(255,204,51,.35)' }}>
+                          <i className="fa-solid fa-certificate" style={{ marginRight: '4px', fontSize: '10px' }}></i>
+                          {d.formationIntitule || '—'}
                         </span>
-                      </div>
-                    </td>
-                    <td className="td-actions">
-                      <button className="act-btn act-detail" title="Voir le détail" onClick={() => openDetail(d.id)}><i className="fa-solid fa-eye"></i></button>
-                      <button className="act-btn act-suppr"  title="Supprimer"      onClick={() => openDelete(d.id)}><i className="fa-solid fa-trash"></i></button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-          {currentSlice.length === 0 && (
-            <div className="empty-state">
-              <i className="fa-solid fa-award"></i>
-              <p>Aucun diplômé trouvé.</p>
+                      </td>
+                      <td>
+                        <div className="td-sub" style={{ fontWeight: '600', color: '#8A6200' }}>
+                          {d.dateAttestation}
+                        </div>
+                      </td>
+                      <td className="td-actions">
+                        <button className="act-btn act-detail" title="Voir le détail" onClick={() => openDetail(d.id)}>
+                          <i className="fa-solid fa-eye"></i>
+                        </button>
+                        <button
+                          className="act-btn"
+                          title="Imprimer l'attestation"
+                          onClick={() => printAttestation(d)}
+                          style={{ background: 'rgba(26,107,74,.10)', color: '#1A6B4A' }}
+                        >
+                          <i className="fa-solid fa-print"></i>
+                        </button>
+                        <button className="act-btn act-suppr" title="Supprimer" onClick={() => openDelete(d.id)}>
+                          <i className="fa-solid fa-trash"></i>
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+
+            {currentSlice.length === 0 && (
+              <div className="empty-state">
+                <i className="fa-solid fa-award"></i>
+                <p>Aucun certifié trouvé. Les certifiés apparaîtront ici après leur certification depuis la liste des étudiants.</p>
+              </div>
+            )}
+          </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="pagination">
+              <button className="pg-btn" disabled={currentPage === 1} onClick={() => setCurrentPage(1)}>
+                <i className="fa-solid fa-angles-left"></i>
+              </button>
+              <button className="pg-btn" disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)}>
+                <i className="fa-solid fa-angle-left"></i>
+              </button>
+              {Array.from({ length: totalPages }, (_, idx) => idx + 1).map(page => (
+                <button
+                  key={page}
+                  className={`pg-num ${currentPage === page ? 'active' : ''}`}
+                  onClick={() => setCurrentPage(page)}
+                >
+                  {page}
+                </button>
+              ))}
+              <button className="pg-btn" disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)}>
+                <i className="fa-solid fa-angle-right"></i>
+              </button>
+              <button className="pg-btn" disabled={currentPage === totalPages} onClick={() => setCurrentPage(totalPages)}>
+                <i className="fa-solid fa-angles-right"></i>
+              </button>
             </div>
           )}
         </div>
+      )}
 
-        {/* Pagination */}
-        <div className="pagination">
-          <button className="pg-btn" disabled={currentPage===1} onClick={() => setCurrentPage(1)}><i className="fa-solid fa-angles-left"></i></button>
-          <button className="pg-btn" disabled={currentPage===1} onClick={() => setCurrentPage(p=>p-1)}><i className="fa-solid fa-angle-left"></i></button>
-          {Array.from({ length:totalPages }, (_,idx) => idx+1).map(page => (
-            <button key={page} className={`pg-num ${currentPage===page?'active':''}`} onClick={() => setCurrentPage(page)}>{page}</button>
-          ))}
-          <button className="pg-btn" disabled={currentPage===totalPages} onClick={() => setCurrentPage(p=>p+1)}><i className="fa-solid fa-angle-right"></i></button>
-          <button className="pg-btn" disabled={currentPage===totalPages} onClick={() => setCurrentPage(totalPages)}><i className="fa-solid fa-angles-right"></i></button>
+      {/* MODALE SUPPRESSION GROUPÉE */}
+      {showBulkDelete && (
+        <div className="modal-overlay show" onClick={ev => { if (ev.target === ev.currentTarget && !bulkDeleting) setShowBulkDelete(false); }}>
+          <div className="modal-suppr">
+            <div style={{ display: 'flex', justifyContent: 'center', paddingTop: '28px' }}>
+              <div className="suppr-icon-wrap">
+                <i className="fa-solid fa-trash" style={{ fontSize: '26px', color: '#ef4444' }}></i>
+              </div>
+            </div>
+            <div style={{ padding: '16px 24px', textAlign: 'center' }}>
+              <h2 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '10px', color: '#1e293b' }}>
+                Supprimer {selectedIds.length} certifié{selectedIds.length > 1 ? 's' : ''}
+              </h2>
+              <p style={{ color: '#64748b', fontSize: '13.5px', marginBottom: '14px' }}>
+                Vous êtes sur le point de supprimer <strong>{selectedIds.length} certifié{selectedIds.length > 1 ? 's' : ''}</strong> sélectionné{selectedIds.length > 1 ? 's' : ''}.
+              </p>
+              <div className="suppr-warning">
+                <i className="fa-solid fa-triangle-exclamation" style={{ flexShrink: 0 }}></i>
+                <span>Cette action est <strong>irréversible</strong>. Toutes les données seront définitivement supprimées.</span>
+              </div>
+            </div>
+            <div style={{ padding: '12px 24px 20px', display: 'flex', gap: '10px' }}>
+              <button className="btn btn-cancel" style={{ flex: 1 }} onClick={() => setShowBulkDelete(false)} disabled={bulkDeleting}>
+                <i className="fa-solid fa-xmark"></i> Annuler
+              </button>
+              <button className="btn btn-suppr-confirm" style={{ flex: 1 }} onClick={handleBulkDelete} disabled={bulkDeleting}>
+                {bulkDeleting
+                  ? <><i className="fa-solid fa-spinner fa-spin"></i> Suppression…</>
+                  : <><i className="fa-solid fa-trash"></i> Confirmer</>}
+              </button>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
 
       <DeleteModal />
       <Toast />
