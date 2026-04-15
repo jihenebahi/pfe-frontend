@@ -615,3 +615,247 @@
   color: white;
   border-color: #EF4444;
 }
+
+
+
+
+
+
+/* ════════════════════════════════════════════════════════════
+   STYLE HISTORIQUE DES ÉCHANGES  —  layout capture
+════════════════════════════════════════════════════════════ */
+
+.echanges-historique {
+  background: transparent;
+  padding: 4px 0;
+}
+
+/* Liste des échanges */
+.echanges-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* ── Wrapper timeline : icône ronde + ligne verte + carte ── */
+.echange-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 10px 0;
+  position: relative;
+}
+
+/* Ligne verticale verte entre les items */
+.echange-row:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  left: 19px;
+  top: 52px;
+  bottom: -10px;
+  width: 2px;
+  background: #D1FAE5;
+}
+
+/* Icône ronde verte (timeline) */
+.echange-timeline-icon {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #ECFDF5;
+  border: 2px solid #6EE7B7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #10B981;
+  font-size: 15px;
+  margin-top: 6px;
+  z-index: 1;
+}
+
+/* Carte principale */
+.echange-card {
+  flex: 1;
+  background: #fff;
+  border: 1px solid #E8EDF3;
+  border-radius: 10px;
+  padding: 12px 16px;
+  position: relative;
+  min-width: 0;
+}
+
+/* En-tête de la carte : badge type + agent à droite */
+.echange-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  padding-right: 32px; /* espace pour le bouton supprimer */
+}
+
+/* Badge "Appel Téléphonique" */
+.echange-type {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #ECFDF5;
+  border: 1px solid #A7F3D0;
+  border-radius: 20px;
+  padding: 3px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #059669;
+}
+
+.echange-type i {
+  font-size: 11px;
+  color: #10B981;
+}
+
+/* Agent / source à droite du header */
+.echange-agent {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: #94A3B8;
+  font-weight: 500;
+}
+
+.echange-agent i {
+  font-size: 11px;
+  color: #CBD5E1;
+}
+
+/* Bouton supprimer en haut à droite de la carte */
+.echange-delete-icon {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: transparent;
+  border: none;
+  color: #CBD5E1;
+  cursor: pointer;
+  font-size: 13px;
+  padding: 5px;
+  border-radius: 6px;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+}
+
+.echange-delete-icon:hover {
+  color: #EF4444;
+  background: rgba(239, 68, 68, 0.1);
+}
+
+/* Date */
+.echange-date {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #64748B;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 6px;
+  padding: 3px 10px;
+  margin-bottom: 12px;
+}
+
+.echange-date i {
+  font-size: 11px;
+  color: #94A3B8;
+}
+
+/* Contenu : boîte bordée */
+.echange-content {
+  border: 1px solid #E8EDF3;
+  border-radius: 8px;
+  padding: 10px 14px;
+  background: #FAFBFC;
+  margin-bottom: 10px;
+}
+
+.echange-message {
+  font-size: 13px;
+  color: #334155;
+  line-height: 1.6;
+  margin-bottom: 0;
+}
+
+.echange-notes {
+  font-size: 13px;
+  color: #475569;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed #E2E8F0;
+  line-height: 1.5;
+}
+
+.notes-label {
+  font-weight: 600;
+  color: #475569;
+  margin-right: 4px;
+}
+
+/* Actions */
+.echange-actions {
+  display: flex;
+  align-items: center;
+  margin-top: 6px;
+}
+
+.action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 14px;
+  height: 30px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: 'Poppins', sans-serif;
+  border: none;
+}
+
+.action-ok {
+  background: rgba(16, 185, 129, 0.1);
+  color: #059669;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+.action-ok:hover:not(:disabled) {
+  background: #059669;
+  color: #fff;
+}
+
+.action-ok:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Loading et empty state */
+.echanges-loading,
+.echanges-empty {
+  text-align: center;
+  padding: 48px 24px;
+  color: #94A3B8;
+}
+
+.echanges-empty i {
+  font-size: 42px;
+  color: #CBD5E1;
+  margin-bottom: 12px;
+  display: block;
+}
+
+.echanges-empty p {
+  font-size: 14px;
+  margin: 0;
+}

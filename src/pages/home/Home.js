@@ -8,62 +8,82 @@ import {
   createRelance,
   deleteRelance,
   actionOk,
-  STATUT_CONFIG,
+  STATUT_CONFIG as PROSPECT_STATUT_CONFIG,
 } from '../../services/crm/relancesService';
+import {
+  getAllEtudiantRelances,
+  createEtudiantRelance,
+  deleteEtudiantRelance,
+  actionOkEtudiant,
+  STATUT_CONFIG as ETUDIANT_STATUT_CONFIG,
+} from '../../services/crm/etudiantRelancesService';
+import {
+  getAllDiplomeRelances,
+  createDiplomeRelance,
+  deleteDiplomeRelance,
+  actionOkDiplome,
+} from '../../services/crm/diplomeRelancesService';
 import '../../styles/home/home.css';
 
-const INITIAL_TASKS = [
-  { id: 1, title: 'Appeler client X',   description: 'Vérifier son contrat de formation',           urgent: true,  done: false },
-  { id: 2, title: 'Envoyer email',      description: 'Proposition commerciale pour formation Java',  urgent: false, done: false },
-  { id: 3, title: 'Préparer réunion',   description: "Réunion bilan Q2 avec l'équipe commerciale",  urgent: true,  done: true  },
-];
+// Fusion des configurations
+const STATUT_CONFIG = { ...PROSPECT_STATUT_CONFIG, ...ETUDIANT_STATUT_CONFIG };
 
 export default function Home() {
   const navigate = useNavigate();
 
   // ── Tasks ─────────────────────────────────────────────────────────────────
-  const [tasks,        setTasks]        = useState(INITIAL_TASKS);
+  const [tasks, setTasks] = useState([
+    { id: 1, title: 'Appeler client X', description: 'Vérifier son contrat de formation', urgent: true, done: false },
+    { id: 2, title: 'Envoyer email', description: 'Proposition commerciale pour formation Java', urgent: false, done: false },
+    { id: 3, title: 'Préparer réunion', description: "Réunion bilan Q2 avec l'équipe commerciale", urgent: true, done: true },
+  ]);
   const [showTaskForm, setShowTaskForm] = useState(false);
-  const [newTask,      setNewTask]      = useState({ title: '', description: '', urgent: false });
+  const [newTask, setNewTask] = useState({ title: '', description: '', urgent: false });
 
-  const addTask    = () => {
-    if (!newTask.title.trim()) return;
-    setTasks([...tasks, { ...newTask, id: Date.now(), done: false }]);
-    setNewTask({ title: '', description: '', urgent: false });
-    setShowTaskForm(false);
-  };
-  const toggleTask = (id) => setTasks(tasks.map((t) => (t.id === id ? { ...t, done: !t.done } : t)));
-  const deleteTask = (id) => setTasks(tasks.filter((t) => t.id !== id));
-
-  // ── Relances (API) ────────────────────────────────────────────────────────
-  const [relances,       setRelances]       = useState([]);
-  const [relLoading,     setRelLoading]     = useState(true);
-  const [relError,       setRelError]       = useState('');
+  // ── Relances (PROSPECTS + ÉTUDIANTS + DIPLÔMÉS) ─────────────────────────
+  const [relances, setRelances] = useState([]);
+  const [relLoading, setRelLoading] = useState(true);
+  const [relError, setRelError] = useState('');
   const [reminderFilter, setReminderFilter] = useState('all');
   const [reminderSearch, setReminderSearch] = useState('');
-  const [savingId,       setSavingId]       = useState(null);
+  const [savingId, setSavingId] = useState(null);
 
   // ── Modals ────────────────────────────────────────────────────────────────
-  const [detailModal,    setDetailModal]    = useState(null);
-  const [showOkPrompt,   setShowOkPrompt]   = useState(false);
-  const [pendingOkId,    setPendingOkId]    = useState(null);
+  const [detailModal, setDetailModal] = useState(null);
+  const [showOkPrompt, setShowOkPrompt] = useState(false);
+  const [pendingOkId, setPendingOkId] = useState(null);
   const [pendingRelance, setPendingRelance] = useState(null);
-  const [okNotes,        setOkNotes]        = useState('');
-  const [reprogModal,    setReprogModal]    = useState(false);
-  const [reprogProspId,  setReprogProspId]  = useState(null);
-  const [modalLoading,   setModalLoading]   = useState(false);
-  const [deleteConfirmId, setDeleteConfirmId] = useState(null);  // ← confirmation suppression
+  const [pendingType, setPendingType] = useState(null);
+  const [okNotes, setOkNotes] = useState('');
+  const [reprogModal, setReprogModal] = useState(false);
+  const [reprogData, setReprogData] = useState(null);
+  const [modalLoading, setModalLoading] = useState(false);
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null);
+  const [deleteType, setDeleteType] = useState(null);
 
-  // ── Charger les relances ──────────────────────────────────────────────────
+  // ── Charger les relances (prospects + étudiants + diplômés) ───────────────
   const loadRelances = useCallback(async () => {
     try {
       setRelLoading(true);
       setRelError('');
-      const data = await getAllRelances();
-      setRelances(data);
+      
+      const [prospectsData, etudiantsData, diplomesData] = await Promise.all([
+        getAllRelances(),
+        getAllEtudiantRelances(),
+        getAllDiplomeRelances()
+      ]);
+      
+      const prospectsWithType = prospectsData.map(r => ({ ...r, type: 'prospect' }));
+      const etudiantsWithType = etudiantsData.map(r => ({ ...r, type: 'etudiant' }));
+      const diplomesWithType = diplomesData.map(r => ({ ...r, type: 'diplome' }));
+      
+      const allRelances = [...prospectsWithType, ...etudiantsWithType, ...diplomesWithType]
+        .sort((a, b) => a.dateRelance.localeCompare(b.dateRelance));
+      
+      setRelances(allRelances);
     } catch (err) {
+      console.error('Erreur détaillée:', err);
       setRelError('Impossible de charger les relances.');
-      console.error(err);
     } finally {
       setRelLoading(false);
     }
@@ -71,42 +91,61 @@ export default function Home() {
 
   useEffect(() => { loadRelances(); }, [loadRelances]);
 
-  // ── Filtrage + tri ────────────────────────────────────────────────────────
-  const filteredRelances = relances
-    .filter((r) => {
-      if (reminderFilter === 'done')     return r.statutCalc === 'fait';
-      if (reminderFilter === 'pending')  return ['en_retard', 'aujourd_hui'].includes(r.statutCalc);
-      if (reminderFilter === 'upcoming') return r.statutCalc === 'a_venir';
-      return true;
-    })
-    .filter((r) =>
-      `${r.prospectNom} ${r.prospectPrenom}`.toLowerCase().includes(reminderSearch.toLowerCase()) ||
-      r.prospectTelephone.includes(reminderSearch)
-    )
-    .sort((a, b) => {
-      const ORDER = { en_retard: 0, aujourd_hui: 1, a_venir: 2, fait: 3 };
-      const diff  = (ORDER[a.statutCalc] ?? 4) - (ORDER[b.statutCalc] ?? 4);
-      if (diff !== 0) return diff;
-      return a.dateRelance.localeCompare(b.dateRelance);
-    });
+  // ── Fonction générique pour créer une relance selon le type ──────────────
+  const handleCreateRelance = async (type, id, { dateRelance, commentaire, formationId }) => {
+    if (type === 'prospect') {
+      return await createRelance(id, { dateRelance, commentaire, formationId });
+    } else if (type === 'etudiant') {
+      return await createEtudiantRelance(id, { dateRelance, commentaire, formationId });
+    } else {
+      return await createDiplomeRelance(id, { dateRelance, commentaire, formationId });
+    }
+  };
+
+  // ── Fonction générique pour supprimer une relance ────────────────────────
+  const handleDeleteRelance = async (id, type) => {
+    if (type === 'prospect') {
+      await deleteRelance(id);
+    } else if (type === 'etudiant') {
+      await deleteEtudiantRelance(id);
+    } else {
+      await deleteDiplomeRelance(id);
+    }
+  };
+
+  // ── Fonction générique pour l'action OK ──────────────────────────────────
+  const handleActionOk = async (id, type, notes) => {
+    if (type === 'prospect') {
+      return await actionOk(id, notes);
+    } else if (type === 'etudiant') {
+      return await actionOkEtudiant(id, notes);
+    } else {
+      return await actionOkDiplome(id, notes);
+    }
+  };
 
   // ── Suppression ───────────────────────────────────────────────────────────
-  const handleDelete = async (id) => {
-    setDeleteConfirmId(id);
+  const handleDelete = (relance) => {
+    setDeleteConfirmId(relance.id);
+    setDeleteType(relance.type);
   };
 
   const confirmDelete = async () => {
     try {
-      await deleteRelance(deleteConfirmId);
+      await handleDeleteRelance(deleteConfirmId, deleteType);
       setRelances((prev) => prev.filter((r) => r.id !== deleteConfirmId));
     } catch (err) { console.error(err); }
-    finally { setDeleteConfirmId(null); }
+    finally { 
+      setDeleteConfirmId(null);
+      setDeleteType(null);
+    }
   };
 
   // ── Ouvrir le prompt OK ───────────────────────────────────────────────────
   const openOkPrompt = (relance) => {
     setPendingOkId(relance.id);
     setPendingRelance(relance);
+    setPendingType(relance.type);
     setOkNotes('');
     setShowOkPrompt(true);
   };
@@ -117,9 +156,19 @@ export default function Home() {
     try {
       setSavingId(pendingOkId);
       setShowOkPrompt(false);
-      const { relance: updated } = await actionOk(pendingOkId, okNotes);
-      setRelances((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
-      setReprogProspId(updated.prospectId);
+      const { relance: updated } = await handleActionOk(pendingOkId, pendingType, okNotes);
+      setRelances((prev) => prev.map((r) => (r.id === updated.id ? { ...updated, type: pendingType } : r)));
+      
+      // Stocker les infos pour reprogrammation
+      let targetId = null;
+      if (pendingType === 'prospect') targetId = updated.prospectId;
+      else if (pendingType === 'etudiant') targetId = updated.etudiantId;
+      else targetId = updated.diplomeId;
+      
+      setReprogData({
+        id: targetId,
+        type: pendingType,
+      });
       setReprogModal(true);
     } catch (err) {
       console.error(err);
@@ -127,17 +176,23 @@ export default function Home() {
       setSavingId(null);
       setPendingOkId(null);
       setPendingRelance(null);
+      setPendingType(null);
     }
   };
 
   // ── Reprogrammer ──────────────────────────────────────────────────────────
   const handleReprog = async ({ dateRelance, commentaire }) => {
-    if (!reprogProspId) return;
+    if (!reprogData) return;
     try {
       setModalLoading(true);
-      const newR = await createRelance(reprogProspId, { dateRelance, commentaire });
-      setRelances((prev) => [newR, ...prev]);
+      const newR = await handleCreateRelance(reprogData.type, reprogData.id, { 
+        dateRelance, 
+        commentaire,
+        formationId: null 
+      });
+      setRelances((prev) => [{ ...newR, type: reprogData.type }, ...prev]);
       setReprogModal(false);
+      setReprogData(null);
     } catch (err) {
       console.error(err);
     } finally {
@@ -145,15 +200,69 @@ export default function Home() {
     }
   };
 
+  // ── Navigation vers la fiche appropriée ──────────────────────────────────
+  const handleNavigate = (relance) => {
+    if (relance.type === 'prospect') {
+      navigate(`/prospects?id=${relance.prospectId}`);
+    } else if (relance.type === 'etudiant') {
+      navigate(`/etudiants?id=${relance.etudiantId}`);
+    } else {
+      navigate(`/diplomes?id=${relance.diplomeId}`);
+    }
+  };
+
+  const addTask = () => {
+    if (!newTask.title.trim()) return;
+    setTasks([...tasks, { ...newTask, id: Date.now(), done: false }]);
+    setNewTask({ title: '', description: '', urgent: false });
+    setShowTaskForm(false);
+  };
+  const toggleTask = (id) => setTasks(tasks.map((t) => (t.id === id ? { ...t, done: !t.done } : t)));
+  const deleteTask = (id) => setTasks(tasks.filter((t) => t.id !== id));
+
+  // ── Filtrage + tri ────────────────────────────────────────────────────────
+  const filteredRelances = relances
+    .filter((r) => {
+      if (reminderFilter === 'done')     return r.statutCalc === 'fait';
+      if (reminderFilter === 'pending')  return ['en_retard', 'aujourd_hui'].includes(r.statutCalc);
+      if (reminderFilter === 'upcoming') return r.statutCalc === 'a_venir';
+      return true;
+    })
+    .filter((r) => {
+      let nom, prenom, telephone;
+      if (r.type === 'prospect') {
+        nom = r.prospectNom;
+        prenom = r.prospectPrenom;
+        telephone = r.prospectTelephone;
+      } else if (r.type === 'etudiant') {
+        nom = r.etudiantNom;
+        prenom = r.etudiantPrenom;
+        telephone = r.etudiantTelephone;
+      } else {
+        nom = r.diplomeNom;
+        prenom = r.diplomePrenom;
+        telephone = r.diplomeTelephone;
+      }
+      return `${prenom} ${nom}`.toLowerCase().includes(reminderSearch.toLowerCase()) ||
+             (telephone || '').includes(reminderSearch);
+    })
+    .sort((a, b) => {
+      const ORDER = { en_retard: 0, aujourd_hui: 1, a_venir: 2, fait: 3 };
+      const diff  = (ORDER[a.statutCalc] ?? 4) - (ORDER[b.statutCalc] ?? 4);
+      if (diff !== 0) return diff;
+      return a.dateRelance.localeCompare(b.dateRelance);
+    });
+
   const fmtDate = (d) =>
     d ? new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
 
-  // ─────────────────────────────────────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════════════════════
+  // RENDER
+  // ═══════════════════════════════════════════════════════════════════════════
   return (
     <Layout>
       <div className="home-dashboard">
-
-        {/* ══════ LEFT : TASKS ══════ */}
+        {/* LEFT PANEL - TASKS */}
         <section className="tasks-panel">
           <div className="panel-header">
             <h2 className="panel-title">
@@ -189,7 +298,7 @@ export default function Home() {
                 </label>
                 <div className="form-actions">
                   <button className="btn-cancel" onClick={() => setShowTaskForm(false)}>Annuler</button>
-                  <button className="btn-save"   onClick={addTask}>Enregistrer</button>
+                  <button className="btn-save" onClick={addTask}>Enregistrer</button>
                 </div>
               </div>
             </div>
@@ -235,7 +344,7 @@ export default function Home() {
           </div>
         </section>
 
-        {/* ══════ RIGHT : RELANCES ══════ */}
+        {/* RIGHT PANEL - RELANCES (PROSPECTS + ÉTUDIANTS + DIPLÔMÉS) */}
         <section className="reminders-panel">
           <div className="panel-header">
             <h2 className="panel-title">
@@ -299,29 +408,33 @@ export default function Home() {
               )}
 
               {filteredRelances.map((r) => {
-                const cfg    = STATUT_CONFIG[r.statutCalc] || STATUT_CONFIG.a_venir;
+                const cfg = STATUT_CONFIG[r.statutCalc] || STATUT_CONFIG.a_venir;
                 const isDone = r.statutCalc === 'fait';
                 const isBusy = savingId === r.id;
+                let typeLabel, name, phone, formation;
+                
+                if (r.type === 'prospect') {
+                  typeLabel = '🎯 Prospect';
+                  name = `${r.prospectPrenom} ${r.prospectNom}`;
+                  phone = r.prospectTelephone;
+                  formation = r.formationNom;
+                } else if (r.type === 'etudiant') {
+                  typeLabel = '🎓 Étudiant';
+                  name = `${r.etudiantPrenom} ${r.etudiantNom}`;
+                  phone = r.etudiantTelephone;
+                  formation = r.formationNom;
+                } else {
+                  typeLabel = '📜 Diplômé';
+                  name = `${r.diplomePrenom} ${r.diplomeNom}`;
+                  phone = r.diplomeTelephone;
+                  formation = r.formationNom || r.diplomeFormation;
+                }
 
                 return (
-                  <div key={r.id} className={`reminder-card ${cfg.cardCls}`}>
+                  <div key={`${r.type}-${r.id}`} className={`reminder-card ${cfg.cardCls}`}>
                     <div className="reminder-left">
-
-                      {/*
-                        ✅ FIX : <button type="button"> au lieu de <div>
-                        — les <div> peuvent être bloqués par pointer-events:none
-                          sur les enfants de .reminder-card dans home.css.
-                        — type="button" empêche tout submit accidentel.
-                        — L'icône est changée en fa-phone-volume (plus claire).
-                        — Le CSS .reminder-ok-btn a été mis à jour en conséquence.
-                      */}
                       {isDone ? (
-                        <button
-                          type="button"
-                          className="reminder-ok-btn ok-done"
-                          title="Appel déjà effectué"
-                          disabled
-                        >
+                        <button type="button" className="reminder-ok-btn ok-done" title="Appel déjà effectué" disabled>
                           <i className="fa-solid fa-circle-check"></i>
                         </button>
                       ) : (
@@ -341,17 +454,18 @@ export default function Home() {
 
                       <div className="reminder-info">
                         <div className="reminder-name">
-                          {r.prospectPrenom} {r.prospectNom}
+                          <span className="reminder-type-badge">{typeLabel}</span>
+                          {name}
                         </div>
                         <div className="reminder-phone">
-                          <i className="fa-solid fa-phone"></i> {r.prospectTelephone}
+                          <i className="fa-solid fa-phone"></i> {phone}
                         </div>
                         <div className="reminder-date">
                           <i className="fa-regular fa-calendar"></i> {fmtDate(r.dateRelance)}
                         </div>
-                        {r.formationNom && (
+                        {formation && (
                           <div className="reminder-formation">
-                            <i className="fa-solid fa-graduation-cap"></i> {r.formationNom}
+                            <i className="fa-solid fa-graduation-cap"></i> {formation}
                           </div>
                         )}
                         {r.commentaire && (
@@ -377,7 +491,7 @@ export default function Home() {
                           type="button"
                           className="btn-delete-reminder"
                           title="Supprimer"
-                          onClick={() => handleDelete(r.id)}
+                          onClick={() => handleDelete(r)}
                         >
                           <i className="fa-solid fa-xmark"></i>
                         </button>
@@ -391,7 +505,7 @@ export default function Home() {
         </section>
       </div>
 
-      {/* ══════ MODAL : Détail relance ══════ */}
+      {/* MODAL DÉTAIL */}
       {detailModal && (
         <div className="modal-overlay show" onClick={() => setDetailModal(null)}>
           <div className="modal-card" onClick={(e) => e.stopPropagation()}>
@@ -403,12 +517,24 @@ export default function Home() {
             </div>
             <div className="modal-body">
               <div className="modal-row">
-                <span className="modal-label"><i className="fa-solid fa-user"></i> Prospect</span>
-                <span className="modal-value">{detailModal.prospectPrenom} {detailModal.prospectNom}</span>
+                <span className="modal-label"><i className="fa-solid fa-user"></i> {detailModal.type === 'prospect' ? 'Prospect' : detailModal.type === 'etudiant' ? 'Étudiant' : 'Diplômé'}</span>
+                <span className="modal-value">
+                  {detailModal.type === 'prospect' 
+                    ? `${detailModal.prospectPrenom} ${detailModal.prospectNom}`
+                    : detailModal.type === 'etudiant'
+                    ? `${detailModal.etudiantPrenom} ${detailModal.etudiantNom}`
+                    : `${detailModal.diplomePrenom} ${detailModal.diplomeNom}`}
+                </span>
               </div>
               <div className="modal-row">
                 <span className="modal-label"><i className="fa-solid fa-phone"></i> Téléphone</span>
-                <span className="modal-value">{detailModal.prospectTelephone}</span>
+                <span className="modal-value">
+                  {detailModal.type === 'prospect' 
+                    ? detailModal.prospectTelephone 
+                    : detailModal.type === 'etudiant'
+                    ? detailModal.etudiantTelephone
+                    : detailModal.diplomeTelephone}
+                </span>
               </div>
               {detailModal.formationNom && (
                 <div className="modal-row">
@@ -430,18 +556,6 @@ export default function Home() {
                   <span className="modal-value">{detailModal.commentaire}</span>
                 </div>
               )}
-              <div className="modal-row">
-                <span className="modal-label"><i className="fa-solid fa-circle-info"></i> Statut</span>
-                <span className={`modal-value reminder-badge ${STATUT_CONFIG[detailModal.statutCalc]?.badgeCls}`}>
-                  {STATUT_CONFIG[detailModal.statutCalc]?.label}
-                </span>
-              </div>
-              {detailModal.dateAction && (
-                <div className="modal-row">
-                  <span className="modal-label"><i className="fa-solid fa-clock"></i> Traité le</span>
-                  <span className="modal-value">{fmtDate(detailModal.dateAction)}</span>
-                </div>
-              )}
             </div>
             <div className="modal-footer">
               {detailModal.statutCalc !== 'fait' && (
@@ -459,20 +573,19 @@ export default function Home() {
               <button
                 type="button"
                 className="btn-goto-prospect"
-                onClick={() => navigate(`/prospects?id=${detailModal.prospectId}`)}
+                onClick={() => handleNavigate(detailModal)}
               >
-                <i className="fa-solid fa-arrow-right"></i> Voir fiche prospect
+                <i className="fa-solid fa-arrow-right"></i> Voir la fiche
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ══════ PROMPT : Confirmer l'appel + notes ══════ */}
+      {/* PROMPT OK */}
       {showOkPrompt && (
         <div className="modal-overlay show" onClick={() => setShowOkPrompt(false)}>
           <div className="relance-modal-card" onClick={(e) => e.stopPropagation()}>
-
             <div className="relance-modal-header">
               <div className="relance-modal-icon ok-icon">
                 <i className="fa-solid fa-phone-volume"></i>
@@ -482,17 +595,18 @@ export default function Home() {
                 <i className="fa-solid fa-xmark"></i>
               </button>
             </div>
-
             <div className="relance-modal-body">
               {pendingRelance && (
                 <div className="ok-prompt-info">
                   <i className="fa-solid fa-circle-info" style={{ color: '#3b82f6' }}></i>{' '}
                   Vous confirmez l'appel pour{' '}
-                  <strong>{pendingRelance.prospectPrenom} {pendingRelance.prospectNom}</strong>.
-                  <br />
-                  <span style={{ fontSize: '12px', color: '#6b7280' }}>
-                    L'échange sera ajouté à l'historique du prospect automatiquement.
-                  </span>
+                  <strong>
+                    {pendingRelance.type === 'prospect' 
+                      ? `${pendingRelance.prospectPrenom} ${pendingRelance.prospectNom}`
+                      : pendingRelance.type === 'etudiant'
+                      ? `${pendingRelance.etudiantPrenom} ${pendingRelance.etudiantNom}`
+                      : `${pendingRelance.diplomePrenom} ${pendingRelance.diplomeNom}`}
+                  </strong>.
                 </div>
               )}
               <div className="relance-field">
@@ -510,36 +624,33 @@ export default function Home() {
                 />
               </div>
             </div>
-
             <div className="relance-modal-footer">
               <button type="button" className="btn-relance-cancel" onClick={() => setShowOkPrompt(false)}>
                 Annuler
               </button>
-              <button
-                type="button"
-                className="btn-relance-save btn-ok"
-                onClick={confirmOk}
-                disabled={savingId !== null}
-              >
+              <button type="button" className="btn-relance-save btn-ok" onClick={confirmOk} disabled={savingId !== null}>
                 {savingId !== null
                   ? <><i className="fa-solid fa-spinner fa-spin"></i> Enregistrement…</>
-                  : <><i className="fa-solid fa-check-double"></i> Confirmer l'appel</>
-                }
+                  : <><i className="fa-solid fa-check-double"></i> Confirmer l'appel</>}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ══════ POPUP : Programmer une autre relance ? ══════ */}
+      {/* MODAL REPROGRAMMATION */}
       <RelanceModal
         isOpen={reprogModal}
-        onClose={() => setReprogModal(false)}
+        onClose={() => {
+          setReprogModal(false);
+          setReprogData(null);
+        }}
         onSave={handleReprog}
         loading={modalLoading}
         title="Programmer une autre relance ?"
       />
-      {/* ── Modal confirmation suppression ── */}
+
+      {/* MODAL CONFIRMATION SUPPRESSION */}
       {deleteConfirmId && (
         <div className="modal-overlay show" onClick={() => setDeleteConfirmId(null)}>
           <div className="modal-card delete-confirm-card" onClick={(e) => e.stopPropagation()}>

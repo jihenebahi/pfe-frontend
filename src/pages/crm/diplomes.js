@@ -2,7 +2,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Layout from '../../components/Layout';
 import '../../styles/crm/etudiants.css';
-import { getDiplomes, deleteDiplome } from '../../services/crm/diplomeService';
+import { getDiplomes, deleteDiplome, envoyerAttestation, convertirVersEtudiant, getDiplome } from '../../services/crm/diplomeService';
+import { createDiplomeRelance } from '../../services/crm/diplomeRelancesService';
+import DiplomeRelances from '../../components/crm/DiplomeRelances';
+import api from '../../services/api';
+import '../../styles/crm/diplomes.css';
 
 /* ──────────────────────────────────────────────────────────
    HELPERS
@@ -35,6 +39,30 @@ const Diplomes = () => {
   const [selectedIds,    setSelectedIds]    = useState([]);
   const [showBulkDelete, setShowBulkDelete] = useState(false);
   const [bulkDeleting,   setBulkDeleting]   = useState(false);
+  const [sendingEmailId, setSendingEmailId] = useState(null);
+
+  // ── Conversion vers étudiant ──
+  const [formations,          setFormations]          = useState([]);
+  const [conversionLoading,   setConversionLoading]   = useState(false);
+  const [conversionForm,      setConversionForm]      = useState({ formations: [], notes: '' });
+  const [convertOpen,         setConvertOpen]         = useState(false);
+  const [formationSearch,     setFormationSearch]     = useState('');
+  const [documents,           setDocuments]           = useState({
+    cin: false,
+    cv: false,
+    contrat: false,
+    recu: false,
+    rne: false,
+    autres: false,
+  });
+  const [docOtherValue,       setDocOtherValue]       = useState('');
+
+  // ── États relance inline ──
+  const [relanceOpen, setRelanceOpen] = useState(false);
+  const [relanceDate, setRelanceDate] = useState('');
+  const [relanceCommentaire, setRelanceCommentaire] = useState('');
+  const [relanceError, setRelanceError] = useState('');
+  const [relanceSaving, setRelanceSaving] = useState(false);
 
   const PER_PAGE = 8;
 
@@ -50,6 +78,15 @@ const Diplomes = () => {
     } finally {
       setLoading(false);
     }
+  }, []);
+
+  // Charger les formations
+  useEffect(() => {
+    api.get('formations/')
+      .then(res => setFormations(
+        res.data.map(f => ({ id: f.id, label: f.intitule, duree: `${f.duree}h` }))
+      ))
+      .catch(() => setFormations([]));
   }, []);
 
   useEffect(() => { loadDiplomes(); }, [loadDiplomes]);
@@ -114,13 +151,18 @@ const Diplomes = () => {
   };
 
   // ── Détail ────────────────────────────────────────────────────────
-  const openDetail = (id) => {
-    const d = diplomes.find(x => x.id === id);
-    if (!d) return;
-    setDetailTarget(d);
-    setPageView('detail');
+  const openDetail = async (id) => {
+    try {
+      const d = await getDiplome(id);
+      setDetailTarget(d);
+      setConvertOpen(false);
+      setRelanceOpen(false);
+      setPageView('detail');
+    } catch {
+      showToast('Impossible de charger les détails.', 'error');
+    }
   };
-  const closeDetail = () => { setPageView('list'); setDetailTarget(null); };
+  const closeDetail = () => { setPageView('list'); setDetailTarget(null); setConvertOpen(false); setRelanceOpen(false); };
 
   // ── Supprimer (individuel) ────────────────────────────────────────
   const openDelete = (id) => {
@@ -144,9 +186,146 @@ const Diplomes = () => {
     }
   };
 
-  // ══════════════════════════════════════════════════════════
+  // ── Filtrage des formations ──
+  const getFilteredFormations = () => {
+    if (!formationSearch) return formations;
+    const searchLower = formationSearch.toLowerCase();
+    return formations.filter(f => f.label.toLowerCase().includes(searchLower));
+  };
+
+  // ── Gestion des documents ──
+  const toggleDocument = (docKey) => {
+    setDocuments(prev => ({ ...prev, [docKey]: !prev[docKey] }));
+  };
+
+  // ══════════════════════════════════════════════════════════════════
+  //  ENVOYER ATTESTATION PAR EMAIL
+  // ══════════════════════════════════════════════════════════════════
+  const handleEnvoyerAttestation = async (id) => {
+    setSendingEmailId(id);
+    try {
+      const result = await envoyerAttestation(id);
+      showToast(result.message, 'success');
+    } catch (error) {
+      const errorMsg = error.response?.data?.error || 'Erreur lors de l\'envoi de l\'attestation.';
+      showToast(errorMsg, 'error');
+    } finally {
+      setSendingEmailId(null);
+    }
+  };
+
+  // ══════════════════════════════════════════════════════════════════
+  //  CONVERSION VERS ÉTUDIANT
+  // ══════════════════════════════════════════════════════════════════
+  const toggleConvert = () => {
+    setConvertOpen(v => !v);
+    setConversionForm({ formations: [], notes: '' });
+    setFormationSearch('');
+    setDocuments({
+      cin: false,
+      cv: false,
+      contrat: false,
+      recu: false,
+      rne: false,
+      autres: false,
+    });
+    setDocOtherValue('');
+  };
+
+  const toggleFormationSelection = (formationId) => {
+    setConversionForm(prev => ({
+      ...prev,
+      formations: prev.formations.includes(formationId)
+        ? prev.formations.filter(id => id !== formationId)
+        : [...prev.formations, formationId]
+    }));
+  };
+
+  const handleConvertirVersEtudiant = async () => {
+    if (!detailTarget) return;
+    if (conversionForm.formations.length === 0) {
+      showToast('Veuillez sélectionner au moins une formation.', 'error');
+      return;
+    }
+
+    setConversionLoading(true);
+    try {
+      const documentsList = [];
+      if (documents.cin) documentsList.push('CIN');
+      if (documents.cv) documentsList.push('CV');
+      if (documents.contrat) documentsList.push('Contrat');
+      if (documents.recu) documentsList.push('Reçu');
+      if (documents.rne) documentsList.push('RNE');
+      if (documents.autres && docOtherValue) documentsList.push(docOtherValue);
+      else if (documents.autres) documentsList.push('Autres');
+
+      const result = await convertirVersEtudiant(
+        detailTarget,
+        conversionForm.formations,
+        conversionForm.notes,
+        documentsList
+      );
+
+      if (result.existant) {
+        showToast(result.message, 'error');
+      } else {
+        showToast(`${detailTarget.prenom} ${detailTarget.nom} a été ajouté en tant qu'étudiant.`, 'success');
+        setConvertOpen(false);
+      }
+    } catch (error) {
+      const errorMsg = error.response?.data?.error || 'Erreur lors de la conversion.';
+      showToast(errorMsg, 'error');
+    } finally {
+      setConversionLoading(false);
+    }
+  };
+
+  // ══════════════════════════════════════════════════════════════════
+  //  RELANCE INLINE
+  // ══════════════════════════════════════════════════════════════════
+  const toggleRelance = () => {
+    setRelanceOpen(v => !v);
+    setRelanceDate('');
+    setRelanceCommentaire('');
+    setRelanceError('');
+  };
+
+  const handleCreateRelanceInline = async () => {
+    if (!relanceDate) {
+      setRelanceError('La date de relance est obligatoire.');
+      return;
+    }
+    setRelanceError('');
+    try {
+      setRelanceSaving(true);
+      await createDiplomeRelance(detailTarget.id, {
+        dateRelance: relanceDate,
+        commentaire: relanceCommentaire,
+        formationId: detailTarget.formationCertifiee || null,
+      });
+      showToast('✅ Relance programmée avec succès !');
+      setRelanceOpen(false);
+      const refreshed = await getDiplome(detailTarget.id);
+      setDetailTarget(refreshed);
+      setDiplomes((prev) => prev.map((d) => (d.id === detailTarget.id ? refreshed : d)));
+    } catch (err) {
+      let errorMsg = 'Erreur lors de la création de la relance.';
+      if (err.response?.data) {
+        if (typeof err.response.data === 'object')
+          errorMsg = Object.values(err.response.data).flat().join(', ');
+        else errorMsg = err.response.data;
+      } else if (err.message) {
+        errorMsg = err.message;
+      }
+      showToast(errorMsg, 'error');
+    } finally {
+      setRelanceSaving(false);
+    }
+  };
+
+  // ══════════════════════════════════════════════════════════════════
   //  IMPRESSION ATTESTATION
-  // ══════════════════════════════════════════════════════════
+  // ══════════════════════════════════════════════════════════════════
   const printAttestation = (d) => {
     const win = window.open('', '_blank', 'width=794,height=1123');
     if (!win) return;
@@ -215,9 +394,7 @@ const Diplomes = () => {
           <div class="title">Attestation de Réussite</div>
           <div class="subtitle">Ce document certifie l'achèvement d'une formation</div>
         </div>
-
         <div class="seal">🎓</div>
-
         <div class="body-text">
           Nous soussignés certifions que
           <br/>
@@ -225,20 +402,17 @@ const Diplomes = () => {
           <br/>
           a suivi avec succès et obtenu son attestation pour la formation :
         </div>
-
         <div class="formation-box">
           <div class="formation-label">Formation certifiée</div>
           <div class="formation-name">${d.formationIntitule || '—'}</div>
           ${d.formationDuree ? `<div class="formation-duree">Durée : ${d.formationDuree}</div>` : ''}
         </div>
-
         ${d.seancesTotal > 0 ? `
           <div style="text-align:center; font-size:13px; color:#475569; margin-bottom:20px;">
             Taux de présence : <strong>${calcPct(d.seancesTotal, d.absences)}%</strong>
             (${d.seancesTotal - d.absences} séances sur ${d.seancesTotal})
           </div>
         ` : ''}
-
         <div class="footer">
           <div class="date-block">
             Délivrée le : <strong>${d.dateAttestation || new Date().toLocaleDateString('fr-FR')}</strong>
@@ -248,7 +422,6 @@ const Diplomes = () => {
             <div class="sign-title">Le Directeur de Formation</div>
           </div>
         </div>
-
         <div class="watermark">Document officiel — Confidentiel</div>
       </body>
       </html>
@@ -257,11 +430,10 @@ const Diplomes = () => {
     setTimeout(() => { win.focus(); win.print(); }, 400);
   };
 
-  // ══════════════════════════════════════════════════════════
+  // ══════════════════════════════════════════════════════════════════
   //  TÉLÉCHARGEMENT ATTESTATION (PDF)
-  // ══════════════════════════════════════════════════════════
+  // ══════════════════════════════════════════════════════════════════
   const downloadAttestation = async (d) => {
-    // Charger html2pdf.js dynamiquement si pas encore chargé
     if (!window.html2pdf) {
       await new Promise((resolve, reject) => {
         const script = document.createElement('script');
@@ -275,7 +447,6 @@ const Diplomes = () => {
     const pct = calcPct(d.seancesTotal, d.absences);
     const dateStr = d.dateAttestation || new Date().toLocaleDateString('fr-FR');
 
-    // Construire le contenu visible dans le DOM (pas hors-écran)
     const container = document.createElement('div');
     container.style.cssText = [
       'position:fixed', 'top:0', 'left:0', 'width:794px',
@@ -291,10 +462,8 @@ const Diplomes = () => {
           <div style="font-size:32px;font-weight:bold;color:#1A6B4A;margin-bottom:6px;">Attestation de Réussite</div>
           <div style="font-size:14px;color:#475569;">Ce document certifie l'achèvement d'une formation</div>
         </div>
-
         <div style="width:80px;height:80px;border-radius:50%;background:#1A6B4A;
           margin:20px auto;font-size:36px;text-align:center;line-height:80px;">🎓</div>
-
         <div style="font-size:15px;line-height:2;text-align:center;margin:30px 0;color:#334155;">
           Nous soussignés certifions que<br/>
           <span style="font-size:26px;color:#1E3A5F;font-weight:bold;
@@ -303,7 +472,6 @@ const Diplomes = () => {
           </span><br/>
           a suivi avec succès et obtenu son attestation pour la formation :
         </div>
-
         <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;
           padding:20px 30px;margin:30px 0;text-align:center;">
           <div style="font-size:11px;color:#6b7280;letter-spacing:2px;
@@ -315,13 +483,11 @@ const Diplomes = () => {
             ? `<div style="font-size:13px;color:#475569;margin-top:4px;">Durée : ${d.formationDuree}</div>`
             : ''}
         </div>
-
         ${d.seancesTotal > 0 ? `
           <div style="text-align:center;font-size:13px;color:#475569;margin-bottom:20px;">
             Taux de présence : <strong>${pct}%</strong>
             &nbsp;(${d.seancesTotal - d.absences} séances sur ${d.seancesTotal})
           </div>` : ''}
-
         <div style="margin-top:60px;display:table;width:100%;">
           <div style="display:table-cell;font-size:13px;color:#64748b;vertical-align:bottom;">
             Délivrée le : <strong>${dateStr}</strong>
@@ -332,15 +498,12 @@ const Diplomes = () => {
             <div style="font-size:12px;color:#64748b;">Le Directeur de Formation</div>
           </div>
         </div>
-
         <div style="margin-top:40px;text-align:center;font-size:11px;
           color:#cbd5e1;letter-spacing:1px;">Document officiel — Confidentiel</div>
       </div>
     `;
 
     document.body.appendChild(container);
-
-    // Laisser le navigateur rendre l'élément avant de le capturer
     await new Promise(r => setTimeout(r, 100));
 
     const opt = {
@@ -417,42 +580,11 @@ const Diplomes = () => {
   //  PAGE DÉTAIL
   // ══════════════════════════════════════════════════════════
   if (pageView === 'detail' && detailTarget) {
-    const d   = detailTarget;
-    // Activités simulées à partir des données disponibles
-    const activites = [
-      {
-        id: 1,
-        icon: 'fa-solid fa-calendar-check',
-        iconBg: '#EBF4FF',
-        iconColor: '#336699',
-        label: 'Attestation délivrée',
-        date: d.dateAttestation ? `Aujourd'hui à ${new Date().getHours()}h${String(new Date().getMinutes()).padStart(2,'0')}` : '—',
-        done: true,
-      },
-      {
-        id: 2,
-        icon: 'fa-solid fa-circle-check',
-        iconBg: '#F0FDF4',
-        iconColor: '#1A6B4A',
-        label: 'Fin de la formation',
-        date: d.dateAttestation || '—',
-        done: true,
-      },
-      {
-        id: 3,
-        icon: 'fa-solid fa-calendar-plus',
-        iconBg: '#EBF4FF',
-        iconColor: '#336699',
-        label: `Inscription au cours ${d.formationIntitule || ''}`,
-        date: d.dateCreation || '—',
-        done: false,
-      },
-    ];
+    const d = detailTarget;
 
     return (
       <Layout>
         <div className="det-page">
-          {/* ── Breadcrumb ── */}
           <div className="det-topbar">
             <button className="back-btn" onClick={closeDetail}>
               <i className="fa-solid fa-arrow-left"></i>
@@ -463,13 +595,8 @@ const Diplomes = () => {
           </div>
 
           <div className="det-body">
-
-            {/* ════════════════════════════════════
-                SIDEBAR GAUCHE
-            ════════════════════════════════════ */}
+            {/* SIDEBAR GAUCHE */}
             <div className="det-sidebar">
-
-              {/* Avatar + nom + badge */}
               <div className="det-sid-hero">
                 <div className="det-sid-avatar" style={{ background: 'linear-gradient(135deg, #1E3A5F, #336699)' }}>
                   {d.prenom[0]}{d.nom[0]}
@@ -480,7 +607,6 @@ const Diplomes = () => {
                 </span>
               </div>
 
-              {/* Tags Formation / Niveau */}
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '14px' }}>
                 {d.formationIntitule && (
                   <span style={{ display:'inline-flex', alignItems:'center', gap:'4px', background:'#EBF4FF', color:'#336699', border:'1px solid rgba(51,102,153,.22)', borderRadius:'20px', padding:'3px 10px', fontSize:'11.5px', fontWeight:'500' }}>
@@ -498,7 +624,6 @@ const Diplomes = () => {
 
               <div className="det-sid-divider" />
 
-              {/* Champs contact */}
               <div className="det-sid-fields">
                 <div className="det-sid-field">
                   <span className="det-sid-label"><i className="fa-regular fa-envelope"></i> E-mail</span>
@@ -518,26 +643,237 @@ const Diplomes = () => {
                 </div>
               </div>
 
-              {/* Boutons d'action */}
+              {/* BOUTONS D'ACTION SIDEBAR */}
               <div className="det-sid-actions">
-                <button className="det-action-btn det-action-edit" onClick={() => printAttestation(d)}>
-                  <i className="fa-regular fa-envelope"></i> Envoyer attestation
+                <button 
+                  className="det-action-btn det-action-relance" 
+                  onClick={toggleRelance}
+                >
+                  <i className="fa-solid fa-bell"></i>
+                  {relanceOpen ? 'Fermer la relance' : 'Ajouter une relance'}
                 </button>
-                <button className="det-action-btn det-action-edit" onClick={() => downloadAttestation(d)}>
+                <button 
+                  className="det-action-btn det-action-convert"
+                  onClick={toggleConvert}
+                >
+                  <i className="fa-solid fa-user-plus"></i>
+                  {convertOpen ? 'Fermer la conversion' : 'Convertir en Étudiant'}
+                </button>
+                <button 
+                  className="det-action-btn det-action-edit" 
+                  onClick={() => downloadAttestation(d)}
+                >
                   <i className="fa-solid fa-download"></i> Télécharger
+                </button>
+                <button 
+                  className="det-action-btn det-action-edit" 
+                  onClick={() => handleEnvoyerAttestation(d.id)}
+                  disabled={sendingEmailId === d.id}
+                >
+                  {sendingEmailId === d.id 
+                    ? <><i className="fa-solid fa-spinner fa-spin"></i> Envoi en cours...</>
+                    : <><i className="fa-regular fa-envelope"></i> Envoyer attestation</>
+                  }
                 </button>
               </div>
             </div>
 
-            {/* ════════════════════════════════════
-                CONTENU PRINCIPAL DROITE
-            ════════════════════════════════════ */}
+            {/* CONTENU PRINCIPAL DROITE */}
             <div className="det-main">
+              {/* FORMULAIRE RELANCE INLINE */}
+              {relanceOpen && (
+                <div className="relance-box det-convert-box">
+                  <div className="relance-box-title">
+                    <i className="fa-solid fa-bell"></i> Programmer une relance
+                    <button className="relance-box-close" onClick={toggleRelance}>
+                      <i className="fa-solid fa-xmark"></i>
+                    </button>
+                  </div>
+                  {relanceError && (
+                    <div className="relance-error-banner">
+                      <i className="fa-solid fa-triangle-exclamation"></i> {relanceError}
+                    </div>
+                  )}
+                  <div className="relance-field">
+                    <label className="relance-label">
+                      <i className="fa-regular fa-calendar"></i> Date de relance
+                      <span className="required-star">*</span>
+                    </label>
+                    <input
+                      type="date"
+                      className="relance-input"
+                      value={relanceDate}
+                      min={new Date().toISOString().split('T')[0]}
+                      onChange={(e) => { setRelanceDate(e.target.value); setRelanceError(''); }}
+                    />
+                  </div>
+                  <div className="relance-field">
+                    <label className="relance-label">
+                      <i className="fa-regular fa-comment"></i> Commentaire
+                      <span className="optional-tag">optionnel</span>
+                    </label>
+                    <textarea
+                      className="relance-textarea"
+                      placeholder="Ex : Rappeler pour confirmer son intérêt…"
+                      rows={3}
+                      value={relanceCommentaire}
+                      onChange={(e) => setRelanceCommentaire(e.target.value)}
+                    />
+                  </div>
+                  <div className="relance-box-footer">
+                    <button className="btn-relance-cancel" onClick={toggleRelance} disabled={relanceSaving}>
+                      Annuler
+                    </button>
+                    <button className="btn-relance-save" onClick={handleCreateRelanceInline} disabled={relanceSaving}>
+                      {relanceSaving ? (
+                        <><i className="fa-solid fa-spinner fa-spin"></i> Enregistrement…</>
+                      ) : (
+                        <><i className="fa-solid fa-check"></i> Enregistrer</>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              )}
 
+              {/* CONVERSION BOX INLINE */}
+              {convertOpen && (
+                <div className="convert-box det-convert-box">
+                  <div className="convert-title">
+                    <i className="fa-solid fa-graduation-cap"></i> Conversion en Étudiant
+                    <button className="det-convert-close" onClick={toggleConvert}>
+                      <i className="fa-solid fa-xmark"></i>
+                    </button>
+                  </div>
+                  
+                  <div className="conv-section-label">
+                    <i className="fa-solid fa-book-open"></i> FORMATION(s) SUIVIE(s)
+                    <span style={{ color: '#e53e3e', marginLeft: '4px' }}>*</span>
+                  </div>
+                  
+                  <div className="conv-search-box">
+                    <i className="fa-solid fa-magnifying-glass"></i>
+                    <input
+                      type="text"
+                      placeholder="Rechercher une formation..."
+                      value={formationSearch}
+                      onChange={(e) => setFormationSearch(e.target.value)}
+                      className="conv-search-input"
+                    />
+                  </div>
+                  
+                  <div className="cfp-wrap">
+                    <div className="cfp-list">
+                      {getFilteredFormations().map(f => {
+                        const checked = conversionForm.formations.includes(f.id);
+                        return (
+                          <div 
+                            key={f.id} 
+                            className={`cfp-item${checked ? ' cfp-item--checked' : ''}`} 
+                            onClick={() => toggleFormationSelection(f.id)}
+                          >
+                            <div className={`cfp-checkbox${checked ? ' cfp-checkbox--checked' : ''}`}>
+                              {checked && <i className="fa-solid fa-check cfp-check-icon"></i>}
+                            </div>
+                            <span className="cfp-label">{f.label}</span>
+                            <span className="dur-tag">{f.duree}</span>
+                          </div>
+                        );
+                      })}
+                      {getFilteredFormations().length === 0 && (
+                        <div className="conv-no-results">
+                          <i className="fa-solid fa-folder-open"></i>
+                          <span>Aucune formation trouvée</span>
+                        </div>
+                      )}
+                    </div>
+                    {conversionForm.formations.length > 0 && (
+                      <div className="cfp-counter">
+                        <i className="fa-solid fa-circle-check"></i> {conversionForm.formations.length} formation(s) sélectionnée(s)
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="conv-section-label" style={{ marginTop: '20px' }}>
+                    <i className="fa-solid fa-folder"></i> Documents fournis
+                  </div>
+                  
+                  <div className="documents-grid">
+                    <label className={`doc-item ${documents.cin ? 'doc-item--checked' : ''}`}>
+                      <input type="checkbox" checked={documents.cin} onChange={() => toggleDocument('cin')} />
+                      <span className="doc-checkbox">{documents.cin && <i className="fa-solid fa-check"></i>}</span>
+                      <span className="doc-label">CIN</span>
+                    </label>
+                    <label className={`doc-item ${documents.cv ? 'doc-item--checked' : ''}`}>
+                      <input type="checkbox" checked={documents.cv} onChange={() => toggleDocument('cv')} />
+                      <span className="doc-checkbox">{documents.cv && <i className="fa-solid fa-check"></i>}</span>
+                      <span className="doc-label">CV</span>
+                    </label>
+                    <label className={`doc-item ${documents.contrat ? 'doc-item--checked' : ''}`}>
+                      <input type="checkbox" checked={documents.contrat} onChange={() => toggleDocument('contrat')} />
+                      <span className="doc-checkbox">{documents.contrat && <i className="fa-solid fa-check"></i>}</span>
+                      <span className="doc-label">Contrat</span>
+                    </label>
+                    <label className={`doc-item ${documents.recu ? 'doc-item--checked' : ''}`}>
+                      <input type="checkbox" checked={documents.recu} onChange={() => toggleDocument('recu')} />
+                      <span className="doc-checkbox">{documents.recu && <i className="fa-solid fa-check"></i>}</span>
+                      <span className="doc-label">Reçu</span>
+                    </label>
+                    <label className={`doc-item ${documents.rne ? 'doc-item--checked' : ''}`}>
+                      <input type="checkbox" checked={documents.rne} onChange={() => toggleDocument('rne')} />
+                      <span className="doc-checkbox">{documents.rne && <i className="fa-solid fa-check"></i>}</span>
+                      <span className="doc-label">RNE</span>
+                    </label>
+                    <label className={`doc-item ${documents.autres ? 'doc-item--checked' : ''}`}>
+                      <input type="checkbox" checked={documents.autres} onChange={() => toggleDocument('autres')} />
+                      <span className="doc-checkbox">{documents.autres && <i className="fa-solid fa-check"></i>}</span>
+                      <span className="doc-label">Autres</span>
+                    </label>
+                  </div>
+                  
+                  {documents.autres && (
+                    <div className="doc-other-input">
+                      <input
+                        type="text"
+                        placeholder="Précisez les autres documents..."
+                        value={docOtherValue}
+                        onChange={(e) => setDocOtherValue(e.target.value)}
+                        className="form-control"
+                      />
+                    </div>
+                  )}
+                  
+                  <div className="form-group" style={{ marginTop: '20px' }}>
+                    <label className="form-label">Notes / Observations</label>
+                    <textarea 
+                      className="form-control" 
+                      rows={3} 
+                      placeholder="Observations, remarques sur l'étudiant..." 
+                      value={conversionForm.notes} 
+                      onChange={e => setConversionForm(prev => ({ ...prev, notes: e.target.value }))} 
+                      disabled={conversionLoading} 
+                    />
+                  </div>
+                  
+                  <div className="det-convert-footer">
+                    <button className="btn btn-cancel" onClick={toggleConvert}>
+                      Annuler
+                    </button>
+                    <button 
+                      className="btn-confirm" 
+                      style={{ flex: 1 }} 
+                      onClick={handleConvertirVersEtudiant} 
+                      disabled={conversionLoading || conversionForm.formations.length === 0}
+                    >
+                      {conversionLoading ? 
+                        <><i className="fa-solid fa-spinner fa-spin"></i> Conversion…</> : 
+                        <><i className="fa-solid fa-check"></i> Confirmer la conversion</>
+                      }
+                    </button>
+                  </div>
+                </div>
+              )}
 
-
-              {/* ── Ligne 2 : Notes ── */}
-              {/* Card Notes */}
+              {/* CARTE NOTES */}
               <div className="det-section-card" style={{ padding: '18px 22px' }}>
                 <div className="det-section-header" style={{ marginBottom: '14px' }}>
                   <i className="fa-solid fa-note-sticky"></i> Notes
@@ -555,45 +891,47 @@ const Diplomes = () => {
                 )}
               </div>
 
-              {/* ── Ligne 3 : Timeline détaillée (événements cliquables) ── */}
+              {/* ACTIVITÉS / TIMELINE - DÉPLACÉ AVANT L'HISTORIQUE DES RELANCES */}
               <div className="det-section-card" style={{ padding: '18px 22px' }}>
                 <div className="det-section-header" style={{ marginBottom: '14px' }}>
-                  <i className="fa-solid fa-list-check"></i> Notes
+                  <i className="fa-solid fa-list-check"></i> Activités
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  {activites.map((a) => (
-                    <div
-                      key={a.id}
-                      style={{
-                        display: 'flex', alignItems: 'center', gap: '14px',
-                        background: '#F8FAFC', border: '1px solid #E8EDF3',
-                        borderRadius: '10px', padding: '12px 16px', cursor: 'pointer',
-                        transition: 'background .15s, border-color .15s',
-                      }}
-                      onMouseEnter={e => { e.currentTarget.style.background = '#EBF4FF'; e.currentTarget.style.borderColor = '#33CCFF'; }}
-                      onMouseLeave={e => { e.currentTarget.style.background = '#F8FAFC'; e.currentTarget.style.borderColor = '#E8EDF3'; }}
-                    >
-                      {/* Icône */}
-                      <div style={{
-                        width: '38px', height: '38px', borderRadius: '50%', flexShrink: 0,
-                        background: a.iconBg || '#EBF4FF',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      }}>
-                        <i className={a.icon} style={{ fontSize: '14px', color: a.iconColor || '#336699' }}></i>
-                      </div>
-                      {/* Label + date */}
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: '13px', fontWeight: '600', color: '#1E3A5F' }}>{a.label}</div>
-                        <div style={{ fontSize: '11.5px', color: '#94A3B8', marginTop: '2px' }}>{a.date}</div>
-                      </div>
-                      {/* Chevron */}
-                      <i className="fa-solid fa-chevron-right" style={{ fontSize: '10px', color: '#CBD5E1' }}></i>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px', background: '#F8FAFC', border: '1px solid #E8EDF3', borderRadius: '10px', padding: '12px 16px' }}>
+                    <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: '#EBF4FF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <i className="fa-solid fa-calendar-check" style={{ fontSize: '14px', color: '#336699' }}></i>
                     </div>
-                  ))}
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: '13px', fontWeight: '600', color: '#1E3A5F' }}>Attestation délivrée</div>
+                      <div style={{ fontSize: '11.5px', color: '#94A3B8', marginTop: '2px' }}>{d.dateAttestation || '—'}</div>
+                    </div>
+                    <i className="fa-solid fa-chevron-right" style={{ fontSize: '10px', color: '#CBD5E1' }}></i>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px', background: '#F8FAFC', border: '1px solid #E8EDF3', borderRadius: '10px', padding: '12px 16px' }}>
+                    <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: '#F0FDF4', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <i className="fa-solid fa-circle-check" style={{ fontSize: '14px', color: '#1A6B4A' }}></i>
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: '13px', fontWeight: '600', color: '#1E3A5F' }}>Fin de la formation</div>
+                      <div style={{ fontSize: '11.5px', color: '#94A3B8', marginTop: '2px' }}>{d.dateAttestation || '—'}</div>
+                    </div>
+                    <i className="fa-solid fa-chevron-right" style={{ fontSize: '10px', color: '#CBD5E1' }}></i>
+                  </div>
                 </div>
               </div>
 
-            </div>{/* fin det-main */}
+              {/* HISTORIQUE DES RELANCES - DÉPLACÉ APRÈS LES ACTIVITÉS */}
+              <div className="det-section-card">
+                <div className="det-section-header">
+                  <i className="fa-solid fa-bell"></i> Historique des relances
+                </div>
+                <DiplomeRelances 
+                  diplomeId={d.id} 
+                  diplomeNom={`${d.prenom} ${d.nom}`}
+                  formationId={d.formationCertifiee}
+                />
+              </div>
+            </div>
           </div>
         </div>
 
@@ -655,7 +993,6 @@ const Diplomes = () => {
         </div>
       )}
 
-      {/* ── État de chargement ── */}
       {loading && (
         <div className="empty-state" style={{ paddingTop: '60px' }}>
           <i className="fa-solid fa-spinner fa-spin" style={{ fontSize: '32px', color: '#1A6B4A' }}></i>
@@ -663,7 +1000,6 @@ const Diplomes = () => {
         </div>
       )}
 
-      {/* ── Erreur API ── */}
       {apiError && !loading && (
         <div className="empty-state">
           <i className="fa-solid fa-triangle-exclamation" style={{ color: '#ef4444' }}></i>
@@ -674,7 +1010,6 @@ const Diplomes = () => {
         </div>
       )}
 
-      {/* ── Table ── */}
       {!loading && !apiError && (
         <div className="table-card">
           <div className="table-top">
@@ -770,7 +1105,6 @@ const Diplomes = () => {
             )}
           </div>
 
-          {/* Pagination */}
           {totalPages > 1 && (
             <div className="pagination">
               <button className="pg-btn" disabled={currentPage === 1} onClick={() => setCurrentPage(1)}>

@@ -74,6 +74,16 @@ export const deleteDiplome = async (id) => {
 };
 
 /**
+ * Envoie l'attestation par email au diplômé.
+ * @param {number} id - ID du diplôme
+ * @returns {Promise<{message: string}>}
+ */
+export const envoyerAttestation = async (id) => {
+  const res = await api.post(`${BASE}${id}/envoyer-attestation/`);
+  return res.data;
+};
+
+/**
  * Certifie un étudiant pour une formation donnée.
  *
  * Logique backend :
@@ -105,5 +115,59 @@ export const certifierVerseDiplome = async (etudiantId, formationId, dateAttesta
     etudiantSupprime: res.data.etudiant_supprime,
     certifiees:       res.data.certifiees,
     total:            res.data.total,
+  };
+};
+
+/**
+ * Convertit un diplômé en étudiant pour commencer une nouvelle formation.
+ * Crée un nouvel enregistrement étudiant avec les informations du diplômé.
+ * 
+ * @param {object} diplomeData - Données du diplômé
+ * @param {array} formationIds - IDs des formations à associer
+ * @param {string} notes       - Notes/observations
+ * 
+ * @returns {Promise<{etudiant: object, existant: boolean, message: string}>}
+ */
+export const convertirVersEtudiant = async (diplomeData, formationIds = [], notes = '') => {
+  // Vérifier si un étudiant avec le même email existe déjà
+  const etudiantsRes = await api.get('etudiants/', {
+    params: { search: diplomeData.email }
+  });
+  
+  const etudiants = etudiantsRes.data || [];
+  const existant = etudiants.some(e => 
+    e.email === diplomeData.email && 
+    e.nom === diplomeData.nom && 
+    e.prenom === diplomeData.prenom
+  );
+  
+  if (existant) {
+    return {
+      etudiant: null,
+      existant: true,
+      message: `Un étudiant avec ces informations existe déjà.`
+    };
+  }
+  
+  // Créer le nouvel étudiant
+  const payload = {
+    nom: diplomeData.nom,
+    prenom: diplomeData.prenom,
+    email: diplomeData.email,
+    telephone: diplomeData.tel,
+    ville: diplomeData.ville,
+    pays: diplomeData.pays,
+    notes: notes,
+    formations_suivies: formationIds,
+    statut: 'actif',
+    mode_paiement: 'espece',
+  };
+  
+  const createRes = await api.post('etudiants/', payload);
+  
+  return {
+    etudiant: createRes.data,
+    existant: false,
+    message: `Étudiant créé avec succès.`
   };
 };

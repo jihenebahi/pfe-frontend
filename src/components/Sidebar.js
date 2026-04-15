@@ -41,9 +41,6 @@ function Sidebar() {
       <Link to="/diplomes" className={`sidebar-link ${isActive("/diplomes") ? "active" : ""}`}>
         <i className="fa-solid fa-award"></i> Diplômés
       </Link>
-      <Link to="/entreprises" className={`sidebar-link ${isActive("/entreprises") ? "active" : ""}`}>
-        <i className="fa-solid fa-building"></i> Entreprises
-      </Link>
       <Link to="/marketing-mail" className={`sidebar-link ${isActive("/marketing-mail") ? "active" : ""}`}>
         <i className="fa-solid fa-envelope"></i> Marketing Mail
       </Link>
@@ -55,18 +52,6 @@ function Sidebar() {
       </Link>
       <Link to="/formations" className={`sidebar-link ${isActive("/formations") ? "active" : ""}`}>
         <i className="fa-solid fa-book-open"></i> Formations
-      </Link>
-
-      {/* DOCUMENTS ADMINISTRATIFS */}
-      <div className="sidebar-title">DOCUMENTS ADMINISTRATIFS</div>
-      <Link to="/factures" className={`sidebar-link ${isActive("/factures") ? "active" : ""}`}>
-        <i className="fa-solid fa-file-invoice"></i> Factures
-      </Link>
-      <Link to="/paiements" className={`sidebar-link ${isActive("/paiements") ? "active" : ""}`}>
-        <i className="fa-solid fa-credit-card"></i> Paiements
-      </Link>
-      <Link to="/attestations" className={`sidebar-link ${isActive("/attestations") ? "active" : ""}`}>
-        <i className="fa-solid fa-certificate"></i> Attestations
       </Link>
 
       {/* SYSTÈME */}

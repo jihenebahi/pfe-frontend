@@ -46,7 +46,7 @@ function App() {
           {/* Gestion des comptes */}
           <Route path="/gestion-comptes"  element={<PrivateRoute><GestionComptes /></PrivateRoute>} />
           <Route path="/ajouter-compte"   element={<PrivateRoute><AjouterCompte /></PrivateRoute>} />
-          <Route path="/modifier-compte"  element={<PrivateRoute><ModifierCompte /></PrivateRoute>} /> {/* ✅ NOUVEAU */}
+          <Route path="/modifier-compte"  element={<PrivateRoute><ModifierCompte /></PrivateRoute>} />
           <Route path="/details-compte"   element={<PrivateRoute><DetailsCompte /></PrivateRoute>} />
 
           {/* Info Centre */}

@@ -221,14 +221,11 @@ const FormationFilterDropdown = ({ value, onChange, formations = [] }) => {
       className: `filter-sel filter-formation-btn${open ? ' filter-open' : ''}${value !== 'Toutes' ? ' filter-active' : ''}`,
       onClick: () => setOpen(v => !v)
     },
-      // ❌ ICON SUPPRIMÉE ICI
-
       React.createElement('span', { className: 'filter-btn-text' },
         value !== 'Toutes' && selected ? selected.label : 'Toutes les formations'
       ),
       React.createElement('i', { className: `fa-solid fa-chevron-${open ? 'up' : 'down'} filter-chevron` })
     ),
-
     open && React.createElement('div', { className: 'filter-dropdown' },
       React.createElement('div', { className: 'filter-search-wrap' },
         React.createElement('i', { className: 'fa-solid fa-magnifying-glass filter-search-icon' }),
@@ -247,7 +244,6 @@ const FormationFilterDropdown = ({ value, onChange, formations = [] }) => {
           React.createElement('i', { className: 'fa-solid fa-xmark' })
         )
       ),
-
       React.createElement('div', { className: 'filter-list' },
         React.createElement('div', {
           className: `filter-item${value === 'Toutes' ? ' filter-item--selected' : ''}`,
@@ -256,7 +252,6 @@ const FormationFilterDropdown = ({ value, onChange, formations = [] }) => {
           React.createElement('i', { className: 'fa-solid fa-list filter-item-icon' }),
           'Toutes les formations'
         ),
-
         filtered.length === 0
           ? React.createElement('div', { className: 'filter-empty' }, 'Aucune formation trouvée')
           : filtered.map(f => React.createElement('div', {
@@ -286,6 +281,28 @@ const ProspectForm = ({ initial, formRef, FORMATIONS }) => {
   const [fd, setFd] = useState({ ...defaults, ...(initial || {}) });
   const [errors, setErrors] = useState({});
 
+  // Fonction pour obtenir les options de diplôme selon le niveau
+  const getDiplomeOptions = (niveauEtudes) => {
+    if (niveauEtudes === 'Secondaire') {
+      return ['Bac'];
+    }
+    if (niveauEtudes === 'Universitaire') {
+      return DIPLOME_LIST;
+    }
+    return [];
+  };
+
+  // Déterminer si le champ diplôme doit être affiché
+const shouldShowDiplome = (niveauEtudes) => {
+  return niveauEtudes === 'Secondaire' || niveauEtudes === 'Universitaire';
+};
+
+const isDiplomeRequired = (niveauEtudes) => {
+  // Secondaire : NON obligatoire (l'élève peut être en 1ère, 2ème ou 3ème année)
+  // Universitaire : OUI obligatoire
+  return niveauEtudes === 'Universitaire';
+};
+
   formRef.current = {
     data: fd,
     triggerValidation: () => {
@@ -297,14 +314,27 @@ const ProspectForm = ({ initial, formRef, FORMATIONS }) => {
   };
 
   const set = (field, value) => {
-    setFd(prev => ({ ...prev, [field]: value }));
-    setErrors(prev => ({ ...prev, [field]: validateField(field, value, { ...fd, [field]: value }) }));
-    if (field === 'niveauEtudes' || field === 'diplomeObtenu') {
-      const other = field === 'niveauEtudes' ? 'diplomeObtenu' : 'niveauEtudes';
-      const otherVal = field === 'niveauEtudes' ? fd.diplomeObtenu : value;
+    // Si on change le niveau d'études, réinitialiser le diplôme
+    if (field === 'niveauEtudes') {
+      setFd(prev => ({ ...prev, [field]: value, diplomeObtenu: '' }));
+      setErrors(prev => ({ 
+        ...prev, 
+        [field]: validateField(field, value, { ...fd, [field]: value }),
+        ['diplomeObtenu']: validateField('diplomeObtenu', '', { ...fd, niveauEtudes: value, diplomeObtenu: '' })
+      }));
+    } else {
+      setFd(prev => ({ ...prev, [field]: value }));
+      setErrors(prev => ({ 
+        ...prev, 
+        [field]: validateField(field, value, { ...fd, [field]: value }) 
+      }));
+    }
+    
+    // Revalider le diplôme si le niveau change
+    if (field === 'niveauEtudes') {
       setErrors(prev => ({
         ...prev,
-        [other]: validateField(other, otherVal, { ...fd, [field]: value, [other]: otherVal }),
+        ['diplomeObtenu']: validateField('diplomeObtenu', fd.diplomeObtenu, { ...fd, niveauEtudes: value, diplomeObtenu: fd.diplomeObtenu })
       }));
     }
   };
@@ -333,7 +363,7 @@ const ProspectForm = ({ initial, formRef, FORMATIONS }) => {
         React.createElement('label', null, 'Niveau d\'études'),
         React.createElement('select', {
           value: fd.niveauEtudes || '',
-          onChange: e => { set('niveauEtudes', e.target.value); },
+          onChange: e => set('niveauEtudes', e.target.value),
           className: errors['niveauEtudes'] ? 'input-error' : ''
         },
           React.createElement('option', { value: '' }, '— Sélectionner —'),
@@ -345,15 +375,20 @@ const ProspectForm = ({ initial, formRef, FORMATIONS }) => {
           errors['niveauEtudes']
         )
       ),
-      React.createElement('div', { className: `pf-group${errors['diplomeObtenu'] ? ' pf-group--error' : ''}` },
-        React.createElement('label', null, 'Diplôme obtenu'),
+      
+      // Affichage conditionnel du champ Diplôme obtenu
+      shouldShowDiplome(fd.niveauEtudes) && React.createElement('div', { className: `pf-group${errors['diplomeObtenu'] ? ' pf-group--error' : ''}` },
+        React.createElement('label', null, 
+          'Diplôme obtenu',
+          isDiplomeRequired(fd.niveauEtudes) && React.createElement('span', { style: { color: '#e53e3e', marginLeft: '4px' } }, '*')
+        ),
         React.createElement('select', {
           value: fd.diplomeObtenu || '',
-          onChange: e => { set('diplomeObtenu', e.target.value); },
+          onChange: e => set('diplomeObtenu', e.target.value),
           className: errors['diplomeObtenu'] ? 'input-error' : ''
         },
           React.createElement('option', { value: '' }, '— Sélectionner —'),
-          DIPLOME_LIST.map(o => React.createElement('option', { key: o, value: o }, o))
+          getDiplomeOptions(fd.niveauEtudes).map(o => React.createElement('option', { key: o, value: o }, o))
         ),
         errors['diplomeObtenu'] && React.createElement('span', { className: 'pf-error-msg' },
           React.createElement('i', { className: 'fa-solid fa-circle-exclamation' }),
@@ -864,11 +899,25 @@ const Prospects = () => {
     try {
       const p = await getProspect(id);
       setDetailTarget(p);
-      setConvertOpen(false); setRelanceOpen(false);
-      setSelectedForms([]); setConvertData({ statutEtudiant: 'Actif', notes: '', documentsFournis: [] });
-      setRelanceDate(''); setRelanceCommentaire(''); setRelanceError('');
+      setConvertOpen(false); 
+      setRelanceOpen(false);
+      
+      const defaultSelectedForms = p.formations_ids || (p.formation ? [parseInt(p.formation, 10)] : []);
+      
+      setSelectedForms(defaultSelectedForms);
+      setConvertData({ 
+        statutEtudiant: 'Actif', 
+        notes: '', 
+        documentsFournis: [] 
+      });
+      setRelanceDate(''); 
+      setRelanceCommentaire(''); 
+      setRelanceError('');
       setPageView('detail');
-    } catch { showToast('Impossible de charger les détails du prospect.', 'error'); }
+    } catch (error) {
+      console.error('Erreur chargement détail:', error);
+      showToast('Impossible de charger les détails du prospect.', 'error');
+    }
   };
 
   // ── Recharger la fiche détail (pour rafraîchir l'historique) ──
@@ -898,7 +947,14 @@ const Prospects = () => {
   const toggleConvert = () => {
     setConvertOpen(v => !v);
     setRelanceOpen(false);
-    setSelectedForms([]); setConvertData({ statutEtudiant: 'Actif', notes: '', documentsFournis: [] });
+    
+    if (!convertOpen && detailTarget) {
+      const defaultForms = detailTarget.formations_ids || 
+                           (detailTarget.formation ? [parseInt(detailTarget.formation, 10)] : []);
+      setSelectedForms(defaultForms);
+    }
+    
+    setConvertData({ statutEtudiant: 'Actif', notes: '', documentsFournis: [] });
   };
   const toggleForm = (id) => setSelectedForms(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   const handleConvert = () => { if (!selectedForms.length) { showToast('Veuillez sélectionner au moins une formation.', 'error'); return; } setShowConfirmConvert(true); };
@@ -1132,7 +1188,7 @@ const Prospects = () => {
                 React.createElement('div', { className: 'det-field' }, React.createElement('span', { className: 'det-field-label' }, 'Date de naissance'), React.createElement('span', { className: 'det-field-val' }, p.dateNaissance || '—')),
                 React.createElement('div', { className: 'det-field' }, React.createElement('span', { className: 'det-field-label' }, 'Genre'), React.createElement('span', { className: 'det-field-val' }, p.genre || '—')),
                 React.createElement('div', { className: 'det-field' }, React.createElement('span', { className: 'det-field-label' }, 'Niveau d\'études'), React.createElement('span', { className: 'det-field-val' }, p.niveauEtudes || '—')),
-                React.createElement('div', { className: 'det-field' }, React.createElement('span', { className: 'det-field-label' }, 'Diplôme obtenu'), React.createElement('span', { className: 'det-field-val' }, p.diplomeObtenu || '—'))
+                p.diplomeObtenu && React.createElement('div', { className: 'det-field' }, React.createElement('span', { className: 'det-field-label' }, 'Diplôme obtenu'), React.createElement('span', { className: 'det-field-val' }, p.diplomeObtenu))
               )
             ),
             React.createElement('div', { className: 'det-section-card' },
@@ -1259,7 +1315,6 @@ const Prospects = () => {
         React.createElement('i', { className: 'fa-solid fa-user-plus' }),
         ' Gestion des Prospects'
       ),
-      React.createElement('div', { className: 'prsp-sub' }, 'Gérez le cycle de vie de vos prospects et convertissez-les en étudiants')
     ),
     React.createElement('div', { className: 'search-row' },
       React.createElement('div', { className: 'search-box' },
@@ -1430,7 +1485,6 @@ const Prospects = () => {
                   React.createElement('td', { className: 'td-num' }, (currentPage - 1) * PER_PAGE + i + 1),
                   React.createElement('td', null,
                     React.createElement('div', { className: 'td-name' }, p.nom, ' ', p.prenom),
-                    React.createElement('div', { className: 'td-sub' }, p.email)
                   ),
                   React.createElement('td', null,
                     React.createElement('div', { className: 'td-sub' }, p.email),

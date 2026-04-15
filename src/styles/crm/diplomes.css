@@ -502,3 +502,205 @@ tbody td { padding: 10px 14px; vertical-align: middle; }
 /* ─── UTILITY ─────────────────────────────────────────────── */
 .hidden { display: none !important; }
 .req { color: #e53e3e; }
+
+
+
+/* ── CFP (Convert Formation Picker) ── */
+.cfp-wrap { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; }
+.cfp-list { max-height: 200px; overflow-y: auto; }
+.cfp-item { display: flex; align-items: center; gap: 10px; padding: 10px 14px; cursor: pointer; border-bottom: 1px solid #f1f5f9; transition: background .15s; }
+.cfp-item:hover { background: rgba(51,204,255,.08); }
+.cfp-item--checked { background: rgba(51,102,153,.08); }
+.cfp-checkbox { width: 18px; height: 18px; border: 2px solid #cbd5e1; border-radius: 5px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: .15s; }
+.cfp-checkbox--checked { background: #336699; border-color: #336699; }
+.cfp-check-icon { font-size: 9px; color: #fff; }
+.cfp-label { flex: 1; font-size: 13px; color: #1e293b; font-weight: 500; }
+.cfp-empty { padding: 18px; text-align: center; font-size: 12.5px; color: #94a3b8; }
+.cfp-counter { padding: 8px 14px; font-size: 12px; color: #336699; font-weight: 600; border-top: 1px solid #e2e8f0; display: flex; align-items: center; gap: 6px; }
+
+/* ── Convert box inline ── */
+.det-convert-box { border: 1.5px solid rgba(51,204,255,.35) !important; background: linear-gradient(135deg, #EBF8FF 0%, #F0F7FF 100%) !important; border-radius: 12px; padding: 18px 20px; position: relative; }
+.det-convert-close { position: absolute; top: 14px; right: 14px; width: 28px; height: 28px; border: none; background: rgba(0,0,0,.06); border-radius: 7px; cursor: pointer; font-size: 12px; color: #64748B; display: flex; align-items: center; justify-content: center; transition: .18s; }
+.det-convert-close:hover { background: #fee2e2; color: #e53e3e; }
+.convert-box { background: linear-gradient(135deg, #EBF8FF 0%, #F0F7FF 100%); border: 1.5px solid rgba(51,204,255,.30); border-radius: 12px; padding: 16px; }
+.convert-title { font-size: 13px; font-weight: 700; color: #1A7A99; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
+.conv-section-label { font-size: 11.5px; font-weight: 700; color: #336699; text-transform: uppercase; letter-spacing: .4px; margin: 10px 0 6px; padding-bottom: 5px; border-bottom: 1px solid rgba(51,102,153,.15); display: flex; align-items: center; gap: 6px; }
+.dur-tag { font-size: 11px; color: #94A3B8; background: #F1F5F9; padding: 1px 8px; border-radius: 10px; }
+.form-group { display: flex; flex-direction: column; gap: 5px; }
+.form-label { display: block; font-size: 12px; font-weight: 600; color: #475569; margin-bottom: 4px; }
+.form-control { width: 100%; height: 36px; padding: 0 11px; border: 1.5px solid #E2E8F0; border-radius: 8px; font-size: 13px; color: #334155; font-family: 'Poppins', sans-serif; outline: none; transition: border-color .2s; background: #fff; }
+.form-control:focus { border-color: #33CCFF; box-shadow: 0 0 0 3px rgba(51,204,255,.12); }
+textarea.form-control { height: 72px; padding: 8px 11px; resize: vertical; }
+.btn-confirm { width: 100%; background: #336699; color: #fff; border: none; height: 36px; border-radius: 9px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: 'Poppins', sans-serif; transition: background .2s, transform .15s; margin-top: 10px; }
+.btn-confirm:hover { background: #2a5580; transform: translateY(-1px); }
+.btn-confirm:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+.det-convert-footer { display: flex; gap: 10px; margin-top: 14px; align-items: center; }
+.det-convert-footer .btn-confirm { margin-top: 0; flex: 1; }
+
+
+
+
+
+/* Styles pour la recherche de formation */
+.conv-search-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 8px 14px;
+  margin-bottom: 15px;
+  transition: all 0.2s ease;
+}
+
+.conv-search-box:focus-within {
+  border-color: #1A6B4A;
+  box-shadow: 0 0 0 3px rgba(26, 107, 74, 0.1);
+}
+
+.conv-search-box i {
+  color: #94a3b8;
+  font-size: 14px;
+}
+
+.conv-search-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-size: 13px;
+  background: transparent;
+}
+
+.conv-search-input::placeholder {
+  color: #cbd5e1;
+}
+
+.conv-no-results {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 30px;
+  color: #94a3b8;
+  text-align: center;
+}
+
+.conv-no-results i {
+  font-size: 32px;
+  margin-bottom: 10px;
+  opacity: 0.5;
+}
+
+.conv-no-results span {
+  font-size: 13px;
+}
+
+/* Grille des documents */
+.documents-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.doc-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.doc-item:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.doc-item--checked {
+  background: #f0fdf4;
+  border-color: #1A6B4A;
+}
+
+.doc-item input {
+  display: none;
+}
+
+.doc-checkbox {
+  width: 18px;
+  height: 18px;
+  border: 2px solid #cbd5e1;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: white;
+  transition: all 0.2s ease;
+}
+
+.doc-item--checked .doc-checkbox {
+  background: #1A6B4A;
+  border-color: #1A6B4A;
+}
+
+.doc-checkbox i {
+  font-size: 10px;
+  color: white;
+}
+
+.doc-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #334155;
+}
+
+.doc-item--checked .doc-label {
+  color: #1A6B4A;
+}
+
+/* Champ Autres supplémentaire */
+.doc-other-input {
+  margin-top: 10px;
+  margin-bottom: 5px;
+}
+
+.doc-other-input .form-control {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 13px;
+  transition: all 0.2s ease;
+}
+
+.doc-other-input .form-control:focus {
+  outline: none;
+  border-color: #1A6B4A;
+  box-shadow: 0 0 0 3px rgba(26, 107, 74, 0.1);
+}
+
+/* Ajustement de la boîte de conversion */
+.det-convert-box {
+  margin-bottom: 20px;
+}
+
+.conv-section-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #334155;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.conv-section-label i {
+  color: #1A6B4A;
+  font-size: 14px;
+}

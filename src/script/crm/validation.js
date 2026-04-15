@@ -2,12 +2,6 @@
 
 const ALPHA_REGEX  = /^[a-zA-ZÀ-ÿ\u0600-\u06FF\s'-]+$/;
 const EMAIL_REGEX  = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
-// src/script/crm/validation.js
-
-// ✅ NOUVELLE REGEX : 8 chiffres commençant par 2,4,5,7,9
-//    Exemples valides : 55123456, 23456789, 41234567, 71234567, 91234567
-//    Accepte aussi les espaces, tirets, points et indicatifs (les nettoie)
-// src/script/crm/validation.js
 
 // ✅ Bonne regex pour 8 chiffres commençant par 2,4,5,7,9
 const TEL_TN_REGEX = /^[24579]\d{7}$/;
@@ -24,8 +18,6 @@ export const cleanPhoneNumber = (phone) => {
   return cleaned;
 };
 
-
-
 const VALID_PAYS   = ['Tunisie', 'France', 'Algérie', 'Maroc', 'Belgique', 'Canada', 'Autre'];
 const VALID_SOURCE = [
   'Facebook', 'Instagram', 'TikTok', 'LinkedIn',
@@ -40,25 +32,34 @@ const VALID_NIVEAU_ETUDES = ['Primaire', 'Préparatoire', 'Secondaire', 'Univers
 const VALID_DIPLOME       = ['Bac', 'Licence', 'Master', 'Autre'];
 
 // ══════════════════════════════════════════════════════════
-//  Validation combinée niveau d'études / diplôme
+//  NOUVELLE VALIDATION : niveau d'études / diplôme
 // ══════════════════════════════════════════════════════════
 export const validateNiveauEtudesDiplome = (niveauEtudes, diplomeObtenu) => {
+  // Si aucun niveau n'est sélectionné, pas d'erreur
   if (!niveauEtudes) return '';
 
+  // Primaire ou Préparatoire : aucun diplôme autorisé
   if (niveauEtudes === 'Primaire' && diplomeObtenu && diplomeObtenu !== '') {
     return 'Pour le niveau Primaire, aucun diplôme ne peut être sélectionné.';
   }
-
+  
   if (niveauEtudes === 'Préparatoire' && diplomeObtenu && diplomeObtenu !== '') {
     return 'Pour le niveau Préparatoire, aucun diplôme ne peut être sélectionné.';
   }
 
-  if (niveauEtudes === 'Secondaire' && diplomeObtenu && diplomeObtenu !== 'Bac') {
-    return 'Pour le niveau Secondaire, seul le diplôme "Bac" est accepté.';
+  // Secondaire : si un diplôme est sélectionné, il doit être "Bac"
+  // Mais le diplôme n'est PAS obligatoire (l'élève peut être en cours)
+  if (niveauEtudes === 'Secondaire') {
+    if (diplomeObtenu && diplomeObtenu !== 'Bac') {
+      return 'Pour le niveau Secondaire, seul le diplôme "Bac" est accepté.';
+    }
   }
 
-  if (niveauEtudes === 'Universitaire' && (!diplomeObtenu || diplomeObtenu === '')) {
-    return 'Pour le niveau Universitaire, un diplôme doit être sélectionné.';
+  // Universitaire : diplôme obligatoire, tous les diplômes sont acceptés
+  if (niveauEtudes === 'Universitaire') {
+    if (!diplomeObtenu || diplomeObtenu === '') {
+      return 'Pour le niveau Universitaire, un diplôme doit être sélectionné.';
+    }
   }
 
   return '';
@@ -84,19 +85,13 @@ export const validateField = (field, value, allValues = {}) => {
       return '';
 
     case 'email':
-      // ✅ MODIFIÉ : l'email est maintenant optionnel.
-      // S'il est vide → pas d'erreur.
-      // S'il est renseigné → on vérifie le format et la longueur.
       if (!v) return '';
       if (!EMAIL_REGEX.test(v)) return "Format d'email invalide (ex : nom@domaine.com).";
       if (v.length > 150)       return "L'email ne peut pas dépasser 150 caractères.";
       return '';
 
-    // Modifiez la validation du champ 'tel'
-    // Dans validateField, remplacez le case 'tel' par :
     case 'tel': {
       if (!v) return 'Le téléphone est obligatoire.';
-      
       const cleaned = cleanPhoneNumber(v);
       if (!TEL_TN_REGEX.test(cleaned)) {
         return 'Numéro tunisien invalide. Format attendu : 8 chiffres commençant par 2, 4, 5, 7 ou 9 (ex: 55123456)';
@@ -129,21 +124,16 @@ export const validateField = (field, value, allValues = {}) => {
 
     case 'niveauEtudes':
       if (v && !VALID_NIVEAU_ETUDES.includes(v)) return "Veuillez sélectionner un niveau d'études valide.";
-      if (v && allValues.diplomeObtenu !== undefined) {
-        const crossError = validateNiveauEtudesDiplome(v, allValues.diplomeObtenu);
-        if (crossError) return crossError;
-      }
       return '';
 
     case 'diplomeObtenu':
-      if (v && !VALID_DIPLOME.includes(v)) return 'Veuillez sélectionner un diplôme valide.';
-      if (v && allValues.niveauEtudes) {
+      // Validation seulement si un niveau est sélectionné
+      if (allValues.niveauEtudes) {
         const crossError = validateNiveauEtudesDiplome(allValues.niveauEtudes, v);
         if (crossError) return crossError;
       }
-      if (allValues.niveauEtudes === 'Universitaire' && (!v || v === '')) {
-        return 'Pour le niveau Universitaire, un diplôme doit être sélectionné.';
-      }
+      // Validation du format du diplôme si présent
+      if (v && !VALID_DIPLOME.includes(v)) return 'Veuillez sélectionner un diplôme valide.';
       return '';
 
     case 'source':
@@ -194,13 +184,17 @@ export const validateAll = (fd) => {
     if (msg) errors[field] = msg;
   });
 
-  const crossError = validateNiveauEtudesDiplome(fd.niveauEtudes, fd.diplomeObtenu);
-  if (crossError) {
-    if (crossError.includes('Primaire') || crossError.includes('Préparatoire') || crossError.includes('Secondaire')) {
-      errors.niveauEtudes = crossError;
-    }
-    if (crossError.includes('diplôme') || crossError.includes('Bac')) {
-      errors.diplomeObtenu = crossError;
+  // Validation croisée supplémentaire
+  if (fd.niveauEtudes) {
+    const crossError = validateNiveauEtudesDiplome(fd.niveauEtudes, fd.diplomeObtenu);
+    if (crossError) {
+      if (crossError.includes('Primaire') || crossError.includes('Préparatoire')) {
+        errors.diplomeObtenu = crossError;
+      } else if (crossError.includes('Secondaire')) {
+        errors.diplomeObtenu = crossError;
+      } else if (crossError.includes('Universitaire')) {
+        errors.diplomeObtenu = crossError;
+      }
     }
   }
 
