@@ -343,11 +343,10 @@ function ChipGroupSimple({ items, selected, onChange, title, labelKey = "label",
   );
 }
 
-// ─── Filtre date unique (CORRIGÉ - Application immédiate) ────────────────────
+// ─── Filtre date unique ───────────────────────────────────────────────────────
 function DateFilter({ dateValue, setDateValue }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
-  const inputRef = useRef(null);
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -362,7 +361,7 @@ function DateFilter({ dateValue, setDateValue }) {
   const handleDateChange = (e) => {
     const newDate = e.target.value;
     setDateValue(newDate);
-    setOpen(false); // Fermer le dropdown après sélection
+    setOpen(false);
   };
 
   const handleReset = () => {
@@ -387,7 +386,6 @@ function DateFilter({ dateValue, setDateValue }) {
           <div style={{ padding: "12px" }}>
             <label style={{ fontSize: "11px", color: "#64748B", display: "block", marginBottom: "6px" }}>Filtrer par date</label>
             <input
-              ref={inputRef}
               type="date"
               className="fd-search-input"
               value={dateValue}
@@ -563,7 +561,7 @@ function ConfirmActionModal({ title, message, onConfirm, onClose }) {
   );
 }
 
-// ─── Table destinataires SANS bouton Envoyer ─────────────────
+// ─── Table destinataires AVEC sauvegarde automatique ─────────────────
 function RecipientsModal({ destinataires, onClose, onSave, savedSelections }) {
   const [search, setSearch] = useState("");
   const [dateFilter, setDateFilter] = useState("");
@@ -577,6 +575,11 @@ function RecipientsModal({ destinataires, onClose, onSave, savedSelections }) {
     return destinataires.map((_, i) => i);
   });
 
+  useEffect(() => {
+    const selectedContacts = selected.map((i) => destinataires[i]);
+    onSave(selectedContacts);
+  }, [selected, destinataires, onSave]);
+
   const filtered = destinataires.filter((d) => {
     const q = search.toLowerCase();
     const matchSearch = !q || 
@@ -587,10 +590,10 @@ function RecipientsModal({ destinataires, onClose, onSave, savedSelections }) {
     
     let matchDate = true;
     if (dateFilter) {
-      const dateInscription = d.date_inscription;
-      if (dateInscription && dateInscription !== "—") {
+      const dateValue = d.date_inscription || d.date_attestation;
+      if (dateValue && dateValue !== "—") {
         const filterDate = dateFilter;
-        const itemDate = dateInscription.split('/').reverse().join('-');
+        const itemDate = dateValue.split('/').reverse().join('-');
         matchDate = filterDate === itemDate;
       } else {
         matchDate = false;
@@ -612,12 +615,6 @@ function RecipientsModal({ destinataires, onClose, onSave, savedSelections }) {
   };
   
   const toggle = (idx) => setSelected((prev) => prev.includes(idx) ? prev.filter((x) => x !== idx) : [...prev, idx]);
-
-  const handleSave = () => {
-    const selectedContacts = selected.map((i) => destinataires[i]);
-    onSave(selectedContacts);
-    onClose();
-  };
 
   return (
     <div className="mm-overlay" onClick={onClose}>
@@ -648,7 +645,7 @@ function RecipientsModal({ destinataires, onClose, onSave, savedSelections }) {
               onChange={(e) => setSearch(e.target.value)} 
             />
           </div>
-          <DateSimpleFilter dateValue={dateFilter} setDateValue={setDateFilter} label="Date inscription" />
+          <DateSimpleFilter dateValue={dateFilter} setDateValue={setDateFilter} label="Date" />
         </div>
 
         <div style={{ overflowY: "auto", flex: 1 }}>
@@ -673,7 +670,7 @@ function RecipientsModal({ destinataires, onClose, onSave, savedSelections }) {
                   <th>Téléphone</th>
                   <th>Formation(s)</th>
                   <th>Statut</th>
-                  <th>Date inscription</th>
+                  <th>Date</th>
                 </tr>
               </thead>
               <tbody>
@@ -702,7 +699,7 @@ function RecipientsModal({ destinataires, onClose, onSave, savedSelections }) {
                           </span>
                         )}
                       </td>
-                      <td className="mm-td-gray">{d.date_inscription || "—"}</td>
+                      <td className="mm-td-gray">{d.date_inscription || d.date_attestation || "—"}</td>
                     </tr>
                   );
                 })}
@@ -715,9 +712,6 @@ function RecipientsModal({ destinataires, onClose, onSave, savedSelections }) {
           <span style={{ fontSize: "13px", color: "#64748B" }}>{selected.length} contact(s) sélectionné(s) sur {destinataires.length}</span>
           <div style={{ display: "flex", gap: "10px" }}>
             <button className="ce-btn-ghost" onClick={onClose}>Fermer</button>
-            <button className="ce-btn-save" onClick={handleSave} style={{ background: "#4aa3c7", color: "white", border: "none", padding: "8px 16px", borderRadius: "8px", cursor: "pointer", fontSize: "13px", fontWeight: "500" }}>
-              <i className="fa-solid fa-save" /> Enregistrer la sélection
-            </button>
           </div>
         </div>
       </div>
@@ -841,7 +835,7 @@ export default function MarketingMail() {
     }
   }, [form.statuts_prospects]);
 
-  // ── Chargement emails (CORRIGÉ AVEC DATE UNIQUE) ─────────────────────────────
+  // ── Chargement emails ─────────────────────────────────────────────────────
   const chargerEmails = useCallback(async () => {
     setLoading(true);
     setError("");
@@ -854,7 +848,6 @@ export default function MarketingMail() {
       }
       const params = { archive: isArchive, groupe, search: searchText, direct: isDirect };
       
-      // Envoyer une seule date si elle est valide
       if (dateFilter && dateFilter.length === 10 && /^\d{4}-\d{2}-\d{2}$/.test(dateFilter)) {
         params.date_unique = dateFilter;
       }
@@ -891,6 +884,38 @@ export default function MarketingMail() {
       setStatutsDisponibles([]);
     }
   }, [form.formations_cibles, form.groupe, isProspectOnly, fetchStatutsDisponiblesByFormations]);
+
+  // ── Chargement automatique des destinataires quand les filtres changent ──────
+  useEffect(() => {
+    if (form.send_mode === "segment" && (form.groupe || isProspectOnly)) {
+      const chargerDestinatairesAuto = async () => {
+        const groupeActuel = isProspectOnly ? "Prospects" : form.groupe;
+        if (!groupeActuel) return;
+        
+        try {
+          const formationsIds = form.formations_cibles.map((id) => Number(id));
+          const payload = {
+            groupe: groupeActuel,
+            formations_cibles: formationsIds,
+            statuts_prospects: form.statuts_prospects || [],
+            sources_prospects: [],
+          };
+          const res = await estimerDestinataires(payload);
+          if (res && res.destinataires && res.destinataires.length > 0) {
+            setRecipientsList(res.destinataires);
+            setSavedSelectedRecipients(res.destinataires);
+          } else {
+            setSavedSelectedRecipients([]);
+          }
+        } catch (err) {
+          console.error("Erreur chargement auto des destinataires:", err);
+          setSavedSelectedRecipients([]);
+        }
+      };
+      
+      chargerDestinatairesAuto();
+    }
+  }, [form.send_mode, form.groupe, isProspectOnly, form.formations_cibles, form.statuts_prospects]);
 
   // ── Pagination ──
   const totalPages      = Math.ceil(emails.length / itemsPerPage);
@@ -969,14 +994,20 @@ export default function MarketingMail() {
     }
   };
 
-  // ── Envoi (sans modal de confirmation) ──
+  // ── Sauvegarde des sélections ───────────────────────────────────────────
+  const handleSaveRecipientsSelection = (selectedContacts) => {
+    setSavedSelectedRecipients(selectedContacts);
+    setError("");
+  };
+
+  // ── Envoi ──
   const handleEnvoyer = async () => {
     if (!form.objet.trim())   { setError("L'objet est obligatoire."); return; }
     if (!form.message.trim()) { setError("Le message est obligatoire."); return; }
     if (form.send_mode === "direct" && !form.email_direct.trim()) { setError("L'adresse email est obligatoire."); return; }
     
     if (form.send_mode === "segment" && savedSelectedRecipients.length === 0) {
-      setError("Veuillez sélectionner au moins un destinataire dans la liste.");
+      setError("Aucun destinataire trouvé pour ces critères. Vérifiez vos filtres.");
       return;
     }
 
@@ -1006,13 +1037,16 @@ export default function MarketingMail() {
 
       await envoyerEmail(formDataToSend);
       
-      // Réinitialiser le formulaire
       setForm({ send_mode: "segment", email_direct: "", groupe: "", formations_cibles: [], statuts_prospects: [], objet: "", apercu: "", message: "", fichier: null });
       setIsProspectOnly(false);
       setSavedSelectedRecipients([]);
       setShowRecipients(false);
+      setActiveTab("tous");
+      setSearchText("");
+      setDateFilter("");
+      setCurrentPage(1);
+      setSelected([]);
       
-      // Recharger la liste et revenir à la vue liste
       await chargerEmails();
       setView("liste");
     } catch (err) {
@@ -1024,11 +1058,6 @@ export default function MarketingMail() {
         } else setError(String(data));
       } else setError(err?.message || "Erreur lors de l'envoi.");
     } finally { setSending(false); }
-  };
-
-  const handleSaveRecipientsSelection = (selectedContacts) => {
-    setSavedSelectedRecipients(selectedContacts);
-    setError("");
   };
 
   const groupeColor = (g) => {
@@ -1131,7 +1160,7 @@ export default function MarketingMail() {
 
           {form.send_mode === "segment" && savedSelectedRecipients.length > 0 && (
             <div className="mm-info-banner" style={{ marginBottom: "12px", padding: "10px 16px", background: "#e8f5fb", borderRadius: "8px", fontSize: "13px", color: "#4aa3c7" }}>
-              <i className="fa-solid fa-users" /> {savedSelectedRecipients.length} destinataire(s) sélectionné(s)
+              <i className="fa-solid fa-users" /> {savedSelectedRecipients.length} destinataire(s) trouvé(s) pour ces critères
             </div>
           )}
 
@@ -1268,7 +1297,7 @@ export default function MarketingMail() {
 
               <div className="ce-preview-meta-box">
                 {[
-                  ["Envoyer à",    form.send_mode === "direct" ? (form.email_direct || "—") : (savedSelectedRecipients.length > 0 ? `${savedSelectedRecipients.length} contact(s) sélectionné(s)` : (isProspectOnly ? "Prospects" : (form.groupe || "—")))],
+                  ["Envoyer à",    form.send_mode === "direct" ? (form.email_direct || "—") : (savedSelectedRecipients.length > 0 ? `${savedSelectedRecipients.length} contact(s)` : (isProspectOnly ? "Prospects" : (form.groupe || "—")))],
                   ["De",           `${userNom} (${userEmail})`],
                 ].map(([k, v]) => (
                   <div key={k} className="ce-meta-row">
@@ -1397,7 +1426,7 @@ export default function MarketingMail() {
               </div>
               <DateFilter dateValue={dateFilter} setDateValue={setDateFilter} />
             </div>
-            {/* Bouton Supprimer uniquement pour l'onglet Archivé */}
+            {/* Boutons pour l'onglet Archivé - seulement Supprimer */}
             {selected.length > 0 && activeTab === "archive" && (
               <div style={{ display: "flex", gap: "8px" }}>
                 <button className="mm-delete-btn" onClick={() => setShowDeleteModal(true)} style={{ background: "#EF4444", color: "white", border: "none", padding: "8px 16px", borderRadius: "8px", cursor: "pointer", fontSize: "13px", fontWeight: "500" }}>
@@ -1405,8 +1434,8 @@ export default function MarketingMail() {
                 </button>
               </div>
             )}
-            {/* Boutons Archiver et Supprimer pour les autres onglets */}
-            {selected.length > 0 && activeTab !== "archive" && activeTab !== "direct" && (
+            {/* Boutons pour l'onglet "Une seule adresse" - Archiver et Supprimer */}
+            {selected.length > 0 && activeTab === "direct" && (
               <div style={{ display: "flex", gap: "8px" }}>
                 <button className="mm-archive-btn" onClick={() => setShowArchiveModal(true)}>
                   <i className="fa-solid fa-box-archive" /> Archiver ({selected.length})
@@ -1416,9 +1445,12 @@ export default function MarketingMail() {
                 </button>
               </div>
             )}
-            {/* Bouton Supprimer pour l'onglet "Une seule adresse" */}
-            {selected.length > 0 && activeTab === "direct" && (
+            {/* Boutons pour les autres onglets (Prospects, Étudiants, Diplômés, Tous) - Archiver et Supprimer */}
+            {selected.length > 0 && activeTab !== "archive" && activeTab !== "direct" && (
               <div style={{ display: "flex", gap: "8px" }}>
+                <button className="mm-archive-btn" onClick={() => setShowArchiveModal(true)}>
+                  <i className="fa-solid fa-box-archive" /> Archiver ({selected.length})
+                </button>
                 <button className="mm-delete-btn" onClick={() => setShowDeleteModal(true)} style={{ background: "#EF4444", color: "white", border: "none", padding: "8px 16px", borderRadius: "8px", cursor: "pointer", fontSize: "13px", fontWeight: "500" }}>
                   <i className="fa-solid fa-trash-can" /> Supprimer ({selected.length})
                 </button>
@@ -1435,7 +1467,6 @@ export default function MarketingMail() {
               <table className="mm-table">
                 <thead>
                   <tr>
-                  {/* Checkbox toujours visible pour tous les onglets */}
                   <th className="mm-th-cb">
                     <span className={`mm-cb ${allSelected ? "mm-cb-on" : ""}`} onClick={() => setSelected(allSelected ? [] : paginatedEmails.map((e) => e.id))}>
                       {allSelected && <i className="fa-solid fa-check" />}
@@ -1507,7 +1538,6 @@ export default function MarketingMail() {
         )}
       </div>
 
-      {/* Modal archivage */}
       {showArchiveModal && (
         <div className="mm-overlay">
           <div className="mm-modal">
@@ -1522,7 +1552,6 @@ export default function MarketingMail() {
         </div>
       )}
 
-      {/* Modal suppression */}
       {showDeleteModal && (
         <ConfirmActionModal
           title="Supprimer définitivement"
@@ -1532,7 +1561,6 @@ export default function MarketingMail() {
         />
       )}
 
-      {/* Modal détail */}
       {detailEmailId && (
         <EmailDetailModal emailId={detailEmailId} onClose={() => setDetailEmailId(null)} />
       )}
