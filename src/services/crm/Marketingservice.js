@@ -10,7 +10,7 @@ export const fetchEmails = async (params = {}) => {
   if (params.archive !== undefined) query.set('archive', params.archive);
   if (params.groupe)     query.set('groupe',     params.groupe);
   if (params.search)     query.set('search',     params.search);
-  if (params.date_unique) query.set('date_unique', params.date_unique);  // CHANGÉ: un seul paramètre
+  if (params.date_unique) query.set('date_unique', params.date_unique);
   if (params.direct)     query.set('direct',     params.direct);
 
   try {
@@ -40,33 +40,31 @@ export const fetchEmailDetail = async (id) => {
  */
 export const envoyerEmail = async (formData) => {
   let body;
-  
+
   if (formData instanceof FormData) {
     body = formData;
   } else {
     body = new FormData();
-    
     body.append('send_mode', formData.send_mode);
     body.append('objet', formData.objet);
     body.append('apercu', formData.apercu || '');
     body.append('message', formData.message);
-    
+
     if (formData.send_mode === 'direct') {
       body.append('email_direct', formData.email_direct);
     } else {
       body.append('groupe', formData.groupe);
-      
       const formationsIds = (formData.formations_cibles || []).map(id => Number(id));
       body.append('formations_cibles', JSON.stringify(formationsIds));
       body.append('statuts_prospects', JSON.stringify(formData.statuts_prospects || []));
       body.append('sources_prospects', JSON.stringify(formData.sources_prospects || []));
     }
-    
+
     if (formData.fichier) {
       body.append('fichier', formData.fichier);
     }
   }
-  
+
   try {
     const response = await api.post('marketing-mail/envoyer/', body, {
       headers: { 'Content-Type': 'multipart/form-data' },
@@ -106,7 +104,6 @@ export const supprimerEmails = async (ids) => {
 
 /**
  * POST /api/marketing-mail/estimer/
- * Retourne le nombre ET la liste des destinataires
  */
 export const estimerDestinataires = async (segment) => {
   try {
@@ -116,7 +113,6 @@ export const estimerDestinataires = async (segment) => {
       statuts_prospects: segment.statuts_prospects || [],
       sources_prospects: segment.sources_prospects || [],
     };
-    
     const response = await api.post('marketing-mail/estimer/', payload);
     return response.data;
   } catch (error) {
@@ -127,7 +123,6 @@ export const estimerDestinataires = async (segment) => {
 
 /**
  * GET /api/marketing-mail/formations/<type_groupe>/
- * Retourne les formations disponibles pour un type avec comptage
  */
 export const fetchFormationsParType = async (typeGroupe) => {
   try {
@@ -141,7 +136,6 @@ export const fetchFormationsParType = async (typeGroupe) => {
 
 /**
  * GET /api/marketing-mail/statuts/
- * Retourne les statuts disponibles pour les prospects
  */
 export const fetchStatutsDisponibles = async (typeGroupe, formationsIds = []) => {
   try {
@@ -167,6 +161,48 @@ export const fetchFormations = async () => {
     return response.data;
   } catch (error) {
     console.error("Erreur fetchFormations:", error);
+    throw error;
+  }
+};
+
+// ══════════════════════════════════════════════════════════════
+//  🤖  FONCTIONS IA — Génération avec Gemini
+// ══════════════════════════════════════════════════════════════
+
+/**
+ * POST /api/marketing-mail/ai/generate-preview/
+ * Génère des propositions de texte d'aperçu
+ *
+ * payload segment  : { mode: "segment",    cible, formation, objet }
+ * payload individuel: { mode: "individual", objet }
+ *
+ * Retourne : { preview: ["...", "...", "..."] }
+ */
+export const generatePreviewAI = async (payload) => {
+  try {
+    const response = await api.post('marketing-mail/ai/generate-preview/', payload);
+    return response.data;          // { preview: [...] }
+  } catch (error) {
+    console.error("Erreur generatePreviewAI:", error);
+    throw error;
+  }
+};
+
+/**
+ * POST /api/marketing-mail/ai/generate-body/
+ * Génère le corps du message
+ *
+ * payload segment  : { mode: "segment",    cible, formation, objet, preview }
+ * payload individuel: { mode: "individual", objet, preview }
+ *
+ * Retourne : { body: "..." }
+ */
+export const generateBodyAI = async (payload) => {
+  try {
+    const response = await api.post('marketing-mail/ai/generate-body/', payload);
+    return response.data;          // { body: "..." }
+  } catch (error) {
+    console.error("Erreur generateBodyAI:", error);
     throw error;
   }
 };

@@ -12,6 +12,8 @@ import {
   estimerDestinataires,
   fetchFormationsParType,
   fetchStatutsDisponibles,
+  generatePreviewAI,
+  generateBodyAI,
 } from "../../services/crm/Marketingservice";
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
@@ -766,17 +768,134 @@ export default function MarketingMail() {
 
   // Flag pour savoir si on est en mode "Prospect Only"
   const [isProspectOnly, setIsProspectOnly] = useState(false);
+
+  // Template sélectionné — les boutons IA ne s'affichent que pour "vide"
+  const [selectedTemplateId, setSelectedTemplateId] = useState("");
   
   // États pour les formations dynamiques et statuts
   const [formationsDisponibles, setFormationsDisponibles] = useState([]);
   const [statutsDisponibles, setStatutsDisponibles] = useState([]);
   const [loadingFormations, setLoadingFormations] = useState(false);
 
+  // ── États IA ─────────────────────────────────────────────────────────────
+  const [loadingApercu,  setLoadingApercu]  = useState(false);
+  const [loadingBody,    setLoadingBody]    = useState(false);
+  const [previewSugs,    setPreviewSugs]    = useState([]);   // propositions aperçu
+  const [bodySug,        setBodySug]        = useState("");   // proposition corps
+
   // Destinataires (liste voir)
   const [showRecipients, setShowRecipients] = useState(false);
   const [recipientsList, setRecipientsList] = useState([]);
   const [loadingRecipients, setLoadingRecipients] = useState(false);
   const [savedSelectedRecipients, setSavedSelectedRecipients] = useState([]);
+
+  // ── Génération IA : texte d'aperçu ───────────────────────────────────────
+  const generateApercu = async () => {
+    if (!form.objet || form.objet.trim() === "") {
+      setError("Veuillez d'abord remplir l'objet pour générer l'aperçu.");
+      return;
+    }
+    setError("");
+    setLoadingApercu(true);
+    setPreviewSugs([]);
+    try {
+      const groupeActuel = isProspectOnly ? "Prospects" : form.groupe;
+      let payload;
+
+      if (form.send_mode === "segment" && groupeActuel) {
+        // Mode segment : on envoie le contexte complet
+        const cibleLabel =
+          groupeActuel === "Prospects" ? "prospect" :
+          groupeActuel === "Étudiants" ? "étudiant" : "diplômé";
+        const formationNom = formationsDisponibles
+          .filter(f => form.formations_cibles.includes(f.id))
+          .map(f => f.intitule)
+          .join(", ") || "formation professionnelle";
+
+        payload = {
+          mode: "segment",
+          cible: cibleLabel,
+          formation: formationNom,
+          objet: form.objet,
+        };
+      } else {
+        // Mode direct ou pas de groupe
+        payload = {
+          mode: "individual",
+          objet: form.objet,
+        };
+      }
+
+      const data = await generatePreviewAI(payload);
+      const suggestions = data?.preview || [];
+      if (suggestions.length > 0) {
+        setPreviewSugs(suggestions);
+      } else {
+        setError("L'IA n'a pas pu générer de proposition. Vérifiez l'objet saisi.");
+      }
+    } catch (err) {
+      setError("Erreur lors de la génération de l'aperçu. Réessayez.");
+    } finally {
+      setLoadingApercu(false);
+    }
+  };
+
+  // ── Génération IA : corps du message ─────────────────────────────────────
+  const generateMessage = async () => {
+    if (!form.objet || form.objet.trim() === "") {
+      setError("Veuillez d'abord remplir l'objet pour générer le message.");
+      return;
+    }
+    if (!form.apercu || form.apercu.trim() === "") {
+      setError("Veuillez d'abord remplir le texte d'aperçu pour générer le message.");
+      return;
+    }
+    setError("");
+    setLoadingBody(true);
+    setBodySug("");
+    try {
+      const groupeActuel = isProspectOnly ? "Prospects" : form.groupe;
+      let payload;
+
+      if (form.send_mode === "segment" && groupeActuel) {
+        const cibleLabel =
+          groupeActuel === "Prospects" ? "prospect" :
+          groupeActuel === "Étudiants" ? "étudiant" : "diplômé";
+        const formationNom = formationsDisponibles
+          .filter(f => form.formations_cibles.includes(f.id))
+          .map(f => f.intitule)
+          .join(", ") || "formation professionnelle";
+
+        payload = {
+          mode: "segment",
+          cible: cibleLabel,
+          formation: formationNom,
+          objet: form.objet,
+          preview: form.apercu,
+        };
+      } else {
+        payload = {
+          mode: "individual",
+          objet: form.objet,
+          preview: form.apercu,
+        };
+      }
+
+      const data = await generateBodyAI(payload);
+      const bodyText = data?.body || "";
+      if (bodyText) {
+        setBodySug(bodyText);
+        // Applique directement le corps généré dans le formulaire
+        setForm(prev => ({ ...prev, message: bodyText }));
+      } else {
+        setError("L'IA n'a pas pu générer le corps. Vérifiez l'objet et l'aperçu.");
+      }
+    } catch (err) {
+      setError("Erreur lors de la génération du corps. Réessayez.");
+    } finally {
+      setLoadingBody(false);
+    }
+  };
 
   // ── Chargement des formations par type ───────────────────────────────────────
   const fetchFormationsByType = useCallback(async (groupe) => {
@@ -1111,7 +1230,7 @@ export default function MarketingMail() {
                   }
                   
                   setIsProspectOnly(tpl.isProspectOnly || false);
-                  
+                  setSelectedTemplateId(tpl.id);
                   setForm(newFormState);
                   setView("creer");
                   setError("");
@@ -1142,11 +1261,22 @@ export default function MarketingMail() {
   //  VUE CRÉER
   // ═══════════════════════════════════════════════════════════════════════════
   if (view === "creer") {
+    // Boutons IA uniquement pour le template "Email vide"
+    const isEmailVide = selectedTemplateId === "vide";
+
+    // Vérifier si l'objet n'est pas vide pour changer la couleur du bouton d'aperçu
+    const hasObjetContent = form.objet && form.objet.trim() !== "";
+    const generateApercuButtonClass = hasObjetContent ? "ce-generate-btn ce-generate-btn-active" : "ce-generate-btn";
+    
+    // Vérifier si l'objet ET l'aperçu sont remplis pour changer la couleur du bouton de message
+    const hasObjetAndApercuContent = (form.objet && form.objet.trim() !== "") && (form.apercu && form.apercu.trim() !== "");
+    const generateMessageButtonClass = hasObjetAndApercuContent ? "ce-generate-btn ce-generate-btn-active" : "ce-generate-btn";
+
     return (
       <Layout>
         <div className="ce-page">
           <div className="ce-topbar">
-            <button className="ce-back-btn" onClick={() => { setView("templates"); setError(""); setIsProspectOnly(false); setSavedSelectedRecipients([]); }}>
+            <button className="ce-back-btn" onClick={() => { setView("templates"); setError(""); setIsProspectOnly(false); setSavedSelectedRecipients([]); setSelectedTemplateId(""); setPreviewSugs([]); }}>
               <i className="fa-solid fa-arrow-left" /> Changer de modèle
             </button>
             <h2 className="ce-topbar-title">Nouvel e-mail</h2>
@@ -1335,12 +1465,128 @@ export default function MarketingMail() {
                   <input className="ce-input" placeholder="Objet de votre e-mail..." value={form.objet} onChange={(e) => setForm({ ...form, objet: e.target.value })} />
                 </div>
                 <div>
-                  <label className="ce-lbl">Texte d'aperçu</label>
-                  <input className="ce-input" placeholder="Court texte visible dans la boîte de réception..." value={form.apercu} onChange={(e) => setForm({ ...form, apercu: e.target.value })} />
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "7px" }}>
+                    <label className="ce-lbl" style={{ marginBottom: 0 }}>Texte d'aperçu</label>
+                    {isEmailVide && (
+                      <button
+                        className={generateApercuButtonClass}
+                        onClick={generateApercu}
+                        type="button"
+                        disabled={loadingApercu}
+                      >
+                        {loadingApercu
+                          ? <><i className="fa-solid fa-spinner fa-spin" /> Génération...</>
+                          : <><i className="fa-solid fa-wand-magic-sparkles" /> Générer</>}
+                      </button>
+                    )}
+                  </div>
+                  <input
+                    className="ce-input"
+                    placeholder="Court texte visible dans la boîte de réception..."
+                    value={form.apercu}
+                    onChange={(e) => { setForm({ ...form, apercu: e.target.value }); setPreviewSugs([]); }}
+                  />
+                  {/* ── Propositions aperçu (email vide seulement) ───── */}
+                  {isEmailVide && previewSugs.length > 0 && (
+                    <div style={{ marginTop: "8px" }}>
+                      <div style={{ fontSize: "11px", color: "#64748B", marginBottom: "5px", display: "flex", alignItems: "center", gap: "5px" }}>
+                        <i className="fa-solid fa-lightbulb" style={{ color: "#f59e0b" }} /> Suggestions :
+                      </div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                        {previewSugs.map((s, i) => (
+                          <div
+                            key={i}
+                            style={{
+                              padding: "8px 12px", fontSize: "12px", borderRadius: "7px",
+                              border: "1px solid #B6E0F3", background: "#EBF7FD",
+                              color: "#0E7490", display: "flex", alignItems: "center", gap: "8px",
+                              lineHeight: "1.4", justifyContent: "space-between",
+                            }}
+                          >
+                            <span style={{ flex: 1 }}>{s}</span>
+                            <div style={{ display: "flex", gap: "4px", flexShrink: 0 }}>
+                              <button
+                                type="button"
+                                onClick={() => { 
+                                  setForm(prev => ({ ...prev, apercu: s })); 
+                                  setPreviewSugs([]); 
+                                }}
+                                title="Insérer cette proposition"
+                                style={{
+                                  padding: "4px 8px", fontSize: "11px", borderRadius: "4px",
+                                  border: "1px solid #4aa3c7", background: "#ffffff",
+                                  color: "#4aa3c7", cursor: "pointer", transition: "all 0.15s",
+                                  fontWeight: "500"
+                                }}
+                                onMouseEnter={e => { e.currentTarget.style.background = "#4aa3c7"; e.currentTarget.style.color = "#ffffff"; }}
+                                onMouseLeave={e => { e.currentTarget.style.background = "#ffffff"; e.currentTarget.style.color = "#4aa3c7"; }}
+                              >
+                                <i className="fa-solid fa-arrow-right" style={{ marginRight: "4px" }} />
+                                Insérer
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => generateApercu()}
+                                title="Générer d'autres propositions"
+                                disabled={loadingApercu}
+                                style={{
+                                  padding: "4px 6px", fontSize: "11px", borderRadius: "4px",
+                                  border: "1px solid #f59e0b", background: "#ffffff",
+                                  color: "#f59e0b", cursor: "pointer", transition: "all 0.15s",
+                                  fontWeight: "bold", minWidth: "32px"
+                                }}
+                                onMouseEnter={e => { e.currentTarget.style.background = "#f59e0b"; e.currentTarget.style.color = "#ffffff"; }}
+                                onMouseLeave={e => { e.currentTarget.style.background = "#ffffff"; e.currentTarget.style.color = "#f59e0b"; }}
+                              >
+                                {loadingApercu ? (
+                                  <i className="fa-solid fa-spinner fa-spin" />
+                                ) : (
+                                  <i className="fa-solid fa-plus" />
+                                )}
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setPreviewSugs([])}
+                        style={{ marginTop: "6px", background: "none", border: "none", color: "#94A3B8", fontSize: "11px", cursor: "pointer" }}
+                      >
+                        <i className="fa-solid fa-xmark" /> Fermer les suggestions
+                      </button>
+                    </div>
+                  )}
                 </div>
                 <div>
-                  <label className="ce-lbl">Corps du message <span className="ce-req">*</span></label>
-                  <textarea className="ce-textarea" rows={8} placeholder={"Bonjour,\n\nVotre message ici..."} value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })} />
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "7px" }}>
+                    <label className="ce-lbl" style={{ marginBottom: 0 }}>Corps du message <span className="ce-req">*</span></label>
+                    {isEmailVide && (
+                      <button
+                        className={generateMessageButtonClass}
+                        onClick={generateMessage}
+                        type="button"
+                        disabled={loadingBody}
+                      >
+                        {loadingBody
+                          ? <><i className="fa-solid fa-spinner fa-spin" /> Génération...</>
+                          : <><i className="fa-solid fa-wand-magic-sparkles" /> Générer</>}
+                      </button>
+                    )}
+                  </div>
+                  <textarea
+                    className="ce-textarea"
+                    rows={8}
+                    placeholder={"Bonjour,\n\nVotre message ici..."}
+                    value={form.message}
+                    onChange={(e) => setForm({ ...form, message: e.target.value })}
+                  />
+                  {/* ── Spinner corps (email vide seulement) ─────────── */}
+                  {isEmailVide && loadingBody && (
+                    <div style={{ marginTop: "8px", padding: "10px 14px", background: "#EBF7FD", borderRadius: "7px", fontSize: "12px", color: "#0E7490", display: "flex", alignItems: "center", gap: "8px" }}>
+                      <i className="fa-solid fa-spinner fa-spin" /> L'IA rédige votre email...
+                    </div>
+                  )}
                 </div>
                 <div>
                   <label className="ce-lbl">Pièce jointe</label>
@@ -1357,7 +1603,7 @@ export default function MarketingMail() {
               </div>
 
               <div style={{ margin: "0 24px 24px 24px", display: "flex", gap: "12px", justifyContent: "flex-end", borderTop: "1px solid #E2E8F0", paddingTop: "20px" }}>
-                <button className="ce-btn-ghost" onClick={() => { setView("liste"); setError(""); setIsProspectOnly(false); setSavedSelectedRecipients([]); }}>Annuler</button>
+                <button className="ce-btn-ghost" onClick={() => { setView("liste"); setError(""); setIsProspectOnly(false); setSavedSelectedRecipients([]); setSelectedTemplateId(""); setPreviewSugs([]); }}>Annuler</button>
                 <button className="ce-btn-send" onClick={handleEnvoyer} disabled={sending || (form.send_mode === "segment" && savedSelectedRecipients.length === 0)}>
                   {sending
                     ? <><i className="fa-solid fa-spinner fa-spin" /> Envoi en cours...</>
