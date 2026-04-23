@@ -85,8 +85,8 @@
 .btn-sort.active { background: #33CCFF; color: #fff; border-color: #33CCFF; }
 
 /* ─── TABLE CARD ─────────────────────────────────────────── */
-.table-card { background: #fff; border-radius: 14px; box-shadow: 0 2px 16px rgba(30,58,95,.07); border: 1px solid #E8EDF3; overflow: hidden; }
-.table-top { padding: 12px 18px; border-bottom: 1px solid #F1F5F9; font-size: 13px; color: #94A3B8; }
+.table-card { background: #fff; border-radius: 14px; box-shadow: 0 2px 16px rgba(30,58,95,.07); border: 1px solid #E8EDF3; overflow: visible; }
+.table-top { padding: 12px 18px; border-bottom: 1px solid #F1F5F9; font-size: 13px; color: #94A3B8; border-radius: 14px 14px 0 0; }
 .table-top strong { color: #336699; font-weight: 700; }
 .table-wrap { overflow-x: auto; }
 
@@ -119,13 +119,12 @@ tbody td { padding: 10px 14px; vertical-align: middle; }
 .act-suppr:hover  { background: #e53e3e; color: #fff; transform: scale(1.08); }
 
 /* ─── PAGINATION ─────────────────────────────────────────── */
-.pagination { display: flex; align-items: center; justify-content: center; gap: 5px; padding: 12px; border-top: 1px solid #F1F5F9; }
-.pg-btn { width: 30px; height: 30px; border-radius: 7px; background: #F8FAFC; border: 1.5px solid #E2E8F0; color: #336699; cursor: pointer; font-size: 11px; display: flex; align-items: center; justify-content: center; transition: .2s; }
-.pg-btn:hover:not(:disabled) { background: #33CCFF; color: #fff; border-color: #33CCFF; }
+.pagination { display: flex; align-items: center; justify-content: flex-end; gap: 8px; padding: 12px 18px; border-top: 1px solid #F1F5F9; }
+.pg-btn { width: 32px; height: 32px; border-radius: 8px; background: #F8FAFC; border: 1.5px solid #E2E8F0; color: #336699; cursor: pointer; font-size: 12px; display: flex; align-items: center; justify-content: center; transition: .2s; }
+.pg-btn:hover:not(:disabled) { background: #336699; color: #fff; border-color: #336699; }
 .pg-btn:disabled { opacity: .35; cursor: not-allowed; }
-.pg-num { width: 30px; height: 30px; border-radius: 7px; background: #F8FAFC; border: 1.5px solid #E2E8F0; color: #475569; cursor: pointer; font-size: 12.5px; font-family: 'Poppins', sans-serif; font-weight: 500; display: flex; align-items: center; justify-content: center; transition: .2s; }
-.pg-num:hover { border-color: #33CCFF; color: #33CCFF; }
-.pg-num.active { background: #336699; color: #fff; border-color: #336699; }
+.pg-info { font-size: 13px; color: #64748B; padding: 0 6px; }
+.pg-info strong { color: #336699; font-weight: 700; }
 
 /* ═══════════════════════════════════════════════════════════
    DRAWER LATÉRAL DROIT (style HubSpot)

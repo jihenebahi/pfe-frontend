@@ -761,6 +761,11 @@ const Prospects = () => {
   }, []);
   useEffect(() => { loadProspects(); }, [loadProspects]);
 
+  // Réinitialiser la page à 1 quand les données de la DB arrivent ou changent
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [prospects]);
+
   // Réinitialiser la sélection quand les filtres/recherche changent
   useEffect(() => {
     setSelectedIds(new Set());
@@ -788,7 +793,9 @@ const Prospects = () => {
   };
   const filtered = getFiltered();
   const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
-  const currentSlice = filtered.slice((currentPage - 1) * PER_PAGE, currentPage * PER_PAGE);
+  // Clamp currentPage : si currentPage dépasse totalPages (ex: après filtrage), on utilise totalPages
+  const safePage = Math.min(currentPage, totalPages);
+  const currentSlice = filtered.slice((safePage - 1) * PER_PAGE, safePage * PER_PAGE);
 
   // ── Sélection en masse ──
   const currentPageIds = currentSlice.map(p => p.id);
@@ -1406,7 +1413,7 @@ const Prospects = () => {
         )
       ),
     ),
-    React.createElement('div', { className: 'table-card' },
+    React.createElement('div', { className: 'table-card', style: { overflow: 'visible' } },
       React.createElement('div', { className: 'table-top' },
         React.createElement('strong', null, filtered.length),
         ' prospect', filtered.length !== 1 ? 's' : '', ' trouvé', filtered.length !== 1 ? 's' : '',
@@ -1482,7 +1489,7 @@ const Prospects = () => {
                       onChange: () => toggleSelect(p.id)
                     })
                   ),
-                  React.createElement('td', { className: 'td-num' }, (currentPage - 1) * PER_PAGE + i + 1),
+                  React.createElement('td', { className: 'td-num' }, (safePage - 1) * PER_PAGE + i + 1),
                   React.createElement('td', null,
                     React.createElement('div', { className: 'td-name' }, p.nom, ' ', p.prenom),
                   ),
@@ -1517,24 +1524,18 @@ const Prospects = () => {
             React.createElement('i', { className: 'fa-solid fa-user-slash' }),
             React.createElement('p', null, 'Aucun prospect trouvé.')
           )
-        ),
-        totalPages > 1 && React.createElement('div', { className: 'pagination' },
-          React.createElement('button', { className: 'pg-btn', disabled: currentPage === 1, onClick: () => setCurrentPage(1) },
-            React.createElement('i', { className: 'fa-solid fa-angles-left' })
-          ),
-          React.createElement('button', { className: 'pg-btn', disabled: currentPage === 1, onClick: () => setCurrentPage(p => p - 1) },
-            React.createElement('i', { className: 'fa-solid fa-angle-left' })
-          ),
-          Array.from({ length: totalPages }, (_, i) => i + 1).map(page =>
-            React.createElement('button', { key: page, className: `pg-num ${currentPage === page ? 'active' : ''}`, onClick: () => setCurrentPage(page) }, page)
-          ),
-          React.createElement('button', { className: 'pg-btn', disabled: currentPage === totalPages, onClick: () => setCurrentPage(p => p + 1) },
-            React.createElement('i', { className: 'fa-solid fa-angle-right' })
-          ),
-          React.createElement('button', { className: 'pg-btn', disabled: currentPage === totalPages, onClick: () => setCurrentPage(totalPages) },
-            React.createElement('i', { className: 'fa-solid fa-angles-right' })
-          )
         )
+      )
+    ),
+    totalPages > 1 && React.createElement('div', { className: 'pagination' },
+      React.createElement('button', { className: 'pg-btn', disabled: safePage === 1, onClick: () => setCurrentPage(p => Math.max(1, p - 1)) },
+        React.createElement('i', { className: 'fa-solid fa-angle-left' })
+      ),
+      React.createElement('span', { className: 'pg-info' },
+        'Page ', React.createElement('strong', null, safePage), ' sur ', React.createElement('strong', null, totalPages)
+      ),
+      React.createElement('button', { className: 'pg-btn', disabled: safePage === totalPages, onClick: () => setCurrentPage(p => Math.min(totalPages, p + 1)) },
+        React.createElement('i', { className: 'fa-solid fa-angle-right' })
       )
     ),
     React.createElement(DrawerPanel, { drawerOpen: drawerOpen, drawerMode: drawerMode, drawerTarget: drawerTarget, closeDrawer: closeDrawer, saveDrawer: saveDrawer, saving: saving, formRef: formRef, FORMATIONS: FORMATIONS }),

@@ -388,12 +388,12 @@ function Formations() {
   }, [activeTab]);
 
   const fetchFormations = async () => {
-    try { setLoading(true); const r = await getFormations(); setFormations(r.data); }
+    try { setLoading(true); const r = await getFormations(); setFormations(r.data); setCurrentPage(1); }
     catch (err) { console.error(err); }
     finally { setLoading(false); }
   };
   const fetchFormationsArchivees = async () => {
-    try { setLoadingArchivees(true); const r = await getFormationsArchivees(); setFormationsArchivees(r.data); }
+    try { setLoadingArchivees(true); const r = await getFormationsArchivees(); setFormationsArchivees(r.data); setCurrentPageArch(1); }
     catch (err) { console.error(err); }
     finally { setLoadingArchivees(false); }
   };
@@ -430,8 +430,10 @@ function Formations() {
       && (!filterCat || f.categorie === filterCat);
   }).sort((a, b) => new Date(b.date_creation) - new Date(a.date_creation));
 
-  const totalPages = Math.ceil(filtered.length / itemsPerPage);
-  const paginated = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / itemsPerPage));
+  // Clamp pour éviter que currentPage dépasse totalPages (ex: après ajout/suppression depuis la DB)
+  const safePage = Math.min(currentPage, totalPages);
+  const paginated = filtered.slice((safePage - 1) * itemsPerPage, safePage * itemsPerPage);
 
   // Archivées filtrées
   const filteredArch = formationsArchivees.map(fmt).filter(f => {
@@ -441,8 +443,10 @@ function Formations() {
       && (!filterCatArch || f.categorie === filterCatArch);
   });
 
-  const totalPagesArch = Math.ceil(filteredArch.length / itemsPerPage);
-  const paginatedArch = filteredArch.slice((currentPageArch - 1) * itemsPerPage, currentPageArch * itemsPerPage);
+  const totalPagesArch = Math.max(1, Math.ceil(filteredArch.length / itemsPerPage));
+  // Clamp pour archivées aussi
+  const safePageArch = Math.min(currentPageArch, totalPagesArch);
+  const paginatedArch = filteredArch.slice((safePageArch - 1) * itemsPerPage, safePageArch * itemsPerPage);
 
   /* ── Sélection actives ── */
   const toggleSelectActive = (id) => setSelectedActives(p => p.includes(id) ? p.filter(x => x !== id) : [...p, id]);
@@ -669,7 +673,7 @@ function Formations() {
             </div>
           )}
 
-          <div className="table-card">
+          <div className="table-card" style={{ overflow: "visible" }}>
             <div className="table-top">
               Affichage de <strong>{paginated.length}</strong> sur <strong>{filtered.length}</strong> formations
             </div>
@@ -714,7 +718,7 @@ function Formations() {
                             <span className="cb-box"></span>
                           </label>
                         </td>
-                        <td className="td-num">{(currentPage - 1) * itemsPerPage + i + 1}</td>
+                        <td className="td-num">{(safePage - 1) * itemsPerPage + i + 1}</td>
                         <td className="td-title">{f.intitule}</td>
                         <td><span className="cat-tag">{f.categorie}</span></td>
                         <td><FormateurBadges noms={f.formateurs_noms} /></td>
@@ -735,16 +739,14 @@ function Formations() {
                 </tbody>
               </table>
             </div>
-            {totalPages > 1 && (
-              <div className="pagination">
-                <button className="pg-btn" onClick={() => setCurrentPage(p => p - 1)} disabled={currentPage === 1}><i className="fa-solid fa-chevron-left"></i></button>
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
-                  <button key={p} className={`pg-num${p === currentPage ? " active" : ""}`} onClick={() => setCurrentPage(p)}>{p}</button>
-                ))}
-                <button className="pg-btn" onClick={() => setCurrentPage(p => p + 1)} disabled={currentPage === totalPages}><i className="fa-solid fa-chevron-right"></i></button>
-              </div>
-            )}
           </div>
+          {totalPages > 1 && (
+            <div className="pagination">
+              <button className="pg-btn" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={safePage === 1}><i className="fa-solid fa-angle-left"></i></button>
+              <span className="pg-info">Page <strong>{safePage}</strong> sur <strong>{totalPages}</strong></span>
+              <button className="pg-btn" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={safePage === totalPages}><i className="fa-solid fa-angle-right"></i></button>
+            </div>
+          )}
         </>
       )}
 
@@ -795,7 +797,7 @@ function Formations() {
             </div>
           )}
 
-          <div className="table-card table-card-archive">
+          <div className="table-card table-card-archive" style={{ overflow: "visible" }}>
             <div className="table-top">
               {loadingArchivees
                 ? <span><i className="fa-solid fa-spinner fa-spin"></i> Chargement…</span>
@@ -844,7 +846,7 @@ function Formations() {
                             <span className="cb-box cb-box-arch"></span>
                           </label>
                         </td>
-                        <td className="td-num">{(currentPageArch - 1) * itemsPerPage + i + 1}</td>
+                        <td className="td-num">{(safePageArch - 1) * itemsPerPage + i + 1}</td>
                         <td className="td-title" style={{ opacity: 0.72 }}>{f.intitule}</td>
                         <td><span className="cat-tag">{f.categorie}</span></td>
                         <td><FormateurBadges noms={f.formateurs_noms} /></td>
@@ -865,16 +867,14 @@ function Formations() {
                 </tbody>
               </table>
             </div>
-            {totalPagesArch > 1 && (
-              <div className="pagination">
-                <button className="pg-btn" onClick={() => setCurrentPageArch(p => p - 1)} disabled={currentPageArch === 1}><i className="fa-solid fa-chevron-left"></i></button>
-                {Array.from({ length: totalPagesArch }, (_, i) => i + 1).map(p => (
-                  <button key={p} className={`pg-num${p === currentPageArch ? " active" : ""}`} onClick={() => setCurrentPageArch(p)}>{p}</button>
-                ))}
-                <button className="pg-btn" onClick={() => setCurrentPageArch(p => p + 1)} disabled={currentPageArch === totalPagesArch}><i className="fa-solid fa-chevron-right"></i></button>
-              </div>
-            )}
           </div>
+          {totalPagesArch > 1 && (
+            <div className="pagination">
+              <button className="pg-btn" onClick={() => setCurrentPageArch(p => Math.max(1, p - 1))} disabled={safePageArch === 1}><i className="fa-solid fa-angle-left"></i></button>
+              <span className="pg-info">Page <strong>{safePageArch}</strong> sur <strong>{totalPagesArch}</strong></span>
+              <button className="pg-btn" onClick={() => setCurrentPageArch(p => Math.min(totalPagesArch, p + 1))} disabled={safePageArch === totalPagesArch}><i className="fa-solid fa-angle-right"></i></button>
+            </div>
+          )}
         </>
       )}
 
