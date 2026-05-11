@@ -53,6 +53,9 @@ function Sidebar() {
       <Link to="/formations" className={`sidebar-link ${isActive("/formations") ? "active" : ""}`}>
         <i className="fa-solid fa-book-open"></i> Formations
       </Link>
+      <Link to="/session-formations" className={`sidebar-link ${isActive("/session-formations") ? "active" : ""}`}>
+        <i className="fa-solid fa-calendar-days"></i> Sessions de formation
+      </Link>
 
       {/* SYSTÈME */}
       <div className="sidebar-title">SYSTÈME</div>

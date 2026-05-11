@@ -20,6 +20,7 @@ import NouveauMDP from "./pages/auth/nouveauxMDP";
 import Formations from "./pages/infoCentre/Formations";
 import Categories from "./pages/infoCentre/Categories";
 import Formateurs from "./pages/infoCentre/Formateurs";
+import SessionFormation from "./pages/infoCentre/session_formation";
 
 // Pages CRM
 import Prospects from "./pages/crm/prospects";
@@ -49,10 +50,10 @@ function App() {
           <Route path="/modifier-compte"  element={<PrivateRoute><ModifierCompte /></PrivateRoute>} />
           <Route path="/details-compte"   element={<PrivateRoute><DetailsCompte /></PrivateRoute>} />
 
-          {/* Info Centre */}
-          <Route path="/formations" element={<PrivateRoute><Formations /></PrivateRoute>} />
-          <Route path="/categories" element={<PrivateRoute><Categories /></PrivateRoute>} />
-          <Route path="/formateurs" element={<PrivateRoute><Formateurs /></PrivateRoute>} />
+       <Route path="/formations" element={<PrivateRoute><Formations /></PrivateRoute>} />
+        <Route path="/categories" element={<PrivateRoute><Categories /></PrivateRoute>} />
+        <Route path="/formateurs" element={<PrivateRoute><Formateurs /></PrivateRoute>} />
+        <Route path="/session-formations" element={<PrivateRoute><SessionFormation /></PrivateRoute>} />
 
           {/* CRM */}
           <Route path="/prospects" element={<PrivateRoute><Prospects /></PrivateRoute>} />

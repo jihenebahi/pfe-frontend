@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import Layout from "../../components/Layout";
 import "../../styles/infoCentre/Formateurs.css";
-import { getFormation } from "../../services/infoCentre/formationService";
 import {
   getFormateurs,
   createFormateur,
@@ -28,20 +27,12 @@ const levelClass = (n) =>
 const contractClass = (c) =>
   c === "interne" ? "contract-interne" : "contract-vacation";
 
-const niveauLabel          = { junior: "Junior", universitaire: "Universitaire", expert: "Expert" };
-const contratLabel         = { interne: "Interne", vacation: "Vacation" };
-const formatLabel          = { presentiel: "Présentiel", en_ligne: "En ligne", hybride: "Hybride" };
-const niveauFormationLabel = { debutant: "Débutant", intermediaire: "Intermédiaire", avance: "Avancé" };
+const niveauLabel = { junior: "Junior", universitaire: "Universitaire", expert: "Expert" };
+const contratLabel = { interne: "Interne", vacation: "Vacation" };
 
 const toArray = (val) => {
   if (Array.isArray(val)) return val;
   if (typeof val === "string") return val.split(",").map((s) => s.trim()).filter(Boolean);
-  return [];
-};
-
-const toFormations = (val) => {
-  if (!val) return [];
-  if (Array.isArray(val)) return val;
   return [];
 };
 
@@ -72,94 +63,23 @@ const parseBackendErrors = (data) => {
   for (const [key, msgs] of Object.entries(data)) {
     const msg = Array.isArray(msgs) ? msgs[0] : msgs;
     if (fieldMap[key]) fieldErrs[fieldMap[key]] = msg;
-    else if (key !== "error" && key !== "formations")
+    else if (key !== "error")
       globalMsg = globalMsg ? globalMsg + " " + msg : msg;
   }
   return { fieldErrs, globalMsg };
 };
 
-// ─── FormationFilterDropdown : dropdown personnalisé pour le filtre formations ──
-function FormationFilterDropdown({ formations, selectedValue, onSelect }) {
-  const [open, setOpen] = useState(false);
-  const [search, setSearch] = useState("");
-  const ref = useRef(null);
+// Formatage des dates
+const formatDate = (dateStr) => {
+  if (!dateStr) return "—";
+  const date = new Date(dateStr);
+  return date.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" });
+};
 
-  useEffect(() => {
-    const close = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
-    document.addEventListener("mousedown", close);
-    return () => document.removeEventListener("mousedown", close);
-  }, []);
-
-  const selectedFormation = formations.find(f => String(f.id) === selectedValue);
-  const displayText = selectedFormation ? selectedFormation.intitule : "Toutes les formations";
-
-  const filteredFormations = formations.filter(f =>
-    f.intitule.toLowerCase().includes(search.toLowerCase())
-  );
-
-  return (
-    <div className="formation-filter-dropdown" ref={ref}>
-      <button
-        type="button"
-        className="filter-dropdown-btn"
-        onClick={() => setOpen(!open)}
-      >
-        <i className="fa-solid fa-graduation-cap"></i>
-        <span className="filter-dropdown-text">{displayText}</span>
-        <i className={`fa-solid fa-chevron-${open ? "up" : "down"} filter-dropdown-chevron`}></i>
-      </button>
-
-      {open && (
-        <div className="filter-dropdown-panel">
-          <div className="filter-dropdown-search">
-            <i className="fa-solid fa-magnifying-glass"></i>
-            <input
-              type="text"
-              placeholder="Rechercher une formation..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              autoFocus
-            />
-          </div>
-          <div className="filter-dropdown-list">
-            <div
-              className={`filter-dropdown-item ${selectedValue === "" ? "active" : ""}`}
-              onClick={() => {
-                onSelect("");
-                setOpen(false);
-                setSearch("");
-              }}
-            >
-              <i className="fa-solid fa-arrow-rotate-left"></i>
-              <span>Toutes les formations</span>
-            </div>
-            {filteredFormations.length === 0 ? (
-              <div className="filter-dropdown-empty">Aucune formation trouvée</div>
-            ) : (
-              filteredFormations.map((fm) => (
-                <div
-                  key={fm.id}
-                  className={`filter-dropdown-item ${String(fm.id) === selectedValue ? "active" : ""}`}
-                  onClick={() => {
-                    onSelect(String(fm.id));
-                    setOpen(false);
-                    setSearch("");
-                  }}
-                >
-                  <i className="fa-solid fa-book-open"></i>
-                  <span className="filter-item-name">{fm.intitule}</span>
-                  {fm.categorie_nom && (
-                    <span className="filter-item-cat">{fm.categorie_nom}</span>
-                  )}
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
+const formatPrice = (price) => {
+  if (!price && price !== 0) return "—";
+  return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(price);
+};
 
 // ─── FileDropdown : multi-fichiers (Contrat / Diplômes) ───────────────────────
 function FileDropdown({ label, icon, colorClass, files, onAdd, onRemove, onRemoveExisting, inputId, existingUrls = [] }) {
@@ -245,7 +165,7 @@ function FileDropdown({ label, icon, colorClass, files, onAdd, onRemove, onRemov
   );
 }
 
-// ─── CvDropdown : fichier unique, même style que FileDropdown ─────────────────
+// ─── CvDropdown : fichier unique ─────────────────
 function CvDropdown({ inputId, cvFile, existingUrl, onChange, onRemoveExisting }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
@@ -311,64 +231,6 @@ function CvDropdown({ inputId, cvFile, existingUrl, onChange, onRemoveExisting }
   );
 }
 
-// ─── FormationsSection ────────────────────────────────────────────────────────
-function FormationsSection({ formations, onSelectFormation }) {
-  const [search, setSearch] = useState("");
-  const list     = toFormations(formations);
-  const filtered = list.filter(f => f.intitule.toLowerCase().includes(search.toLowerCase()));
-
-  return (
-    <div className="detail-sec formations-sec-wrap">
-      <div className="formations-header-bar">
-        <i className="fa-solid fa-graduation-cap formations-hdr-icon"></i>
-        <span className="formations-hdr-label">Formations associées</span>
-        <span className="formations-hdr-count">{list.length}</span>
-      </div>
-
-      {list.length > 0 && (
-        <div className="formations-search-under">
-          <i className="fa-solid fa-magnifying-glass"></i>
-          <input
-            type="text"
-            placeholder="Rechercher une formation..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-          />
-        </div>
-      )}
-
-      {list.length === 0 ? (
-        <div className="no-formations-msg">
-          <i className="fa-solid fa-circle-info"></i> Aucune formation associée à ce formateur.
-        </div>
-      ) : (
-        <div className="formations-scroll-body">
-          {filtered.length === 0 ? (
-            <div className="no-formations-msg">Aucune formation trouvée.</div>
-          ) : (
-            filtered.map((fm, i) => (
-              <button key={fm.id || i} className="formation-item formation-item-clickable"
-                onClick={() => onSelectFormation(fm)} title="Voir les détails de la formation">
-                <div className="formation-item-icon"><i className="fa-solid fa-book-open"></i></div>
-                <div className="formation-item-info">
-                  <span className="formation-item-title">{fm.intitule}</span>
-                  {fm.categorie_nom && <span className="formation-item-cat">{fm.categorie_nom}</span>}
-                </div>
-                {fm.niveau && (
-                  <span className={`formation-item-niveau niveau-${fm.niveau}`}>
-                    {niveauFormationLabel[fm.niveau] || fm.niveau}
-                  </span>
-                )}
-                <i className="fa-solid fa-chevron-right formation-item-arrow"></i>
-              </button>
-            ))
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
 // ─── DocsSearchSection : colonne document avec recherche ─────────────────────
 function DocsSearchSection({ header, headerClass, items, emptyMsg, getUrl, getName }) {
   const [search, setSearch] = useState("");
@@ -417,16 +279,17 @@ function Formateurs() {
   const [loading, setLoading]       = useState(true);
   const [error, setError]           = useState(null);
   const [search, setSearch]         = useState("");
-  const [filterFormation, setFilterFormation] = useState("");
 
   const [modalDetail, setModalDetail] = useState(null);
   const [modalAjout,  setModalAjout]  = useState(false);
   const [modalModif,  setModalModif]  = useState(null);
   const [modalSuppr,  setModalSuppr]  = useState(null);
-
-  const [modalFormationDetail, setModalFormationDetail] = useState(null);
-  const [loadingFD, setLoadingFD] = useState(false);
-  const [errorFD,   setErrorFD]   = useState("");
+  
+  // États pour la modal de détail de session
+  const [modalSessionDetail, setModalSessionDetail] = useState(null);
+  const [sessionSearch, setSessionSearch] = useState("");
+  const [sessionDateDebut, setSessionDateDebut] = useState("");
+  const [sessionDateFin, setSessionDateFin] = useState("");
 
   const [formAjout, setFormAjout]     = useState(FORM_VIDE);
   const [formModif, setFormModif]     = useState(FORM_VIDE);
@@ -435,8 +298,8 @@ function Formateurs() {
   const [globalErrAjout, setGlobalErrAjout] = useState("");
   const [globalErrModif, setGlobalErrModif] = useState("");
 
-  const [supprErrMsg,        setSupprErrMsg]       = useState("");
-  const [supprErrFormations, setSupprErrFormations] = useState([]);
+  const [supprErrMsg, setSupprErrMsg] = useState("");
+  const [supprBlocked, setSupprBlocked] = useState(null); // { nb_sessions: N }
 
   const [deletedContrats,    setDeletedContrats]    = useState([]);
   const [deletedDiplomes,    setDeletedDiplomes]    = useState([]);
@@ -466,36 +329,51 @@ function Formateurs() {
     finally  { setLoading(false); }
   };
 
-  const allFormations = Array.from(
-    new Map(
-      formateurs.flatMap((f) => toFormations(f.formations).map((fm) => [fm.id, fm]))
-    ).values()
-  ).sort((a, b) => a.intitule.localeCompare(b.intitule));
+  // Réinitialiser les filtres de session quand on ferme la modal
+  useEffect(() => {
+    if (!modalDetail) {
+      setSessionSearch("");
+      setSessionDateDebut("");
+      setSessionDateFin("");
+    }
+  }, [modalDetail]);
 
   const filtered = formateurs.filter((f) => {
     const q = search.toLowerCase();
-    const matchSearch =
-      !q || f.nom.toLowerCase().includes(q) || f.prenom.toLowerCase().includes(q) ||
-      toArray(f.specialites).some((s) => s.toLowerCase().includes(q));
-    const matchFormation =
-      !filterFormation || toFormations(f.formations).some((fm) => String(fm.id) === filterFormation);
-    return matchSearch && matchFormation;
+    return (
+      !q || 
+      f.nom.toLowerCase().includes(q) || 
+      f.prenom.toLowerCase().includes(q) ||
+      toArray(f.specialites).some((s) => s.toLowerCase().includes(q))
+    );
   });
 
   const totalPages = Math.ceil(filtered.length / PER_PAGE);
   const paginated  = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
 
-  const openFormationDetail = async (fm) => {
-    setModalFormationDetail({ intitule: fm.intitule, id: fm.id });
-    setLoadingFD(true); setErrorFD("");
-    try {
-      const response = await getFormation(fm.id);
-      setModalFormationDetail(response.data);
-    } catch { setErrorFD("Impossible de charger les détails de cette formation."); }
-    finally  { setLoadingFD(false); }
-  };
-
-  const closeFormationDetail = () => { setModalFormationDetail(null); setErrorFD(""); };
+  // Filtrage des sessions du formateur
+  const filteredSessions = (modalDetail?.sessions_list || []).filter((session) => {
+    const searchMatch = !sessionSearch || 
+      session.intitule_session?.toLowerCase().includes(sessionSearch.toLowerCase());
+    
+    let dateMatch = true;
+    if (sessionDateDebut || sessionDateFin) {
+      const sessionDebut = new Date(session.date_debut);
+      const sessionFin = new Date(session.date_fin);
+      const filterDebut = sessionDateDebut ? new Date(sessionDateDebut) : null;
+      const filterFin = sessionDateFin ? new Date(sessionDateFin) : null;
+      
+      if (filterDebut && filterFin) {
+        dateMatch = (sessionDebut <= filterFin && sessionFin >= filterDebut);
+      } else if (filterDebut) {
+        dateMatch = sessionFin >= filterDebut;
+      } else if (filterFin) {
+        dateMatch = sessionDebut <= filterFin;
+      }
+    }
+    
+    return searchMatch && dateMatch;
+  });
 
   const handleAddFiles = (files, field, setForm) =>
     setForm((prev) => ({ ...prev, [field]: [...(prev[field] || []), ...files] }));
@@ -594,11 +472,12 @@ function Formateurs() {
     setDeletedContrats([]); setDeletedDiplomes([]); setCvExistantSupprime(false);
   };
 
-  const openSuppr = (f) => { setSupprErrMsg(""); setSupprErrFormations([]); setModalSuppr(f); };
+  const openSuppr = (f) => { setSupprErrMsg(""); setSupprBlocked(null); setModalSuppr(f); };
 
   const confirmDelete = async () => {
     if (!modalSuppr) return;
-    setSupprErrMsg(""); setSupprErrFormations([]);
+    setSupprErrMsg("");
+    setSupprBlocked(null);
     try {
       setDeleting(true);
       await deleteFormateur(modalSuppr.id);
@@ -607,9 +486,12 @@ function Formateurs() {
       setSuccessMsg("Formateur supprimé avec succès !");
     } catch (err) {
       const data = err.response?.data;
-      if (err.response?.status === 409 && data?.error === "suppression_bloquee") {
-        setSupprErrMsg(data.message); setSupprErrFormations(data.formations || []);
-      } else setSupprErrMsg("Une erreur est survenue lors de la suppression.");
+      if (err.response?.status === 409 && data?.error === 'suppression_bloquee') {
+        // Formateur lié à des sessions → afficher template bloqué
+        setSupprBlocked({ nb_sessions: data.nb_sessions });
+      } else {
+        setSupprErrMsg("Une erreur est survenue lors de la suppression.");
+      }
     } finally { setDeleting(false); }
   };
 
@@ -662,6 +544,129 @@ function Formateurs() {
     </div>
   );
 
+  // Rendu de la section des sessions dans la modal de détail
+  const renderSessionsSection = () => {
+    const sessions = modalDetail?.sessions_list || [];
+    
+    return (
+      <div className="detail-sec">
+        <div className="detail-sec-title">
+          <i className="fa-solid fa-calendar-days"></i>
+          Sessions ({modalDetail?.sessions_count || 0})
+        </div>
+
+        {sessions.length > 0 ? (
+          <>
+            <div className="sessions-filters-row">
+              <div className="session-filter-search">
+                <i className="fa-solid fa-magnifying-glass"></i>
+                <input
+                  type="text"
+                  placeholder="Rechercher une session..."
+                  value={sessionSearch}
+                  onChange={e => setSessionSearch(e.target.value)}
+                />
+                {sessionSearch && (
+                  <button type="button" className="filter-clear-btn" onClick={() => setSessionSearch("")}>
+                    <i className="fa-solid fa-xmark"></i>
+                  </button>
+                )}
+              </div>
+
+              <div className="session-date-filter-row">
+                <i className="fa-regular fa-calendar"></i>
+                <input
+                  type="date"
+                  className="date-input"
+                  value={sessionDateDebut}
+                  onChange={e => setSessionDateDebut(e.target.value)}
+                />
+                <span className="date-separator">→</span>
+                <input
+                  type="date"
+                  className="date-input"
+                  value={sessionDateFin}
+                  onChange={e => setSessionDateFin(e.target.value)}
+                />
+                {(sessionDateDebut || sessionDateFin) && (
+                  <button type="button" className="filter-clear-btn" onClick={() => { setSessionDateDebut(""); setSessionDateFin(""); }}>
+                    <i className="fa-solid fa-rotate-left"></i>
+                  </button>
+                )}
+              </div>
+
+              {(sessionSearch || sessionDateDebut || sessionDateFin) && (
+                <button className="reset-filters-btn" onClick={() => {
+                  setSessionSearch("");
+                  setSessionDateDebut("");
+                  setSessionDateFin("");
+                }}>
+                  <i className="fa-solid fa-eraser"></i>
+                </button>
+              )}
+            </div>
+
+            <div className="sessions-table-wrapper">
+              <table className="sessions-table">
+                <thead>
+                  <tr>
+                    <th>Intitulé</th>
+                    <th>Dates</th>
+                    <th>Formation</th>
+                    <th>Statut</th>
+                    <th style={{ width: "60px" }}>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredSessions.length === 0 ? (
+                    <tr className="empty-row">
+                      <td colSpan="5" className="empty-cell">
+                        <i className="fa-solid fa-filter-circle-xmark"></i>
+                        <span>Aucune session trouvée</span>
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredSessions.map((session) => (
+                      <tr key={session.id} className="session-row" onClick={() => setModalSessionDetail(session)}>
+                        <td className="session-title-cell">{session.intitule_session}</td>
+                        <td className="session-dates-cell">
+                          {formatDate(session.date_debut)} → {formatDate(session.date_fin)}
+                        </td>
+                        <td className="session-formation-cell">
+                          <span className="formation-tag">{session.formation_nom || "—"}</span>
+                        </td>
+                        <td className="session-statut-cell">
+                          <span className={`session-statut-badge ${session.statut_session}`}>
+                            <span className="status-dot"></span>
+                            {session.statut_display}
+                          </span>
+                        </td>
+                        <td className="session-action-cell">
+                          <button className="session-view-btn">
+                            <i className="fa-solid fa-eye"></i>
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="sessions-filter-count">
+              {filteredSessions.length} / {sessions.length} session(s) affichée(s)
+            </div>
+          </>
+        ) : (
+          <div className="no-sessions-message">
+            <i className="fa-solid fa-calendar-xmark"></i>
+            <p>Aucune session associée à ce formateur</p>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <Layout>
       {successMsg && (
@@ -688,12 +693,6 @@ function Formateurs() {
               onChange={(e) => { setSearch(e.target.value); setPage(1); }}
             />
           </div>
-
-          <FormationFilterDropdown
-            formations={allFormations}
-            selectedValue={filterFormation}
-            onSelect={setFilterFormation}
-          />
         </div>
         <div className="toolbar-right">
           <button className="btn btn-add" onClick={() => setModalAjout(true)}>
@@ -710,15 +709,6 @@ function Formateurs() {
             <>
               Affichage de <strong>{paginated.length}</strong> formateurs sur{" "}
               <strong>{filtered.length}</strong>
-              {filterFormation && (
-                <span className="filter-active-badge">
-                  <i className="fa-solid fa-filter"></i>{" "}
-                  {allFormations.find((f) => String(f.id) === filterFormation)?.intitule}
-                  <button onClick={() => { setFilterFormation(""); setPage(1); }}>
-                    <i className="fa-solid fa-xmark"></i>
-                  </button>
-                </span>
-              )}
             </>
           )}
         </div>
@@ -749,35 +739,31 @@ function Formateurs() {
                   </td>
                 </tr>
               ) : (
-                paginated.map((f, idx) => {
-                  const fms = toFormations(f.formations);
-                  return (
-                    <tr key={f.id}>
-                      <td className="td-num">{pad((page - 1) * PER_PAGE + idx + 1)}</td>
-                      <td className="td-name">{f.nom}</td>
-                      <td className="td-firstname">{f.prenom}</td>
-                      <td className="td-email"><a href={`mailto:${f.email}`}>{f.email}</a></td>
-                      <td className="td-phone">{f.telephone}</td>
-                      <td>
-                        {toArray(f.specialites).map((s) => (
-                          <span key={s} className="spec-tag">{s}</span>
-                        ))}
-                      </td>
-                      
-                      <td className="td-actions">
-                        <button className="act-btn act-detail" title="Détail" onClick={() => setModalDetail(f)}>
-                          <i className="fa-solid fa-eye"></i>
-                        </button>
-                        <button className="act-btn act-modif" title="Modifier" onClick={() => openModif(f)}>
-                          <i className="fa-solid fa-pen"></i>
-                        </button>
-                        <button className="act-btn act-suppr" title="Supprimer" onClick={() => openSuppr(f)}>
-                          <i className="fa-solid fa-trash"></i>
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })
+                paginated.map((f, idx) => (
+                  <tr key={f.id}>
+                    <td className="td-num">{pad((page - 1) * PER_PAGE + idx + 1)}</td>
+                    <td className="td-name">{f.nom}</td>
+                    <td className="td-firstname">{f.prenom}</td>
+                    <td className="td-email"><a href={`mailto:${f.email}`}>{f.email}</a></td>
+                    <td className="td-phone">{f.telephone}</td>
+                    <td>
+                      {toArray(f.specialites).map((s) => (
+                        <span key={s} className="spec-tag">{s}</span>
+                      ))}
+                    </td>
+                    <td className="td-actions">
+                      <button className="act-btn act-detail" title="Détail" onClick={() => setModalDetail(f)}>
+                        <i className="fa-solid fa-eye"></i>
+                      </button>
+                      <button className="act-btn act-modif" title="Modifier" onClick={() => openModif(f)}>
+                        <i className="fa-solid fa-pen"></i>
+                      </button>
+                      <button className="act-btn act-suppr" title="Supprimer" onClick={() => openSuppr(f)}>
+                        <i className="fa-solid fa-trash"></i>
+                      </button>
+                    </td>
+                  </tr>
+                ))
               )}
             </tbody>
           </table>
@@ -800,109 +786,10 @@ function Formateurs() {
         )}
       </div>
 
-      {modalFormationDetail && (
-        <div className="modal-overlay show" style={{ zIndex: 3000 }} onClick={closeFormationDetail}>
-          <div className="modal modal-formation-detail" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header" style={{ borderBottomColor: "#33CCFF" }}>
-              <h2><i className="fa-solid fa-book-open"></i> {modalFormationDetail.intitule}</h2>
-              <button className="modal-close" onClick={closeFormationDetail}>
-                <i className="fa-solid fa-xmark"></i>
-              </button>
-            </div>
-            <div className="modal-body">
-              {loadingFD && (
-                <div className="fd-loading">
-                  <i className="fa-solid fa-spinner fa-spin"></i> Chargement des détails...
-                </div>
-              )}
-              {errorFD && !loadingFD && (
-                <div className="global-error-banner">
-                  <i className="fa-solid fa-circle-xmark"></i><span>{errorFD}</span>
-                </div>
-              )}
-              {!loadingFD && !errorFD && (
-                <div className="fd-pro-layout">
-                  <div className="fd-chips-row">
-                    {modalFormationDetail.categorie_nom && (
-                      <span className="fd-chip fd-chip-cat">
-                        <i className="fa-solid fa-tag"></i> {modalFormationDetail.categorie_nom}
-                      </span>
-                    )}
-                    {modalFormationDetail.niveau && (
-                      <span className={`formation-item-niveau niveau-${modalFormationDetail.niveau}`}>
-                        <i className="fa-solid fa-layer-group"></i> {niveauFormationLabel[modalFormationDetail.niveau] || modalFormationDetail.niveau}
-                      </span>
-                    )}
-                    {modalFormationDetail.format && (
-                      <span className="fd-chip fd-chip-format">
-                        <i className="fa-solid fa-display"></i> {formatLabel[modalFormationDetail.format] || modalFormationDetail.format}
-                      </span>
-                    )}
-                    {modalFormationDetail.duree && (
-                      <span className="fd-chip fd-chip-duree">
-                        <i className="fa-solid fa-clock"></i> {modalFormationDetail.duree}h
-                      </span>
-                    )}
-                  </div>
-                  {(modalFormationDetail.date_debut || modalFormationDetail.date_fin || modalFormationDetail.prix_ht || modalFormationDetail.prix_ttc) && (
-                    <div className="fd-meta-row">
-                      {modalFormationDetail.date_debut && (
-                        <div className="fd-meta-item">
-                          <span className="fd-meta-lbl"><i className="fa-solid fa-calendar-day"></i> Début</span>
-                          <span className="fd-meta-val">{modalFormationDetail.date_debut}</span>
-                        </div>
-                      )}
-                      {modalFormationDetail.date_fin && (
-                        <div className="fd-meta-item">
-                          <span className="fd-meta-lbl"><i className="fa-solid fa-calendar-check"></i> Fin</span>
-                          <span className="fd-meta-val">{modalFormationDetail.date_fin}</span>
-                        </div>
-                      )}
-                      {modalFormationDetail.prix_ht && (
-                        <div className="fd-meta-item">
-                          <span className="fd-meta-lbl"><i className="fa-solid fa-money-bill"></i> Prix HT</span>
-                          <span className="fd-meta-val">{modalFormationDetail.prix_ht} TND</span>
-                        </div>
-                      )}
-                      {modalFormationDetail.prix_ttc && (
-                        <div className="fd-meta-item fd-meta-item-accent">
-                          <span className="fd-meta-lbl"><i className="fa-solid fa-receipt"></i> Prix TTC</span>
-                          <span className="fd-meta-val">{modalFormationDetail.prix_ttc} TND</span>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  {modalFormationDetail.description && (
-                    <div className="fd-text-block">
-                      <div className="fd-text-label"><i className="fa-solid fa-align-left"></i> Description</div>
-                      <p className="fd-text-content">{modalFormationDetail.description}</p>
-                    </div>
-                  )}
-                  {modalFormationDetail.objectifs_pedagogiques && (
-                    <div className="fd-text-block fd-text-block-alt">
-                      <div className="fd-text-label"><i className="fa-solid fa-bullseye"></i> Objectifs pédagogiques</div>
-                      <p className="fd-text-content">{modalFormationDetail.objectifs_pedagogiques}</p>
-                    </div>
-                  )}
-                  {modalFormationDetail.prerequis && (
-                    <div className="fd-text-block">
-                      <div className="fd-text-label"><i className="fa-solid fa-list-check"></i> Prérequis</div>
-                      <p className="fd-text-content">{modalFormationDetail.prerequis}</p>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-            <div className="modal-footer">
-              <button className="btn btn-cancel" onClick={closeFormationDetail}>Fermer</button>
-            </div>
-          </div>
-        </div>
-      )}
-
+      {/* Modal Détail Formateur AVEC SESSIONS */}
       {modalDetail && (
         <div className="modal-overlay show" onClick={() => setModalDetail(null)}>
-          <div className="modal modal-wide" onClick={(e) => e.stopPropagation()}>
+          <div className="modal modal-wide modal-detail-formation" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header detail-header">
               <div className="detail-header-left">
                 <div className="detail-icon-wrap">
@@ -941,13 +828,6 @@ function Formateurs() {
                   <div className="sc-info">
                     <span className="sc-val">{modalDetail.telephone}</span>
                     <span className="sc-lbl">Téléphone</span>
-                  </div>
-                </div>
-                <div className="stat-card sc-sand">
-                  <div className="sc-icon"><i className="fa-solid fa-graduation-cap"></i></div>
-                  <div className="sc-info">
-                    <span className="sc-val">{toFormations(modalDetail.formations).length}</span>
-                    <span className="sc-lbl">Formation(s)</span>
                   </div>
                 </div>
                 <div className="stat-card sc-green">
@@ -1004,10 +884,10 @@ function Formateurs() {
                     </div>
                   </div>
                 </div>
-                <FormationsSection
-                  formations={modalDetail.formations}
-                  onSelectFormation={openFormationDetail}
-                />
+                
+                {/* SECTION SESSIONS DU FORMATEUR */}
+                {renderSessionsSection()}
+
                 <div className="detail-sec">
                   <div className="detail-sec-title">
                     <i className="fa-solid fa-folder-open"></i> Documents administratifs
@@ -1057,6 +937,197 @@ function Formateurs() {
         </div>
       )}
 
+      {/* MODALE DÉTAIL SESSION CORRIGÉE */}
+      {modalSessionDetail && (
+        <div className="modal-overlay show" onClick={(e) => { if (e.target === e.currentTarget) setModalSessionDetail(null); }}>
+          <div className="modal modal-session-detail">
+            <div className="session-detail-header">
+              <div className="session-detail-title-section">
+                <div className="session-detail-icon">
+                  <i className="fa-solid fa-chalkboard-user"></i>
+                </div>
+                <div className="session-detail-title-info">
+                  <h3>{modalSessionDetail.intitule_session}</h3>
+                  <div className="session-detail-meta">
+                    <span className={`session-status-badge-detail ${modalSessionDetail.statut_session}`}>
+                      <span className="status-dot"></span>
+                      {modalSessionDetail.statut_display}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <button className="modal-close-btn" onClick={() => setModalSessionDetail(null)}>
+                <i className="fa-solid fa-xmark"></i>
+              </button>
+            </div>
+
+            <div className="session-detail-body">
+              
+              <div className="detail-info-block">
+                <div className="block-header">
+                  <i className="fa-regular fa-calendar"></i>
+                  <span>Période</span>
+                </div>
+                <div className="block-content dates-content">
+                  <div className="date-box">
+                    <span className="date-label">Du</span>
+                    <span className="date-value">{formatDate(modalSessionDetail.date_debut)}</span>
+                  </div>
+                  <div className="date-arrow-icon">
+                    <i className="fa-solid fa-arrow-right"></i>
+                  </div>
+                  <div className="date-box">
+                    <span className="date-label">Au</span>
+                    <span className="date-value">{formatDate(modalSessionDetail.date_fin)}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="detail-info-block">
+                <div className="block-header">
+                  <i className="fa-solid fa-book-open"></i>
+                  <span>Formation associée</span>
+                </div>
+                <div className="block-content">
+                  <div className="formation-card-detail">
+                    <div className="formation-name">{modalSessionDetail.formation_nom || "—"}</div>
+                    <div className="formation-badges-row">
+                      {modalSessionDetail.formation_categorie && (
+                        <div className="formation-categorie">
+                          <i className="fa-solid fa-tag"></i> {modalSessionDetail.formation_categorie}
+                        </div>
+                      )}
+                      {modalSessionDetail.formation_duree && (
+                        <div className="formation-duree">
+                          <i className="fa-regular fa-clock"></i> {modalSessionDetail.formation_duree} heures
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Description */}
+                  {modalSessionDetail.formation_description && (
+                    <div className="formation-text-block">
+                      <div className="formation-text-label">
+                        <i className="fa-solid fa-align-left"></i> Description
+                      </div>
+                      <p className="formation-text-content">{modalSessionDetail.formation_description}</p>
+                    </div>
+                  )}
+
+                  {/* Objectifs */}
+                  {modalSessionDetail.formation_objectifs && (
+                    <div className="formation-text-block formation-text-block-alt">
+                      <div className="formation-text-label">
+                        <i className="fa-solid fa-bullseye"></i> Objectifs pédagogiques
+                      </div>
+                      <p className="formation-text-content">{modalSessionDetail.formation_objectifs}</p>
+                    </div>
+                  )}
+
+                  {/* Prérequis */}
+                  {modalSessionDetail.formation_prerequis && (
+                    <div className="formation-text-block">
+                      <div className="formation-text-label">
+                        <i className="fa-solid fa-circle-info"></i> Prérequis
+                      </div>
+                      <p className="formation-text-content">{modalSessionDetail.formation_prerequis}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="detail-info-block">
+                <div className="block-header">
+                  <i className="fa-solid fa-users"></i>
+                  <span>Formateurs</span>
+                </div>
+                <div className="block-content">
+                  {modalSessionDetail.formateurs_list && modalSessionDetail.formateurs_list.length > 0 ? (
+                    <div className="formateurs-list-detail">
+                      {modalSessionDetail.formateurs_list.map((formateur, idx) => (
+                        <div key={idx} className="formateur-card">
+                          <div className="formateur-avatar">
+                            {formateur.prenom?.[0]}{formateur.nom?.[0]}
+                          </div>
+                          <div className="formateur-info">
+                            <div className="formateur-name">{formateur.nom_complet}</div>
+                            <div className="formateur-specialite">{formateur.specialites || "Formateur"}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="empty-block">Aucun formateur assigné</div>
+                  )}
+                </div>
+              </div>
+
+              <div className="detail-info-block">
+                <div className="block-header">
+                  <i className="fa-solid fa-euro-sign"></i>
+                  <span>Tarifs</span>
+                </div>
+                <div className="block-content tariffs-content">
+                  <div className="tariff-card">
+                    <div className="tariff-label">Prix HT</div>
+                    <div className="tariff-value">{formatPrice(modalSessionDetail.prix_ht)}</div>
+                  </div>
+                  <div className="tariff-card">
+                    <div className="tariff-label">Prix TTC</div>
+                    <div className="tariff-value">{formatPrice(modalSessionDetail.prix_ttc)}</div>
+                  </div>
+                  {modalSessionDetail.tranche && (
+                    <div className="tariff-card tranche-card">
+                      <div className="tariff-label">Tranche</div>
+                      <div className="tranche-value">
+                        <i className="fa-solid fa-layer-group"></i>
+                        {modalSessionDetail.tranche}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="detail-info-block">
+                <div className="block-header">
+                  <i className="fa-solid fa-chart-simple"></i>
+                  <span>Informations</span>
+                </div>
+                <div className="block-content info-grid-content">
+                  <div className="info-item">
+                    <div className="info-label">Niveau</div>
+                    <div className={`niveau-badge-detail ${modalSessionDetail.niveau || ""}`}>
+                      {modalSessionDetail.niveau_display || "Non défini"}
+                    </div>
+                  </div>
+                  <div className="info-item">
+                    <div className="info-label">Mode</div>
+                    <div className="mode-badge-detail">
+                      <i className={`fa-solid ${
+                        modalSessionDetail.mode === 'presentiel' ? 'fa-chalkboard-user' :
+                        modalSessionDetail.mode === 'ligne' ? 'fa-wifi' : 'fa-code-branch'
+                      }`}></i>
+                      {modalSessionDetail.mode_display}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+
+
+            </div>
+
+            <div className="session-detail-footer">
+              <button className="btn-close-detail" onClick={() => setModalSessionDetail(null)}>
+                Fermer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Ajout */}
       {modalAjout && (
         <div className="modal-overlay show" onClick={closeModalAjout}>
           <div className="modal modal-wide" onClick={(e) => e.stopPropagation()}>
@@ -1147,6 +1218,7 @@ function Formateurs() {
         </div>
       )}
 
+      {/* Modal Modification */}
       {modalModif && (
         <div className="modal-overlay show" onClick={closeModalModif}>
           <div className="modal modal-wide" onClick={(e) => e.stopPropagation()}>
@@ -1231,54 +1303,108 @@ function Formateurs() {
         </div>
       )}
 
+      {/* Modal Suppression */}
       {modalSuppr && (
-        <div className="modal-overlay show" onClick={() => { setModalSuppr(null); setSupprErrMsg(""); setSupprErrFormations([]); }}>
+        <div className="modal-overlay show" onClick={() => { setModalSuppr(null); setSupprErrMsg(""); setSupprBlocked(null); }}>
           <div className="modal modal-suppr" onClick={(e) => e.stopPropagation()}>
-            <div className="suppr-body">
-              <div className="suppr-icon-wrap"><i className="fa-solid fa-trash-can"></i></div>
-              <p className="suppr-title">Supprimer le formateur</p>
-              <div className="suppr-card">
-                <div className="suppr-card-avatar">
-                  {modalSuppr.prenom.charAt(0).toUpperCase()}{modalSuppr.nom.charAt(0).toUpperCase()}
-                </div>
-                <div className="suppr-card-info">
-                  <span className="suppr-card-name">{modalSuppr.prenom} {modalSuppr.nom}</span>
-                  <span className="suppr-card-email">{modalSuppr.email}</span>
-                </div>
-              </div>
-              {supprErrMsg && (
-                <div className="suppr-blocked-error">
-                  <div className="suppr-blocked-header">
-                    <i className="fa-solid fa-ban"></i><span>{supprErrMsg}</span>
+
+            {/* ─── TEMPLATE : SUPPRESSION BLOQUÉE ─────────────────── */}
+            {supprBlocked ? (
+              <>
+                <div className="suppr-body">
+                  <div className="suppr-blocked-icon-wrap">
+                    <i className="fa-solid fa-ban"></i>
                   </div>
-                  {supprErrFormations.length > 0 && (
-                    <ul className="suppr-blocked-list">
-                      {supprErrFormations.map((nom, i) => (
-                        <li key={i}><i className="fa-solid fa-book-open"></i> {nom}</li>
-                      ))}
-                    </ul>
+                  <p className="suppr-blocked-title">Suppression impossible</p>
+
+                  {/* Carte formateur */}
+                  <div className="suppr-card">
+                    <div className="suppr-card-avatar suppr-card-avatar-blocked">
+                      {modalSuppr.prenom.charAt(0).toUpperCase()}{modalSuppr.nom.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="suppr-card-info">
+                      <span className="suppr-card-name">{modalSuppr.prenom} {modalSuppr.nom}</span>
+                      <span className="suppr-card-email">{modalSuppr.email}</span>
+                    </div>
+                  </div>
+
+                  {/* Bloc sessions compteur */}
+                  <div className="suppr-blocked-sessions-box">
+                    <div className="suppr-blocked-sessions-icon">
+                      <i className="fa-solid fa-calendar-days"></i>
+                    </div>
+                    <div className="suppr-blocked-sessions-info">
+                      <span className="suppr-blocked-sessions-count">
+                        {supprBlocked.nb_sessions}
+                      </span>
+                      <span className="suppr-blocked-sessions-label">
+                        session{supprBlocked.nb_sessions > 1 ? "s" : ""} associée{supprBlocked.nb_sessions > 1 ? "s" : ""}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Message explicatif */}
+                  <div className="suppr-blocked-notice">
+                    <i className="fa-solid fa-circle-info"></i>
+                    <span>
+                      Ce formateur est assigné à <strong>{supprBlocked.nb_sessions} session{supprBlocked.nb_sessions > 1 ? "s" : ""}</strong> de formation.
+                      Veuillez d'abord le retirer de {supprBlocked.nb_sessions > 1 ? "ces sessions" : "cette session"} avant de le supprimer.
+                    </span>
+                  </div>
+                </div>
+                <div className="suppr-footer">
+                  <button
+                    className="btn-suppr-cancel btn-suppr-cancel-full"
+                    onClick={() => { setModalSuppr(null); setSupprErrMsg(""); setSupprBlocked(null); }}
+                  >
+                    <i className="fa-solid fa-xmark"></i> Fermer
+                  </button>
+                </div>
+              </>
+            ) : (
+
+              /* ─── TEMPLATE : CONFIRMATION SUPPRESSION ─────────────── */
+              <>
+                <div className="suppr-body">
+                  <div className="suppr-icon-wrap"><i className="fa-solid fa-trash-can"></i></div>
+                  <p className="suppr-title">Supprimer le formateur</p>
+                  <div className="suppr-card">
+                    <div className="suppr-card-avatar">
+                      {modalSuppr.prenom.charAt(0).toUpperCase()}{modalSuppr.nom.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="suppr-card-info">
+                      <span className="suppr-card-name">{modalSuppr.prenom} {modalSuppr.nom}</span>
+                      <span className="suppr-card-email">{modalSuppr.email}</span>
+                    </div>
+                  </div>
+                  {supprErrMsg && (
+                    <div className="suppr-blocked-error">
+                      <div className="suppr-blocked-header">
+                        <i className="fa-solid fa-circle-xmark"></i><span>{supprErrMsg}</span>
+                      </div>
+                    </div>
+                  )}
+                  {!supprErrMsg && (
+                    <div className="suppr-warning">
+                      <i className="fa-solid fa-triangle-exclamation"></i>
+                      <span>Cette action est <strong>irréversible</strong>. Toutes les données associées seront définitivement supprimées.</span>
+                    </div>
                   )}
                 </div>
-              )}
-              {!supprErrMsg && (
-                <div className="suppr-warning">
-                  <i className="fa-solid fa-triangle-exclamation"></i>
-                  <span>Cette action est <strong>irréversible</strong>. Toutes les données associées seront définitivement supprimées.</span>
+                <div className="suppr-footer">
+                  <button className="btn-suppr-cancel" onClick={() => { setModalSuppr(null); setSupprErrMsg(""); setSupprBlocked(null); }}>
+                    <i className="fa-solid fa-xmark"></i> Annuler
+                  </button>
+                  {!supprErrMsg && (
+                    <button className="btn-suppr-confirm" onClick={confirmDelete} disabled={deleting}>
+                      {deleting
+                        ? <><i className="fa-solid fa-spinner fa-spin"></i> Suppression...</>
+                        : <><i className="fa-solid fa-trash"></i> Confirmer</>}
+                    </button>
+                  )}
                 </div>
-              )}
-            </div>
-            <div className="suppr-footer">
-              <button className="btn-suppr-cancel" onClick={() => { setModalSuppr(null); setSupprErrMsg(""); setSupprErrFormations([]); }}>
-                <i className="fa-solid fa-xmark"></i> Annuler
-              </button>
-              {!supprErrMsg && (
-                <button className="btn-suppr-confirm" onClick={confirmDelete} disabled={deleting}>
-                  {deleting
-                    ? <><i className="fa-solid fa-spinner fa-spin"></i> Suppression...</>
-                    : <><i className="fa-solid fa-trash"></i> Confirmer</>}
-                </button>
-              )}
-            </div>
+              </>
+            )}
           </div>
         </div>
       )}
